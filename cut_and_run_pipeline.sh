@@ -75,12 +75,12 @@ esac
 echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR/pipeline.log
 
 # Step 1: Quality Control (FastQC)
-#~ echo "Running FastQC on raw FASTQ files..." | tee -a $LOG_DIR/pipeline.log
-#~ $FASTQC_PATH $RAW_FASTQ_DIR/*.{fastq,fq}.gz -o $OUTPUT_DIR/fastqc_reports > $LOG_DIR/fastqc_output.log 2> $LOG_DIR/fastqc_error.log
-#~ if [ $? -ne 0 ]; then
-    #~ echo "FastQC failed. Check $LOG_DIR/fastqc_error.log for details." | tee -a $LOG_DIR/pipeline.log
-    #~ exit 1
-#~ fi
+echo "Running FastQC on raw FASTQ files..." | tee -a $LOG_DIR/pipeline.log
+$FASTQC_PATH $RAW_FASTQ_DIR/*.{fastq,fq}.gz -o $OUTPUT_DIR/fastqc_reports > $LOG_DIR/fastqc_output.log 2> $LOG_DIR/fastqc_error.log
+if [ $? -ne 0 ]; then
+    echo "FastQC failed. Check $LOG_DIR/fastqc_error.log for details." | tee -a $LOG_DIR/pipeline.log
+    exit 1
+fi
 
 # Step 2: Adapter trimming (optional, if necessary)
 echo "Trimming adapters and low-quality reads..." | tee -a $LOG_DIR/pipeline.log
