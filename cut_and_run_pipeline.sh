@@ -134,9 +134,9 @@ echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR
 
 # Step 4.1: Remove duplicates using Picard's MarkDuplicates
 echo "Removing duplicates using Picard MarkDuplicates..." | tee -a $LOG_DIR/pipeline.log
-for sorted_bam in $ALIGNMENT_DIR/*.sortedByCoordinate.bam
+for sorted_bam in $ALIGNMENT_DIR/*.sortedByCoord.out.bam
 do
-    base_name=$(basename $sorted_bam .sortedByCoordinate.bam)
+    base_name=$(basename $sorted_bam .sortedByCoord.out.bam)
     java -jar $PICARD_PATH MarkDuplicates I=$sorted_bam O=$ALIGNMENT_DIR/$base_name.dedup.bam M=$LOG_DIR/$base_name.metrics.txt REMOVE_DUPLICATES=true
     if [ $? -ne 0 ]; then
         echo "Picard MarkDuplicates failed for $base_name. Check $LOG_DIR/$base_name.metrics.txt for details." | tee -a $LOG_DIR/pipeline.log
