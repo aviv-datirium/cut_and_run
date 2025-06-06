@@ -91,6 +91,9 @@ do
     base_name=$(basename "$fastq_file" .gz)  # Remove .gz first
     base_name=${base_name%.fastq}  # Remove .fastq extension
     base_name=${base_name%.fq}  # Remove .fq extension
+    
+    # Ensure base_name doesn't have issues with the file name
+    base_name=$(echo "$base_name" | sed 's/[^a-zA-Z0-9_-]//g')  # Remove any special characters
 
     # Trim Galore with output redirection
     trim_galore --quality 20 --phred33 --output_dir "$ALIGNMENT_DIR" "$fastq_file" > "$LOG_DIR/trim_galore_${base_name}.log" 2> "$LOG_DIR/trim_galore_${base_name}_error.log"
