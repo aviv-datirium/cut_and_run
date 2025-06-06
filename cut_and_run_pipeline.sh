@@ -106,7 +106,7 @@ echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR
 
 # Step 3: Align reads to the reference genome using STAR
 echo "Aligning reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
-find $ALIGNMENT_DIR -type f \( -iname "*trimmed.fq.gz" -o -iname "*trimmed.fastq.gz" \) | while read trimmed_file; do
+find $ALIGNMENT_DIR -type f \( -iname "*trimmed.fq.gz" -o -iname "*trimmed.fastq.gz" \) | while read trimmed_file;
 do
     base_name=$(basename $trimmed_file .fastq)
     base_name=${base_name%.fastq}  # Handle both fastq and fq extensions
