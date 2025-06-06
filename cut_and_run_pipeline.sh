@@ -118,6 +118,7 @@ do
     /mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR --runThreadN 8 \
          --genomeDir $REFERENCE_GENOME \
          --readFilesIn $trimmed_file \
+         --readFilesCommand zcat \
          --outFileNamePrefix $ALIGNMENT_DIR/$base_name. \
          --outSAMtype BAM SortedByCoordinate \
          > $LOG_DIR/STAR_${base_name}.log 2> $LOG_DIR/STAR_${base_name}_error.log
