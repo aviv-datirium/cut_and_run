@@ -82,9 +82,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Sanitize the base_name to avoid special characters issues
-base_name=$(echo "$base_name" | tr -d '[:space:]' | tr -d '[:punct:]')
-
 # Step 2: Adapter trimming (optional, if necessary)
 echo "Trimming adapters and low-quality reads..." | tee -a "$LOG_DIR/pipeline.log"
 for fastq_file in $RAW_FASTQ_DIR/*.{fastq,fq}.gz
