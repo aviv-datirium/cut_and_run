@@ -75,40 +75,40 @@ esac
 echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR/pipeline.log
 
 # Step 1: Quality Control (FastQC)
-echo "Running FastQC on raw FASTQ files..." | tee -a $LOG_DIR/pipeline.log
-$FASTQC_PATH $RAW_FASTQ_DIR/*.{fastq,fq}.gz -o $OUTPUT_DIR/fastqc_reports > $LOG_DIR/fastqc_output.log 2> $LOG_DIR/fastqc_error.log
-if [ $? -ne 0 ]; then
-    echo "FastQC failed. Check $LOG_DIR/fastqc_error.log for details." | tee -a $LOG_DIR/pipeline.log
-    exit 1
-fi
+#~ echo "Running FastQC on raw FASTQ files..." | tee -a $LOG_DIR/pipeline.log
+#~ $FASTQC_PATH $RAW_FASTQ_DIR/*.{fastq,fq}.gz -o $OUTPUT_DIR/fastqc_reports > $LOG_DIR/fastqc_output.log 2> $LOG_DIR/fastqc_error.log
+#~ if [ $? -ne 0 ]; then
+    #~ echo "FastQC failed. Check $LOG_DIR/fastqc_error.log for details." | tee -a $LOG_DIR/pipeline.log
+    #~ exit 1
+#~ fi
 
 # Step 2: Adapter trimming (optional, if necessary)
-echo "Trimming adapters and low-quality reads..." | tee -a $LOG_DIR/pipeline.log
+#~ echo "Trimming adapters and low-quality reads..." | tee -a $LOG_DIR/pipeline.log
 
 # Use find to list all .fq.gz and .fastq.gz files correctly
-for fastq_file in $(find $RAW_FASTQ_DIR -type f \( -iname "*.fastq.gz" -o -iname "*.fq.gz" \)); do
-    # Extract the base name by removing the extensions (.fq.gz or .fastq.gz)
-    base_name=$(basename "$fastq_file" .gz)  # Remove .gz first
-    base_name=${base_name%.fastq}  # Remove .fastq extension
-    base_name=${base_name%.fq}  # Remove .fq extension
+#~ for fastq_file in $(find $RAW_FASTQ_DIR -type f \( -iname "*.fastq.gz" -o -iname "*.fq.gz" \)); do
+    #~ # Extract the base name by removing the extensions (.fq.gz or .fastq.gz)
+    #~ base_name=$(basename "$fastq_file" .gz)  # Remove .gz first
+    #~ base_name=${base_name%.fastq}  # Remove .fastq extension
+    #~ base_name=${base_name%.fq}  # Remove .fq extension
 
-    # Ensure base_name doesn't have issues with the file name
-    base_name=$(echo "$base_name" | sed 's/[^a-zA-Z0-9_-]//g')  # Remove any special characters
+    #~ # Ensure base_name doesn't have issues with the file name
+    #~ base_name=$(echo "$base_name" | sed 's/[^a-zA-Z0-9_-]//g')  # Remove any special characters
 
-    # Trim Galore with output redirection
-    trim_galore --quality 20 --phred33 --output_dir "$ALIGNMENT_DIR" "$fastq_file" > "$LOG_DIR/trim_galore_${base_name}.log" 2> "$LOG_DIR/trim_galore_${base_name}_error.log"
+    #~ # Trim Galore with output redirection
+    #~ trim_galore --quality 20 --phred33 --output_dir "$ALIGNMENT_DIR" "$fastq_file" > "$LOG_DIR/trim_galore_${base_name}.log" 2> "$LOG_DIR/trim_galore_${base_name}_error.log"
 
-    if [ $? -ne 0 ]; then
-        echo "Trim Galore failed for $base_name. Check $LOG_DIR/trim_galore_${base_name}_error.log for details." | tee -a "$LOG_DIR/pipeline.log"
-        exit 1
-    fi
-done
+    #~ if [ $? -ne 0 ]; then
+        #~ echo "Trim Galore failed for $base_name. Check $LOG_DIR/trim_galore_${base_name}_error.log for details." | tee -a "$LOG_DIR/pipeline.log"
+        #~ exit 1
+    #~ fi
+#~ done
 
 # Step 3: Align reads to the reference genome using STAR
 echo "Aligning reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
-for trimmed_file in $ALIGNMENT_DIR/*.{fastq,fq}.gz
+for fastq_file in $ALIGNMENT_DIR/*trimmed*.{fastq,fq}.gz
 do
-    base_name=$(basename $trimmed_file .fastq)
+    base_name=$(basename $fastq_file .fastq)
     base_name=${base_name%.fastq}  # Handle both fastq and fq extensions
     base_name=${base_name%.fq}  # Remove .fq extension
     
