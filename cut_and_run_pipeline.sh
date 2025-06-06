@@ -88,7 +88,7 @@ for fastq_file in $RAW_FASTQ_DIR/*.{fastq,fq}.gz
 do
 
     # Extract the base name by removing the extensions (.fq.gz or .fastq.gz)
-    base_name=$(basename "$fastq_file" .gz)  # Remove .gz first
+    base_name=$(base_name "$fastq_file" .gz)  # Remove .gz first
     base_name=${base_name%.fastq}  # Remove .fastq extension
     base_name=${base_name%.fq}  # Remove .fq extension
 
