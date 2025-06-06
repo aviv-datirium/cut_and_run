@@ -109,7 +109,12 @@ echo "Aligning reads to the reference genome using STAR..." | tee -a $LOG_DIR/pi
 for trimmed_file in $ALIGNMENT_DIR/*.{fastq,fq}.gz
 do
     base_name=$(basename $trimmed_file .fastq)
-    base_name=${base_name%.fq}  # Handle both fastq and fq extensions
+    base_name=${base_name%.fastq}  # Handle both fastq and fq extensions
+    base_name=${base_name%.fq}  # Remove .fq extension
+    
+    # Ensure base_name doesn't have issues with the file name
+    base_name=$(echo "$base_name" | sed 's/[^a-zA-Z0-9_-]//g')  # Remove any special characters
+    
     /mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR --runThreadN 8 \
          --genomeDir $REFERENCE_GENOME \
          --readFilesIn $trimmed_file \
