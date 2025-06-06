@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Read the config.json file to get input parameters
-CONFIG_FILE="/mnt/data/home/aviv/bash_scripts/config.json"
+CONFIG_FILE="/mnt/data/home/aviv/cut_and_run/config.json"
 
 RAW_FASTQ_DIR=$(jq -r '.raw_fastq_dir' $CONFIG_FILE)
 ALIGNMENT_DIR=$(jq -r '.alignment_dir' $CONFIG_FILE)
@@ -12,6 +12,7 @@ GENOME_SIZE_STRING=$(jq -r '.genome_size' $CONFIG_FILE)
 FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' $CONFIG_FILE)
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' $CONFIG_FILE)
 LOG_DIR=$(jq -r '.log_dir' $CONFIG_FILE)
+NUM_THREADS=$(jq -r '.num_threads' $CONFIG_FILE)  # Get the number of threads from the config file
 
 # Define genome sizes for various species (numeric values in base pairs)
 GENOME_SIZE_HUMAN=2913022398  # Human genome size (hg38)
@@ -25,6 +26,9 @@ PICARD_PATH="/mnt/data/home/aviv/tools/picard.jar"  # Path to the Picard jar fil
 
 # FastQC tools path
 FASTQC_PATH="/mnt/data/home/aviv/tools/FastQC/fastqc"
+
+# STAR path
+STAR_PATH="/mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR"
 
 # Make output directories
 mkdir -p $OUTPUT_DIR $ALIGNMENT_DIR
@@ -75,34 +79,34 @@ esac
 echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR/pipeline.log
 
 # Step 1: Quality Control (FastQC)
-#~ echo "Running FastQC on raw FASTQ files..." | tee -a $LOG_DIR/pipeline.log
-#~ $FASTQC_PATH $RAW_FASTQ_DIR/*.{fastq,fq}.gz -o $OUTPUT_DIR/fastqc_reports > $LOG_DIR/fastqc_output.log 2> $LOG_DIR/fastqc_error.log
-#~ if [ $? -ne 0 ]; then
-    #~ echo "FastQC failed. Check $LOG_DIR/fastqc_error.log for details." | tee -a $LOG_DIR/pipeline.log
-    #~ exit 1
-#~ fi
+echo "Running FastQC on raw FASTQ files..." | tee -a $LOG_DIR/pipeline.log
+$FASTQC_PATH $RAW_FASTQ_DIR/*.{fastq,fq}.gz -o $OUTPUT_DIR/fastqc_reports > $LOG_DIR/fastqc_output.log 2> $LOG_DIR/fastqc_error.log
+if [ $? -ne 0 ]; then
+    echo "FastQC failed. Check $LOG_DIR/fastqc_error.log for details." | tee -a $LOG_DIR/pipeline.log
+    exit 1
+fi
 
 # Step 2: Adapter trimming (optional, if necessary)
-#~ echo "Trimming adapters and low-quality reads..." | tee -a $LOG_DIR/pipeline.log
+echo "Trimming adapters and low-quality reads..." | tee -a $LOG_DIR/pipeline.log
 
 # Use find to list all .fq.gz and .fastq.gz files correctly
-#~ for fastq_file in $(find $RAW_FASTQ_DIR -type f \( -iname "*.fastq.gz" -o -iname "*.fq.gz" \)); do
-    #~ # Extract the base name by removing the extensions (.fq.gz or .fastq.gz)
-    #~ base_name=$(basename "$fastq_file" .gz)  # Remove .gz first
-    #~ base_name=${base_name%.fastq}  # Remove .fastq extension
-    #~ base_name=${base_name%.fq}  # Remove .fq extension
+for fastq_file in $(find $RAW_FASTQ_DIR -type f \( -iname "*.fastq.gz" -o -iname "*.fq.gz" \)); do
+    # Extract the base name by removing the extensions (.fq.gz or .fastq.gz)
+    base_name=$(basename "$fastq_file" .gz)  # Remove .gz first
+    base_name=${base_name%.fastq}  # Remove .fastq extension
+    base_name=${base_name%.fq}  # Remove .fq extension
 
-    #~ # Ensure base_name doesn't have issues with the file name
-    #~ base_name=$(echo "$base_name" | sed 's/[^a-zA-Z0-9_-]//g')  # Remove any special characters
+    # Ensure base_name doesn't have issues with the file name
+    base_name=$(echo "$base_name" | sed 's/[^a-zA-Z0-9_-]//g')  # Remove any special characters
 
-    #~ # Trim Galore with output redirection
-    #~ trim_galore --quality 20 --phred33 --output_dir "$ALIGNMENT_DIR" "$fastq_file" > "$LOG_DIR/trim_galore_${base_name}.log" 2> "$LOG_DIR/trim_galore_${base_name}_error.log"
+    # Trim Galore with output redirection
+    trim_galore --quality 20 --phred33 --output_dir "$ALIGNMENT_DIR" "$fastq_file" > "$LOG_DIR/trim_galore_${base_name}.log" 2> "$LOG_DIR/trim_galore_${base_name}_error.log"
 
-    #~ if [ $? -ne 0 ]; then
-        #~ echo "Trim Galore failed for $base_name. Check $LOG_DIR/trim_galore_${base_name}_error.log for details." | tee -a "$LOG_DIR/pipeline.log"
-        #~ exit 1
-    #~ fi
-#~ done
+    if [ $? -ne 0 ]; then
+        echo "Trim Galore failed for $base_name. Check $LOG_DIR/trim_galore_${base_name}_error.log for details." | tee -a "$LOG_DIR/pipeline.log"
+        exit 1
+    fi
+done
 
 # Step 3: Align reads to the reference genome using STAR
 echo "Aligning reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
@@ -115,7 +119,7 @@ do
     # Ensure base_name doesn't have issues with the file name
     base_name=$(echo "$base_name" | sed 's/[^a-zA-Z0-9_-]//g')  # Remove any special characters
     
-    /mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR --runThreadN 8 \
+    $STAR_PATH --runThreadN "$NUM_THREADS" \
          --genomeDir $REFERENCE_GENOME \
          --readFilesIn $trimmed_file \
          --readFilesCommand zcat \

@@ -8,4 +8,5 @@
   "fragment_size_filter": "below_1000",
   "custom_genome_size": null,
   "log_dir": "/mnt/data/home/aviv/output/logs"
+  "num_threads": 4  # Number of threads for STAR alignment
 }
