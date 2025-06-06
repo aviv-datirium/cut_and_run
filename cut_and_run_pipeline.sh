@@ -83,15 +83,15 @@ echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR
 #~ fi
 
 # Step 2: Adapter trimming (optional, if necessary)
-echo "Trimming adapters and low-quality reads..." | tee -a "$LOG_DIR/pipeline.log"
-for fastq_file in $RAW_FASTQ_DIR/*.{fastq,fq}.gz
-do
+echo "Trimming adapters and low-quality reads..." | tee -a $LOG_DIR/pipeline.log
 
+# Use find to list all .fq.gz and .fastq.gz files correctly
+for fastq_file in $(find $RAW_FASTQ_DIR -type f \( -iname "*.fastq.gz" -o -iname "*.fq.gz" \)); do
     # Extract the base name by removing the extensions (.fq.gz or .fastq.gz)
     base_name=$(basename "$fastq_file" .gz)  # Remove .gz first
     base_name=${base_name%.fastq}  # Remove .fastq extension
     base_name=${base_name%.fq}  # Remove .fq extension
-    
+
     # Ensure base_name doesn't have issues with the file name
     base_name=$(echo "$base_name" | sed 's/[^a-zA-Z0-9_-]//g')  # Remove any special characters
 
