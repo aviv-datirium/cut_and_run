@@ -191,7 +191,7 @@ do
     base_name=$(basename $dedup_bam .dedup.bam)
 
     # Step 5.1: Generate BedGraph from BAM using bedtools genomecov
-    bedtools genomecov -ibam $dedup_bam -g $GENOME_SIZE -bg > $OUTPUT_DIR/bigwig_bedgraphs/$base_name.bedgraph
+    bedtools genomecov -ibam $dedup_bam -bg > $OUTPUT_DIR/bigwig_bedgraphs/$base_name.bedgraph
     if [ $? -ne 0 ]; then
         echo "BedGraph generation failed for $base_name. Check $LOG_DIR/bedgraph_error.log for details." | tee -a $LOG_DIR/pipeline.log
         exit 1
