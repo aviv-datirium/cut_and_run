@@ -199,7 +199,7 @@ do
     fi
 
     # Step 5.2: Convert BedGraph to BigWig using bedGraphToBigWig (UCSC tool)
-    bedGraphToBigWig $OUTPUT_DIR/bigwig_bedgraphs/$base_name.bedgraph $OUTPUT_DIR/bigwig_bedgraphs/$base_name.bw
+    bedGraphToBigWig $OUTPUT_DIR/bigwig_bedgraphs/$base_name.bedgraph $CHROM_SIZE $OUTPUT_DIR/bigwig_bedgraphs/$base_name.bw
     if [ $? -ne 0 ]; then
         echo "BigWig conversion failed for $base_name. Check $LOG_DIR/bigwig_error.log for details." | tee -a $LOG_DIR/pipeline.log
         exit 1
