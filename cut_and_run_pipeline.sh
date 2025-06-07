@@ -40,6 +40,9 @@ mkdir -p $OUTPUT_DIR/fastqc_reports
 # Create BigWig and BedGraph output directory if it doesn't exist
 mkdir -p $OUTPUT_DIR/bigwig_bedgraphs
 
+# Create annotated_peaks directory if it doesn't exist
+mkdir -p $OUTPUT_DIR/annotated_peaks
+
 # Define log and error files
 mkdir -p $LOG_DIR
 
