@@ -163,7 +163,7 @@ do
 done
 
 # Step 5: Peak calling with MACS2 (both broad and narrow peaks)
-echo "Running MACS2 for peak calling (both broad, narrow, and gapped peaks)..." | tee -a $LOG_DIR/pipeline.log
+echo "Running MACS2 for peak calling (both broad and gapped peaks)..." | tee -a $LOG_DIR/pipeline.log
 for filtered_bam in $ALIGNMENT_DIR/*.filtered.bam
 do
     base_name=$(basename $filtered_bam .filtered.bam)
