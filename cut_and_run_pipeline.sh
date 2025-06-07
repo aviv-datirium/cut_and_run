@@ -162,21 +162,21 @@ do
     fi
 done
 
-# Step 5: Peak calling with MACS2 (both broad, and narrow peaks)
+# Step 5: Peak calling with MACS2 (both broad and narrow peaks)
 echo "Running MACS2 for peak calling (both broad, narrow, and gapped peaks)..." | tee -a $LOG_DIR/pipeline.log
 for filtered_bam in $ALIGNMENT_DIR/*.filtered.bam
 do
     base_name=$(basename $filtered_bam .filtered.bam)
 
     # Narrow peaks (for TFs, etc.)
-    macs2 callpeak -t $filtered_bam -f BAM -g $GENOME_SIZE -n $base_name --outdir $OUTPUT_DIR/macs2_peaks --call-summits > $LOG_DIR/macs2_${base_name}_narrow.log 2> $LOG_DIR/macs2_${base_name}_narrow_error.log
+    macs2 callpeak -t $filtered_bam -f BAM -n $base_name --outdir $OUTPUT_DIR/macs2_peaks --call-summits > $LOG_DIR/macs2_${base_name}_narrow.log 2> $LOG_DIR/macs2_${base_name}_narrow_error.log
     if [ $? -ne 0 ]; then
         echo "MACS2 narrow peak calling failed for $base_name. Check $LOG_DIR/macs2_${base_name}_narrow_error.log for details." | tee -a $LOG_DIR/pipeline.log
         exit 1
     fi
 
     # Broad peaks (for histones, etc.)
-    macs2 callpeak -t $filtered_bam -f BAM -g $GENOME_SIZE -n $base_name --outdir $OUTPUT_DIR/macs2_peaks --broad > $LOG_DIR/macs2_${base_name}_broad.log 2> $LOG_DIR/macs2_${base_name}_broad_error.log
+    macs2 callpeak -t $filtered_bam -f BAM -n $base_name --outdir $OUTPUT_DIR/macs2_peaks --broad > $LOG_DIR/macs2_${base_name}_broad.log 2> $LOG_DIR/macs2_${base_name}_broad_error.log
     if [ $? -ne 0 ]; then
         echo "MACS2 broad peak calling failed for $base_name. Check $LOG_DIR/macs2_${base_name}_broad_error.log for details." | tee -a $LOG_DIR/pipeline.log
         exit 1
