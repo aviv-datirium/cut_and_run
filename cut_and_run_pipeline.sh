@@ -178,13 +178,7 @@ do
         echo "MACS2 broad peak calling failed for $base_name. Check $LOG_DIR/macs2_${base_name}_broad_error.log for details." | tee -a $LOG_DIR/pipeline.log
         exit 1
     fi
-
-    # Gapped peaks
-    macs2 callpeak -t $filtered_bam -f BAM -g $GENOME_SIZE -n $base_name --outdir $OUTPUT_DIR/macs2_peaks --gappedPeak > $LOG_DIR/macs2_${base_name}_gapped.log 2> $LOG_DIR/macs2_${base_name}_gapped_error.log
-    if [ $? -ne 0 ]; then
-        echo "MACS2 gapped peak calling failed for $base_name. Check $LOG_DIR/macs2_${base_name}_gapped_error.log for details." | tee -a $LOG_DIR/pipeline.log
-        exit 1
-    fi
+    
 done
 
 # Step 6: Generate BigWig Files from BAM
