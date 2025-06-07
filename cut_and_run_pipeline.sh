@@ -13,6 +13,7 @@ FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' $CONFIG_FILE)
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' $CONFIG_FILE)
 LOG_DIR=$(jq -r '.log_dir' $CONFIG_FILE)
 NUM_THREADS=$(jq -r '.num_threads' $CONFIG_FILE)  # Get the number of threads from the config file
+CHROM_SIZE=$(jq -r '.chrom_sizes' $CONFIG_FILE)  # chromosome sizes for bedGraphToBigwig
 
 # Define genome sizes for various species (numeric values in base pairs)
 GENOME_SIZE_HUMAN=2913022398  # Human genome size (hg38)
