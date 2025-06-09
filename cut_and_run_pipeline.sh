@@ -192,7 +192,8 @@ echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR
 #~ fi
 
 # Step 4.1: Remove duplicates using Picard's MarkDuplicates
-echo "Removing duplicates using Picard MarkDuplicates..." | tee -a $LOG_DIR/pipeline.log
+echo "Running Picard AddOrReplaceReadGroups + MarkDuplicates..." | tee -a "$LOG_DIR/pipeline.log"
+
 for bam in "$ALIGNMENT_DIR"/*.Aligned.sortedByCoord.out.bam; do
     if [ ! -s "$bam" ]; then
         echo "⚠️ Skipping empty BAM: $bam" | tee -a "$LOG_DIR/pipeline.log"
@@ -200,10 +201,26 @@ for bam in "$ALIGNMENT_DIR"/*.Aligned.sortedByCoord.out.bam; do
     fi
 
     base=$(basename "$bam" .Aligned.sortedByCoord.out.bam)
-    java -jar "$PICARD_PATH" MarkDuplicates \
+
+    # Step 1: Add read groups
+    java -jar "$PICARD_PATH" AddOrReplaceReadGroups \
         I="$bam" \
+        O="$ALIGNMENT_DIR/${base}.rg.bam" \
+        RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM="${base}" \
+        VALIDATION_STRINGENCY=LENIENT
+
+    if [ $? -ne 0 ]; then
+        echo "❌ AddOrReplaceReadGroups failed for $base." | tee -a "$LOG_DIR/pipeline.log"
+        exit 1
+    fi
+
+    # Step 2: Mark Duplicates
+    java -jar "$PICARD_PATH" MarkDuplicates \
+        I="$ALIGNMENT_DIR/${base}.rg.bam" \
         O="$ALIGNMENT_DIR/${base}.dedup.bam" \
-        M="$LOG_DIR/${base}.metrics.txt" REMOVE_DUPLICATES=true
+        M="$LOG_DIR/${base}.metrics.txt" \
+        REMOVE_DUPLICATES=true \
+        VALIDATION_STRINGENCY=LENIENT
 
     if [ $? -ne 0 ]; then
         echo "❌ Picard MarkDuplicates failed for $base." | tee -a "$LOG_DIR/pipeline.log"
