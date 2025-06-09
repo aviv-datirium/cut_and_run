@@ -88,7 +88,8 @@ STAR_PATH="/mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR"
 # Make output directories
 mkdir -p $OUTPUT_DIR $ALIGNMENT_DIR
 # Create FastQC output directory if it doesn't exist
-mkdir -p $OUTPUT_DIR/fastqc_reports
+FASTQC_DIR="$OUTPUT_DIR/fastqc_reports"
+mkdir -p "$FASTQC_DIR"
 # MACS2 peaks
 mkdir -p $OUTPUT_DIR/macs2_peaks
 # Create BigWig and BedGraph output directory if it doesn't exist
@@ -119,7 +120,7 @@ case $GENOME_SIZE_STRING in
             # Use the custom genome size provided by the user
             GENOME_SIZE=$CUSTOM_GENOME_SIZE
         else
-            echo "Error: Invalid genome size string provided in config.json. Please use one of: hs, mm, dm, ce, sc, or provide a custom size." | tee -a $LOG_DIR/pipeline.log
+            echo "Error: Invalid genome size string provided in config.json. Please use one of: hs, mm, dm, ce, sc, or provide a custom size." | tee -a "$LOG_DIR/pipeline.log"
             exit 1
         fi
         ;;
@@ -131,10 +132,10 @@ if [ -n "$CONTROL_R1" ]; then
     FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2")
 fi
 
-echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR/pipeline.log
+echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a "$LOG_DIR/pipeline.log"
 
 # Step 1: FastQC
-echo "Running FastQC..." | tee -a $LOG_DIR/pipeline.log
+echo "Running FastQC..." | tee -a "$LOG_DIR/pipeline.log"
 for fq in "${FASTQ_FILES[@]}"; do
     fastqc --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
 done
@@ -181,7 +182,7 @@ done
 
 
 #~ # Step 3: Align reads to the reference genome using STAR
-#~ echo "Aligning trimmed FASTQ paired-end reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
+#~ echo "Aligning trimmed FASTQ paired-end reads to the reference genome using STAR..." | tee -a "$LOG_DIR/pipeline.log"
 
 #~ $STAR_PATH --runThreadN "$NUM_THREADS" \
     #~ --genomeDir "$REFERENCE_GENOME" \
@@ -243,7 +244,7 @@ for bam in "$ALIGNMENT_DIR"/*.Aligned.sortedByCoord.out.bam; do
 done
 
 # Step 4.2: Filter by fragment size
-echo "Filtering by fragment size: $FRAGMENT_SIZE_FILTER..." | tee -a $LOG_DIR/pipeline.log
+echo "Filtering by fragment size: $FRAGMENT_SIZE_FILTER..." | tee -a "$LOG_DIR/pipeline.log"
 for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
     base=$(basename "$bam" .dedup.bam)
     if [ "$FRAGMENT_SIZE_FILTER" == "histones" ]; then
@@ -256,7 +257,7 @@ for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
 done
 
 # Step 5: Peak calling with MACS2 (both broad and narrow peaks)
-echo "Running MACS2 for peak calling (both broad and gapped peaks)..." | tee -a $LOG_DIR/pipeline.log
+echo "Running MACS2 for peak calling (both broad and gapped peaks)..." | tee -a "$LOG_DIR/pipeline.log"
 TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
 
 # Check if filtered BAM exists
@@ -290,7 +291,7 @@ else
 fi
 
 # Step 6: Generate BigWig Files from BAM
-echo "Generating BigWig files from BAM files..." | tee -a $LOG_DIR/pipeline.log
+echo "Generating BigWig files from BAM files..." | tee -a "$LOG_DIR/pipeline.log"
 # BedGraph and BigWig
 echo "Generating BigWig files..." | tee -a "$LOG_DIR/pipeline.log"
 for bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
@@ -300,8 +301,7 @@ for bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
 done
 
 # Step 7: Annotate Peaks (optional)
-echo "Annotating peaks using bedtools..." | tee -a $LOG_DIR/pipeline.log
-echo "Annotating peaks..." | tee -a "$LOG_DIR/pipeline.log"
+echo "Annotating peaks using bedtools..." | tee -a "$LOG_DIR/pipeline.log"
 for np in "$OUTPUT_DIR/macs2_peaks"/*.narrowPeak; do
     base=$(basename "$np" .narrowPeak)
     bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb > "$OUTPUT_DIR/annotated_peaks/${base}.annotated.bed"
@@ -309,9 +309,9 @@ for np in "$OUTPUT_DIR/macs2_peaks"/*.narrowPeak; do
 done
 
 # Step 8: MultiQC (aggregate QC results from both FastQC and Alignment)
-echo "Generating MultiQC report for both FastQC and alignment results..." | tee -a $LOG_DIR/pipeline.log
+echo "Generating MultiQC report for both FastQC and alignment results..." | tee -a "$LOG_DIR/pipeline.log"
 multiqc "$OUTPUT_DIR/fastqc_reports" "$ALIGNMENT_DIR" -o "$OUTPUT_DIR/multiqc_report_combined" \
     > "$LOG_DIR/multiqc.log" 2> "$LOG_DIR/multiqc_error.log"
 
 # Final report
-echo "Analysis complete! Check the output directory for the results, including BigWig files, broad/narrow peaks, and annotated peaks in TSV format." | tee -a $LOG_DIR/pipeline.log
+echo "Analysis complete! Check the output directory for the results, including BigWig files, broad/narrow peaks, and annotated peaks in TSV format." | tee -a "$LOG_DIR/pipeline.log"
