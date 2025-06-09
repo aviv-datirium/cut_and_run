@@ -17,12 +17,17 @@ TREATMENT_R2=$(jq -r '.samples.treatment.r2' $CONFIG_FILE)
 CONTROL_R1=$(jq -r '.samples.control.r1 // empty' $CONFIG_FILE)
 CONTROL_R2=$(jq -r '.samples.control.r2 // empty' $CONFIG_FILE)
 
-#~ # Defining base names for all samples
-#~ TREATMENT_BASENAME=$(basename $TREATMENT_R1 | sed 's/_R1.*//;s/\.fastq.*//;s/[^a-zA-Z0-9_-]//g')
-#~ CONTROL_BASENAME=""
-#~ if [ -n "$CONTROL_R1" ]; then
-    #~ CONTROL_BASENAME=$(basename $CONTROL_R1 | sed 's/_R1.*//;s/\.fastq.*//;s/[^a-zA-Z0-9_-]//g')
-#~ fi
+# Defining base names for all files
+TREATMENT_BASE=$(get_sample_basename "$TREATMENT_R1")
+TREATMENT_TRIMMED_R1="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R1.fq.gz"
+TREATMENT_TRIMMED_R2="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R2.fq.gz"
+
+if [ -n "$CONTROL_R1" ]; then
+    CONTROL_BASE=$(get_sample_basename "$CONTROL_R1")
+    CONTROL_TRIMMED_R1="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R1.fq.gz"
+    CONTROL_TRIMMED_R2="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R2.fq.gz"
+fi
+
 
 # Required data files
 REFERENCE_GENOME=$(jq -r '.reference_genome' $CONFIG_FILE)
@@ -34,6 +39,11 @@ GENOME_SIZE_STRING=$(jq -r '.genome_size' $CONFIG_FILE)
 FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' $CONFIG_FILE)
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' $CONFIG_FILE)
 NUM_THREADS=$(jq -r '.num_threads' $CONFIG_FILE)  # Get the number of threads from the config file
+
+# MACS2-specific params
+# In common in cases like CUT&RUN or when read count is low or fragment length is narrow (as expected in histone or TF targeting experiments), MACS2 simply falls back to non-model-based peak calling and recommends
+BROAD_EXTSIZE=$(jq -r '.broad_peak_extsize' "$CONFIG_FILE")
+NARROW_EXTSIZE=$(jq -r '.narrow_peak_extsize' "$CONFIG_FILE")
 
 # Define genome sizes for various species (numeric values in base pairs)
 GENOME_SIZE_HUMAN=2913022398  # Human genome size (hg38)
@@ -165,10 +175,6 @@ echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR
 #~ # Step 3: Align reads to the reference genome using STAR
 #~ echo "Aligning trimmed FASTQ paired-end reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
 
-TREATMENT_BASE=$(get_sample_basename "$TREATMENT_R1")
-TREATMENT_TRIMMED_R1="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R1.fq.gz"
-TREATMENT_TRIMMED_R2="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R2.fq.gz"
-
 #~ $STAR_PATH --runThreadN "$NUM_THREADS" \
     #~ --genomeDir "$REFERENCE_GENOME" \
     #~ --readFilesIn "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
@@ -263,11 +269,16 @@ if [ -n "$CONTROL_R1" ] && [ -f "$ALIGNMENT_DIR/${CONTROL_BASE}.filtered.bam" ];
         --call-summits --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
 else
     echo "Calling peaks with treatment only (no control)..." | tee -a "$LOG_DIR/pipeline.log"
-    macs2 callpeak -t "$TREATMENT_FILTERED" \
-        --broad --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
 
-    macs2 callpeak -t "$TREATMENT_FILTERED" \
-        --call-summits --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+	macs2 callpeak -t "$TREATMENT_FILTERED" \
+		--broad --nomodel --extsize "$BROAD_EXTSIZE" \
+		--outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+
+	macs2 callpeak -t "$TREATMENT_FILTERED" \
+		--call-summits --nomodel --extsize "$NARROW_EXTSIZE" \
+		--outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+
+
 fi
 
 # Step 6: Generate BigWig Files from BAM

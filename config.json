@@ -16,8 +16,10 @@
   "chrom_sizes": "/mnt/data/home/aviv/chrom/hg38.chrom.sizes",
   "annotation_genes": "/mnt/data/home/aviv/annotation/hg38.refGene.gtf",
   "genome_size": "hs",
-  "fragment_size_filter": "below_1000",
   "custom_genome_size": null,
+  "fragment_size_filter": "below_1000",
+  "broad_peak_extsize": 147,
+  "narrow_peak_extsize": 200,
   "log_dir": "/mnt/data/home/aviv/output/logs",
   "num_threads": 4
 }
