@@ -9,7 +9,6 @@
       "r2": "/mnt/data/home/aviv/test_fastq/control_R2.fastq.gz"
     }
   },
-{
   "raw_fastq_dir": "/mnt/data/home/aviv/test_fastq",
   "alignment_dir": "/mnt/data/home/aviv/alignment",
   "output_dir": "/mnt/data/home/aviv/output",
