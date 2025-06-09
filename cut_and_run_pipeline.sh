@@ -17,6 +17,32 @@ TREATMENT_R2=$(jq -r '.samples.treatment.r2' $CONFIG_FILE)
 CONTROL_R1=$(jq -r '.samples.control.r1 // empty' $CONFIG_FILE)
 CONTROL_R2=$(jq -r '.samples.control.r2 // empty' $CONFIG_FILE)
 
+# --- Define helper functions ---
+# Getting base names for all samples
+# Helper to get clean base name
+get_sample_basename() {
+    local r1=$1
+    local base=$(basename "$r1")
+    base=${base%.fastq.gz}
+    base=${base%.fq.gz}
+    base=${base%_R1}
+    base=${base%_1}
+    base=${base%.R1}
+    base=${base%.1}
+    echo "$base" | sed 's/[^a-zA-Z0-9._-]//g'
+}
+
+get_trimmed_files() {
+    local r1=$1
+    local r2=$2
+    local name1=$(basename "$r1")
+    local name2=$(basename "$r2")
+    name1=${name1%.fastq.gz}
+    name1=${name1%.fq.gz}
+    name2=${name2%.fastq.gz}
+    name2=${name2%.fq.gz}
+    echo "$ALIGNMENT_DIR/${name1}_val_1.fq.gz $ALIGNMENT_DIR/${name2}_val_2.fq.gz"
+}
 # Defining base names for all files
 TREATMENT_BASE=$(get_sample_basename "$TREATMENT_R1")
 TREATMENT_TRIMMED_R1="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R1.fq.gz"
@@ -27,7 +53,6 @@ if [ -n "$CONTROL_R1" ]; then
     CONTROL_TRIMMED_R1="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R1.fq.gz"
     CONTROL_TRIMMED_R2="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R2.fq.gz"
 fi
-
 
 # Required data files
 REFERENCE_GENOME=$(jq -r '.reference_genome' $CONFIG_FILE)
@@ -99,32 +124,6 @@ case $GENOME_SIZE_STRING in
         fi
         ;;
 esac
-
-# Getting base names for all samples
-# Helper to get clean base name
-get_sample_basename() {
-    local r1=$1
-    local base=$(basename "$r1")
-    base=${base%.fastq.gz}
-    base=${base%.fq.gz}
-    base=${base%_R1}
-    base=${base%_1}
-    base=${base%.R1}
-    base=${base%.1}
-    echo "$base" | sed 's/[^a-zA-Z0-9._-]//g'
-}
-
-get_trimmed_files() {
-    local r1=$1
-    local r2=$2
-    local name1=$(basename "$r1")
-    local name2=$(basename "$r2")
-    name1=${name1%.fastq.gz}
-    name1=${name1%.fq.gz}
-    name2=${name2%.fastq.gz}
-    name2=${name2%.fq.gz}
-    echo "$ALIGNMENT_DIR/${name1}_val_1.fq.gz $ALIGNMENT_DIR/${name2}_val_2.fq.gz"
-}
 
 echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR/pipeline.log
 
