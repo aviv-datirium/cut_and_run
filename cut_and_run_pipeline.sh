@@ -165,9 +165,9 @@ echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR
 #~ # Step 3: Align reads to the reference genome using STAR
 #~ echo "Aligning trimmed FASTQ paired-end reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
 
-#~ TREATMENT_BASE=$(get_sample_basename "$TREATMENT_R1")
-#~ TREATMENT_TRIMMED_R1="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R1.fq.gz"
-#~ TREATMENT_TRIMMED_R2="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R2.fq.gz"
+TREATMENT_BASE=$(get_sample_basename "$TREATMENT_R1")
+TREATMENT_TRIMMED_R1="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R1.fq.gz"
+TREATMENT_TRIMMED_R2="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R2.fq.gz"
 
 #~ $STAR_PATH --runThreadN "$NUM_THREADS" \
     #~ --genomeDir "$REFERENCE_GENOME" \
