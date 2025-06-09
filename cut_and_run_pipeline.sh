@@ -104,11 +104,16 @@ get_sample_basename() {
     echo "$base" | sed 's/[^a-zA-Z0-9._-]//g'
 }
 
-# Helper to get trimmed file paths
 get_trimmed_files() {
     local r1=$1
-    local base=$(get_sample_basename "$r1")
-    echo "$ALIGNMENT_DIR/${base}_val_1.fq.gz $ALIGNMENT_DIR/${base}_val_2.fq.gz"
+    local r2=$2
+    local name1=$(basename "$r1")
+    local name2=$(basename "$r2")
+    name1=${name1%.fastq.gz}
+    name1=${name1%.fq.gz}
+    name2=${name2%.fastq.gz}
+    name2=${name2%.fq.gz}
+    echo "$ALIGNMENT_DIR/${name1}_val_1.fq.gz $ALIGNMENT_DIR/${name2}_val_2.fq.gz"
 }
 
 echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR/pipeline.log
@@ -125,34 +130,43 @@ for role in treatment control; do
 done
 
 # Step 2: Adapter trimming
-echo "Trimming adapters..." | tee -a $LOG_DIR/pipeline.log
+echo "Running Trim Galore and renaming output..." | tee -a "$LOG_DIR/pipeline.log"
+
+echo "Running Trim Galore and renaming output..." | tee -a "$LOG_DIR/pipeline.log"
+
 for role in treatment control; do
     R1=$(jq -r ".samples.${role}.r1 // empty" $CONFIG_FILE)
     R2=$(jq -r ".samples.${role}.r2 // empty" $CONFIG_FILE)
+
     if [ -n "$R1" ] && [ -n "$R2" ]; then
         BASE=$(get_sample_basename "$R1")
-        $TRIMGALORE_PATH --paired --quality 20 --phred33 \
-            --output_dir "$ALIGNMENT_DIR" "$R1" "$R2" \
+
+        trim_galore --paired --quality 20 --phred33 \
+            --output_dir "$ALIGNMENT_DIR" \
+            "$R1" "$R2" \
             > "$LOG_DIR/trim_galore_${BASE}.log" 2> "$LOG_DIR/trim_galore_${BASE}_error.log"
+
+        # Find the actual output files by listing *_val_1.fq.gz and *_val_2.fq.gz
+        VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" -newermt -5min | grep "$BASE" | head -n1)
+        VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" -newermt -5min | grep "$BASE" | head -n1)
+
+        if [ ! -f "$VAL1" ] || [ ! -f "$VAL2" ]; then
+            echo "Trimmed files not found for $BASE. Aborting." | tee -a "$LOG_DIR/pipeline.log"
+            exit 1
+        fi
+
+        mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
+        mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
     fi
 done
 
-# Resolve trimmed file names
-get_trimmed_files() {
-    local r1=$1
-    local base=$(get_sample_basename "$r1")
-    echo "$ALIGNMENT_DIR/${base}_val_1.fq.gz $ALIGNMENT_DIR/${base}_val_2.fq.gz"
-}
-
-read TREATMENT_TRIMMED_R1 TREATMENT_TRIMMED_R2 < <(get_trimmed_files "$TREATMENT_R1")
-if [ -n "$CONTROL_R1" ] && [ -n "$CONTROL_R2" ]; then
-    read CONTROL_TRIMMED_R1 CONTROL_TRIMMED_R2 < <(get_trimmed_files "$CONTROL_R1")
-fi
-
 # Step 3: Align reads to the reference genome using STAR
-echo "Aligning paired-end reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
-echo "Aligning with STAR..." | tee -a "$LOG_DIR/pipeline.log"
+echo "Aligning trimmed FASTQ paired-end reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
+
 TREATMENT_BASE=$(get_sample_basename "$TREATMENT_R1")
+TREATMENT_TRIMMED_R1="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R1.fq.gz"
+TREATMENT_TRIMMED_R2="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R2.fq.gz"
+
 $STAR_PATH --runThreadN "$NUM_THREADS" \
     --genomeDir "$REFERENCE_GENOME" \
     --readFilesIn "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
@@ -163,6 +177,9 @@ $STAR_PATH --runThreadN "$NUM_THREADS" \
 
 if [ -n "$CONTROL_R1" ] && [ -n "$CONTROL_R2" ]; then
     CONTROL_BASE=$(get_sample_basename "$CONTROL_R1")
+    CONTROL_TRIMMED_R1="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R1.fq.gz"
+    CONTROL_TRIMMED_R2="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R2.fq.gz"
+
     $STAR_PATH --runThreadN "$NUM_THREADS" \
         --genomeDir "$REFERENCE_GENOME" \
         --readFilesIn "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
