@@ -125,10 +125,19 @@ case $GENOME_SIZE_STRING in
         ;;
 esac
 
+# FASTQ_FILES is already built from config, e.g.:
+FASTQ_FILES=("$TREATMENT_R1" "$TREATMENT_R2")
+if [ -n "$CONTROL_R1" ]; then
+    FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2")
+fi
+
 echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR/pipeline.log
 
-#~ # Step 1: FastQC
-#~ echo "Running FastQC..." | tee -a $LOG_DIR/pipeline.log
+# Step 1: FastQC
+echo "Running FastQC..." | tee -a $LOG_DIR/pipeline.log
+for fq in "${FASTQ_FILES[@]}"; do
+    fastqc --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
+done
 #~ for role in treatment control; do
     #~ R1=$(jq -r ".samples.${role}.r1 // empty" $CONFIG_FILE)
     #~ R2=$(jq -r ".samples.${role}.r2 // empty" $CONFIG_FILE)
@@ -284,8 +293,8 @@ fi
 echo "Generating BigWig files from BAM files..." | tee -a $LOG_DIR/pipeline.log
 # BedGraph and BigWig
 echo "Generating BigWig files..." | tee -a "$LOG_DIR/pipeline.log"
-for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
-    base=$(basename "$bam" .dedup.bam)
+for bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
+    base=$(basename "$bam" .dedup.filtered.bam)
     bedtools genomecov -ibam "$bam" -bg > "$OUTPUT_DIR/bigwig_bedgraphs/${base}.bedgraph"
     bedGraphToBigWig "$OUTPUT_DIR/bigwig_bedgraphs/${base}.bedgraph" "$CHROM_SIZE" "$OUTPUT_DIR/bigwig_bedgraphs/${base}.bw"
 done
