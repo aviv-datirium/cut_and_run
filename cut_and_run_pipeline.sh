@@ -131,6 +131,7 @@ done
 
 # Step 2: Adapter trimming
 echo "Running Trim Galore and renaming output..." | tee -a "$LOG_DIR/pipeline.log"
+echo "Running Trim Galore and renaming output..." | tee -a "$LOG_DIR/pipeline.log"
 
 for role in treatment control; do
     R1=$(jq -r ".samples.${role}.r1 // empty" $CONFIG_FILE)
@@ -144,19 +145,24 @@ for role in treatment control; do
             "$R1" "$R2" \
             > "$LOG_DIR/trim_galore_${BASE}.log" 2> "$LOG_DIR/trim_galore_${BASE}_error.log"
 
-        # Find the actual output files by listing *_val_1.fq.gz and *_val_2.fq.gz
-        VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" -newermt -5min | grep "$BASE" | head -n1)
-        VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" -newermt -5min | grep "$BASE" | head -n1)
+        # Detect output
+        VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
+        VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
 
-        if [ ! -f "$VAL1" ] || [ ! -f "$VAL2" ]; then
-            echo "Trimmed files not found for $BASE. Aborting." | tee -a "$LOG_DIR/pipeline.log"
+        if [ "$role" == "treatment" ] && { [ ! -f "$VAL1" ] || [ ! -f "$VAL2" ]; }; then
+            echo "❌ Trimmed FASTQ files for treatment not found. Aborting." | tee -a "$LOG_DIR/pipeline.log"
             exit 1
         fi
 
-        mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
-        mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
+        if [ -f "$VAL1" ] && [ -f "$VAL2" ]; then
+            mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
+            mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
+        else
+            echo "⚠️  Trimmed files for optional sample '$role' not found. Skipping." | tee -a "$LOG_DIR/pipeline.log"
+        fi
     fi
 done
+
 
 # Step 3: Align reads to the reference genome using STAR
 echo "Aligning trimmed FASTQ paired-end reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
