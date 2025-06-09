@@ -118,87 +118,97 @@ get_trimmed_files() {
 
 echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a $LOG_DIR/pipeline.log
 
-# Step 1: FastQC
-echo "Running FastQC..." | tee -a $LOG_DIR/pipeline.log
-for role in treatment control; do
-    R1=$(jq -r ".samples.${role}.r1 // empty" $CONFIG_FILE)
-    R2=$(jq -r ".samples.${role}.r2 // empty" $CONFIG_FILE)
-    if [ -n "$R1" ] && [ -n "$R2" ]; then
-        $FASTQC_PATH "$R1" "$R2" -o $OUTPUT_DIR/fastqc_reports \
-            > "$LOG_DIR/fastqc_${role}.log" 2> "$LOG_DIR/fastqc_${role}_error.log"
-    fi
-done
+#~ # Step 1: FastQC
+#~ echo "Running FastQC..." | tee -a $LOG_DIR/pipeline.log
+#~ for role in treatment control; do
+    #~ R1=$(jq -r ".samples.${role}.r1 // empty" $CONFIG_FILE)
+    #~ R2=$(jq -r ".samples.${role}.r2 // empty" $CONFIG_FILE)
+    #~ if [ -n "$R1" ] && [ -n "$R2" ]; then
+        #~ $FASTQC_PATH "$R1" "$R2" -o $OUTPUT_DIR/fastqc_reports \
+            #~ > "$LOG_DIR/fastqc_${role}.log" 2> "$LOG_DIR/fastqc_${role}_error.log"
+    #~ fi
+#~ done
 
-# Step 2: Adapter trimming
-echo "Running Trim Galore and renaming output..." | tee -a "$LOG_DIR/pipeline.log"
-for role in treatment control; do
-    R1=$(jq -r ".samples.${role}.r1 // empty" $CONFIG_FILE)
-    R2=$(jq -r ".samples.${role}.r2 // empty" $CONFIG_FILE)
+#~ # Step 2: Adapter trimming
+#~ echo "Running Trim Galore and renaming output..." | tee -a "$LOG_DIR/pipeline.log"
+#~ for role in treatment control; do
+    #~ R1=$(jq -r ".samples.${role}.r1 // empty" $CONFIG_FILE)
+    #~ R2=$(jq -r ".samples.${role}.r2 // empty" $CONFIG_FILE)
 
-    if [ -n "$R1" ] && [ -n "$R2" ]; then
-        BASE=$(get_sample_basename "$R1")
+    #~ if [ -n "$R1" ] && [ -n "$R2" ]; then
+        #~ BASE=$(get_sample_basename "$R1")
 
-        trim_galore --paired --quality 20 --phred33 \
-            --output_dir "$ALIGNMENT_DIR" \
-            "$R1" "$R2" \
-            > "$LOG_DIR/trim_galore_${BASE}.log" 2> "$LOG_DIR/trim_galore_${BASE}_error.log"
+        #~ trim_galore --paired --quality 20 --phred33 \
+            #~ --output_dir "$ALIGNMENT_DIR" \
+            #~ "$R1" "$R2" \
+            #~ > "$LOG_DIR/trim_galore_${BASE}.log" 2> "$LOG_DIR/trim_galore_${BASE}_error.log"
 
-        # Detect output
-        VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
-        VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
+        #~ # Detect output
+        #~ VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
+        #~ VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
 
-        if [ "$role" == "treatment" ] && { [ ! -f "$VAL1" ] || [ ! -f "$VAL2" ]; }; then
-            echo "❌ Trimmed FASTQ files for treatment not found. Aborting." | tee -a "$LOG_DIR/pipeline.log"
-            exit 1
-        fi
+        #~ if [ "$role" == "treatment" ] && { [ ! -f "$VAL1" ] || [ ! -f "$VAL2" ]; }; then
+            #~ echo "❌ Trimmed FASTQ files for treatment not found. Aborting." | tee -a "$LOG_DIR/pipeline.log"
+            #~ exit 1
+        #~ fi
 
-        if [ -f "$VAL1" ] && [ -f "$VAL2" ]; then
-            mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
-            mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
-        else
-            echo "⚠️  Trimmed files for optional sample '$role' not found. Skipping." | tee -a "$LOG_DIR/pipeline.log"
-        fi
-    fi
-done
+        #~ if [ -f "$VAL1" ] && [ -f "$VAL2" ]; then
+            #~ mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
+            #~ mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
+        #~ else
+            #~ echo "⚠️  Trimmed files for optional sample '$role' not found. Skipping." | tee -a "$LOG_DIR/pipeline.log"
+        #~ fi
+    #~ fi
+#~ done
 
 
-# Step 3: Align reads to the reference genome using STAR
-echo "Aligning trimmed FASTQ paired-end reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
+#~ # Step 3: Align reads to the reference genome using STAR
+#~ echo "Aligning trimmed FASTQ paired-end reads to the reference genome using STAR..." | tee -a $LOG_DIR/pipeline.log
 
-TREATMENT_BASE=$(get_sample_basename "$TREATMENT_R1")
-TREATMENT_TRIMMED_R1="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R1.fq.gz"
-TREATMENT_TRIMMED_R2="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R2.fq.gz"
+#~ TREATMENT_BASE=$(get_sample_basename "$TREATMENT_R1")
+#~ TREATMENT_TRIMMED_R1="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R1.fq.gz"
+#~ TREATMENT_TRIMMED_R2="$ALIGNMENT_DIR/${TREATMENT_BASE}_trimmed_R2.fq.gz"
 
-$STAR_PATH --runThreadN "$NUM_THREADS" \
-    --genomeDir "$REFERENCE_GENOME" \
-    --readFilesIn "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
-    --readFilesCommand zcat \
-    --outFileNamePrefix "$ALIGNMENT_DIR/${TREATMENT_BASE}." \
-    --outSAMtype BAM SortedByCoordinate \
-    > "$LOG_DIR/STAR_${TREATMENT_BASE}.log" 2> "$LOG_DIR/STAR_${TREATMENT_BASE}_error.log"
+#~ $STAR_PATH --runThreadN "$NUM_THREADS" \
+    #~ --genomeDir "$REFERENCE_GENOME" \
+    #~ --readFilesIn "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
+    #~ --readFilesCommand zcat \
+    #~ --outFileNamePrefix "$ALIGNMENT_DIR/${TREATMENT_BASE}." \
+    #~ --outSAMtype BAM SortedByCoordinate \
+    #~ > "$LOG_DIR/STAR_${TREATMENT_BASE}.log" 2> "$LOG_DIR/STAR_${TREATMENT_BASE}_error.log"
 
-if [ -n "$CONTROL_R1" ] && [ -n "$CONTROL_R2" ]; then
-    CONTROL_BASE=$(get_sample_basename "$CONTROL_R1")
-    CONTROL_TRIMMED_R1="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R1.fq.gz"
-    CONTROL_TRIMMED_R2="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R2.fq.gz"
+#~ if [ -n "$CONTROL_R1" ] && [ -n "$CONTROL_R2" ]; then
+    #~ CONTROL_BASE=$(get_sample_basename "$CONTROL_R1")
+    #~ CONTROL_TRIMMED_R1="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R1.fq.gz"
+    #~ CONTROL_TRIMMED_R2="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R2.fq.gz"
 
-    $STAR_PATH --runThreadN "$NUM_THREADS" \
-        --genomeDir "$REFERENCE_GENOME" \
-        --readFilesIn "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
-        --readFilesCommand zcat \
-        --outFileNamePrefix "$ALIGNMENT_DIR/${CONTROL_BASE}." \
-        --outSAMtype BAM SortedByCoordinate \
-        > "$LOG_DIR/STAR_${CONTROL_BASE}.log" 2> "$LOG_DIR/STAR_${CONTROL_BASE}_error.log"
-fi
+    #~ $STAR_PATH --runThreadN "$NUM_THREADS" \
+        #~ --genomeDir "$REFERENCE_GENOME" \
+        #~ --readFilesIn "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
+        #~ --readFilesCommand zcat \
+        #~ --outFileNamePrefix "$ALIGNMENT_DIR/${CONTROL_BASE}." \
+        #~ --outSAMtype BAM SortedByCoordinate \
+        #~ > "$LOG_DIR/STAR_${CONTROL_BASE}.log" 2> "$LOG_DIR/STAR_${CONTROL_BASE}_error.log"
+#~ fi
 
 # Step 4.1: Remove duplicates using Picard's MarkDuplicates
 echo "Removing duplicates using Picard MarkDuplicates..." | tee -a $LOG_DIR/pipeline.log
-for bam in "$ALIGNMENT_DIR"/*.sortedByCoord.out.bam; do
-    base=$(basename "$bam" .sortedByCoord.out.bam)
+for bam in "$ALIGNMENT_DIR"/*.Aligned.sortedByCoord.out.bam; do
+    if [ ! -s "$bam" ]; then
+        echo "⚠️ Skipping empty BAM: $bam" | tee -a "$LOG_DIR/pipeline.log"
+        continue
+    fi
+
+    base=$(basename "$bam" .Aligned.sortedByCoord.out.bam)
     java -jar "$PICARD_PATH" MarkDuplicates \
         I="$bam" \
         O="$ALIGNMENT_DIR/${base}.dedup.bam" \
         M="$LOG_DIR/${base}.metrics.txt" REMOVE_DUPLICATES=true
+
+    if [ $? -ne 0 ]; then
+        echo "❌ Picard MarkDuplicates failed for $base." | tee -a "$LOG_DIR/pipeline.log"
+        exit 1
+    fi
 done
 
 # Step 4.2: Filter by fragment size
@@ -251,4 +261,4 @@ multiqc "$OUTPUT_DIR/fastqc_reports" "$ALIGNMENT_DIR" -o "$OUTPUT_DIR/multiqc_re
     > "$LOG_DIR/multiqc.log" 2> "$LOG_DIR/multiqc_error.log"
 
 # Final report
-echo "Analysis complete! Check the output directory for the results, including BigWig files, broad/narrow/gapped peaks, and annotated peaks in TSV format." | tee -a $LOG_DIR/pipeline.log
+echo "Analysis complete! Check the output directory for the results, including BigWig files, broad/narrow peaks, and annotated peaks in TSV format." | tee -a $LOG_DIR/pipeline.log
