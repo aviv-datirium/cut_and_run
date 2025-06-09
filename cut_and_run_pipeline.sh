@@ -233,24 +233,41 @@ echo "Filtering by fragment size: $FRAGMENT_SIZE_FILTER..." | tee -a $LOG_DIR/pi
 for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
     base=$(basename "$bam" .dedup.bam)
     if [ "$FRAGMENT_SIZE_FILTER" == "histones" ]; then
-        samtools view -h "$bam" | awk '{if ($9 >= 130 && $9 <= 300 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.filtered.bam"
+        samtools view -h "$bam" | awk '{if ($9 >= 130 && $9 <= 300 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
     elif [ "$FRAGMENT_SIZE_FILTER" == "transcription_factors" ]; then
-        samtools view -h "$bam" | awk '{if ($9 < 130 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.filtered.bam"
+        samtools view -h "$bam" | awk '{if ($9 < 130 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
     else
-        samtools view -h "$bam" | awk '{if ($9 < 1000 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.filtered.bam"
+        samtools view -h "$bam" | awk '{if ($9 < 1000 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
     fi
 done
 
 # Step 5: Peak calling with MACS2 (both broad and narrow peaks)
 echo "Running MACS2 for peak calling (both broad and gapped peaks)..." | tee -a $LOG_DIR/pipeline.log
-TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.filtered.bam"
-if [ -n "$CONTROL_R1" ] && [ -n "$CONTROL_R2" ]; then
-    CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.filtered.bam"
-    macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" --broad --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
-    macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" --call-summits --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
+
+# Check if filtered BAM exists
+if [ ! -f "$TREATMENT_FILTERED" ]; then
+    echo "❌ No treatment filtered BAM found: $TREATMENT_FILTERED" | tee -a "$LOG_DIR/pipeline.log"
+    exit 1
+fi
+
+# If control exists and is valid
+if [ -n "$CONTROL_R1" ] && [ -f "$ALIGNMENT_DIR/${CONTROL_BASE}.filtered.bam" ]; then
+    CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
+
+    echo "Calling peaks with treatment vs control..." | tee -a "$LOG_DIR/pipeline.log"
+    macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        --broad --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+
+    macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        --call-summits --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
 else
-    macs2 callpeak -t "$TREATMENT_FILTERED" --broad --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
-    macs2 callpeak -t "$TREATMENT_FILTERED" --call-summits --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+    echo "Calling peaks with treatment only (no control)..." | tee -a "$LOG_DIR/pipeline.log"
+    macs2 callpeak -t "$TREATMENT_FILTERED" \
+        --broad --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+
+    macs2 callpeak -t "$TREATMENT_FILTERED" \
+        --call-summits --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
 fi
 
 # Step 6: Generate BigWig Files from BAM
