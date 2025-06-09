@@ -131,8 +131,6 @@ done
 
 # Step 2: Adapter trimming
 echo "Running Trim Galore and renaming output..." | tee -a "$LOG_DIR/pipeline.log"
-echo "Running Trim Galore and renaming output..." | tee -a "$LOG_DIR/pipeline.log"
-
 for role in treatment control; do
     R1=$(jq -r ".samples.${role}.r1 // empty" $CONFIG_FILE)
     R2=$(jq -r ".samples.${role}.r2 // empty" $CONFIG_FILE)
