@@ -86,7 +86,7 @@ FASTQC_PATH="/mnt/data/home/aviv/tools/FastQC/fastqc"
 STAR_PATH="/mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR"
 
 # Make output directories
-mkdir -p $OUTPUT_DIR $ALIGNMENT_DIR
+mkdir -p $OUTPUT_DIR $LOG_DIR $ALIGNMENT_DIR
 # Create FastQC output directory if it doesn't exist
 FASTQC_DIR="$OUTPUT_DIR/fastqc_reports"
 mkdir -p "$FASTQC_DIR"
@@ -96,8 +96,9 @@ mkdir -p $OUTPUT_DIR/macs2_peaks
 mkdir -p $OUTPUT_DIR/bigwig_bedgraphs
 # Create annotated_peaks directory if it doesn't exist
 mkdir -p $OUTPUT_DIR/annotated_peaks
-# Create log and error files
-mkdir -p $LOG_DIR
+# Create MultiQC output directory if it doesn't exist
+MULTIQC_DIR="$OUTPUT_DIR/multiqc_reports"
+mkdir -p "$MULTIQC_DIR"
 
 # Default fragment size threshold for filtering (below 1000 bp)
 if [ "$FRAGMENT_SIZE_FILTER" == "histones" ]; then
@@ -310,7 +311,7 @@ done
 
 # Step 8: MultiQC (aggregate QC results from both FastQC and Alignment)
 echo "Generating MultiQC report for both FastQC and alignment results..." | tee -a "$LOG_DIR/pipeline.log"
-multiqc "$OUTPUT_DIR/fastqc_reports" "$ALIGNMENT_DIR" -o "$OUTPUT_DIR/multiqc_report_combined" \
+multiqc "$FASTQC_DIR" "$ALIGNMENT_DIR" -o "$MULTIQC_DIR" \
     > "$LOG_DIR/multiqc.log" 2> "$LOG_DIR/multiqc_error.log"
 
 # Final report
