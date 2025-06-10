@@ -63,6 +63,20 @@ get_sample_basename() {
   echo "$base" | sed 's/[^a-zA-Z0-9._-]//g'
 }
 
+# Usage: run_star <STAR_index> <R1> <R2> <outPrefix> <logBase>
+# Runs STAR → sorted BAM + logs.
+run_star() {
+  local index=$1 r1=$2 r2=$3 prefix=$4 logbase=$5
+  "$STAR_PATH" --runThreadN "$NUM_THREADS" \
+               --genomeDir  "$index" \
+               --readFilesIn "$r1" "$r2" \
+               --readFilesCommand zcat \
+               --outSAMtype BAM SortedByCoordinate \
+               --outFileNamePrefix "$prefix" \
+               > "$LOG_DIR/${logbase}.log"  \
+               2> "$LOG_DIR/${logbase}_err.log"
+}
+
 run_spikein_align() {
   # Align trimmed reads to E. coli spike‑in genome with STAR.
   # Usage: run_spikein_align R1 R2 SAMPLE_BASENAME
@@ -136,62 +150,70 @@ for fq in "${FASTQ_FILES[@]}"; do
 done
 
 # -----------------------------------------------------------------------------
-# 6  Adapter trimming (Trim Galore!)
+# 6  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs
 # -----------------------------------------------------------------------------
-for role in treatment control; do
-  R1=$(jq -r ".samples.${role}.r1 // empty" "$CONFIG_FILE")
-  R2=$(jq -r ".samples.${role}.r2 // empty" "$CONFIG_FILE")
-  [[ -z "$R1" || -z "$R2" ]] && continue
+echo "[Trim Galore] starting…" | tee -a "$LOG_DIR/pipeline.log"
 
+i=0
+while [[ $i -lt ${#FASTQ_FILES[@]} ]]; do
+  R1=${FASTQ_FILES[$i]}
+  R2=${FASTQ_FILES[$((i+1))]}
   BASE=$(get_sample_basename "$R1")
-  echo "[TRIM] Processing $BASE…" | tee -a "$LOG_DIR/pipeline.log"
 
+  echo "  ↳ trimming $BASE" | tee -a "$LOG_DIR/pipeline.log"
   trim_galore --paired --quality 20 --phred33 \
               --output_dir "$ALIGNMENT_DIR" "$R1" "$R2" \
-              > "$LOG_DIR/trim_galore_${BASE}.log" \
-              2> "$LOG_DIR/trim_galore_${BASE}_error.log"
+              > "$LOG_DIR/trim_${BASE}.log" 2>&1
 
   VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
   VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
-  [[ -f "$VAL1" && -f "$VAL2" ]] || { echo "❌ Trimmed FASTQs not found for $BASE" | tee -a "$LOG_DIR/pipeline.log"; exit 1; }
 
-  mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
-  mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
+  if [[ -f "$VAL1" && -f "$VAL2" ]]; then
+    mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
+    mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
+  else
+    echo "❌ Trim Galore did not produce trimmed files for $BASE — aborting." | tee -a "$LOG_DIR/pipeline.log"
+    exit 1
+  fi
+  i=$((i+2))
 done
 
+#-----------------------------------------------------------------------
+# Decide once if a usable control exists (for downstream steps)
+#-----------------------------------------------------------------------
+USE_CONTROL=0
+if [[ -n "${CONTROL_BASE:-}" ]] && \
+   [[ -f "$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R1.fq.gz" ]] && \
+   [[ -f "$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R2.fq.gz" ]]; then
+  USE_CONTROL=1
+  CONTROL_TRIMMED_R1="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R1.fq.gz"
+  CONTROL_TRIMMED_R2="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R2.fq.gz"
+else
+  echo "⚠️  No trimmed control FASTQs found — proceeding without control." | tee -a "$LOG_DIR/pipeline.log"
+fi
+
 # -----------------------------------------------------------------------------
-# 7  Spike‑in alignment (E. coli) — runs on trimmed FASTQs
+# 7  Spike-in alignment (E. coli)
 # -----------------------------------------------------------------------------
 run_spikein_align "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" "$TREATMENT_BASE"
-if [[ -n "$CONTROL_R1" ]]; then
+
+if [[ $USE_CONTROL -eq 1 ]]; then
   run_spikein_align "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" "$CONTROL_BASE"
 fi
+
 
 # -----------------------------------------------------------------------------
 # 8  Host‑genome alignment (STAR)
 # -----------------------------------------------------------------------------
-STAR_PATH="/mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR"
-
 echo "Aligning to host genome with STAR…" | tee -a "$LOG_DIR/pipeline.log"
+run_star "$REFERENCE_GENOME" \
+         "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
+         "$ALIGNMENT_DIR/${TREATMENT_BASE}." "STAR_${TREATMENT_BASE}"
 
-$STAR_PATH --runThreadN "$NUM_THREADS" \
-           --genomeDir "$REFERENCE_GENOME" \
-           --readFilesIn "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
-           --readFilesCommand zcat \
-           --outFileNamePrefix "$ALIGNMENT_DIR/${TREATMENT_BASE}." \
-           --outSAMtype BAM SortedByCoordinate \
-           > "$LOG_DIR/STAR_${TREATMENT_BASE}.log" \
-           2> "$LOG_DIR/STAR_${TREATMENT_BASE}_error.log"
-
-if [[ -n "$CONTROL_R1" ]]; then
-  $STAR_PATH --runThreadN "$NUM_THREADS" \
-             --genomeDir "$REFERENCE_GENOME" \
-             --readFilesIn "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
-             --readFilesCommand zcat \
-             --outFileNamePrefix "$ALIGNMENT_DIR/${CONTROL_BASE}." \
-             --outSAMtype BAM SortedByCoordinate \
-             > "$LOG_DIR/STAR_${CONTROL_BASE}.log" \
-             2> "$LOG_DIR/STAR_${CONTROL_BASE}_error.log"
+if [[ $USE_CONTROL -eq 1 ]]; then
+  run_star "$REFERENCE_GENOME" \
+           "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
+           "$ALIGNMENT_DIR/${CONTROL_BASE}." "STAR_${CONTROL_BASE}"
 fi
 
 # -----------------------------------------------------------------------------
@@ -230,19 +252,26 @@ for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
 done
 
 # -----------------------------------------------------------------------------
-# 11  Peak calling (MACS2)
+# 11  Peak calling (MACS2)
 # -----------------------------------------------------------------------------
 TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
-[[ -f "$TREATMENT_FILTERED" ]] || { echo "❌ Missing treatment BAM" | tee -a "$LOG_DIR/pipeline.log"; exit 1; }
+[[ -f "$TREATMENT_FILTERED" ]] || { echo "❌ Treatment BAM missing"; exit 1; }
 
-if [[ -n "$CONTROL_R1" ]]; then
+if [[ $USE_CONTROL -eq 1 ]]; then
   CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
-  macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" --broad --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-  macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" --call-summits --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+  macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        --broad         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+  macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        --call-summits  --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 else
-  macs2 callpeak -t "$TREATMENT_FILTERED" --broad --nomodel --extsize "$BROAD_EXTSIZE" --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-  macs2 callpeak -t "$TREATMENT_FILTERED" --call-summits --nomodel --extsize "$NARROW_EXTSIZE" --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+  macs2 callpeak -t "$TREATMENT_FILTERED" \
+        --broad --nomodel --extsize "$BROAD_EXTSIZE" \
+        --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+  macs2 callpeak -t "$TREATMENT_FILTERED" \
+        --call-summits --nomodel --extsize "$NARROW_EXTSIZE" \
+        --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 fi
+
 
 # -----------------------------------------------------------------------------
 # 12  BigWig generation
@@ -274,3 +303,18 @@ multiqc "$FASTQC_DIR" "$ALIGNMENT_DIR" "$SPIKE_BAM_DIR" \
        > "$LOG_DIR/multiqc.log" 2> "$LOG_DIR/multiqc_error.log"
 
 echo "🎉  CUT&RUN pipeline complete!  Results are in: $OUTPUT_DIR" | tee -a "$LOG_DIR/pipeline.log"
+
+#~ # -----------------------------------------------------------------------------
+#~ # 11  MultiQC summary
+#~ # -----------------------------------------------------------------------------
+#~ echo "[MultiQC] aggregating QC reports" | tee -a "$LOG_DIR/pipeline.log"
+
+#~ if [[ $USE_CONTROL -eq 1 ]]; then
+  #~ multiqc "$FASTQC_DIR" "$ALIGNMENT_DIR" "$SPIKE_BAM_DIR" \
+          #~ -o "$MULTIQC_DIR" \
+          #~ > "$LOG_DIR/multiqc.log" 2> "$LOG_DIR/multiqc_error.log"
+#~ else
+  #~ multiqc "$FASTQC_DIR" "$ALIGNMENT_DIR" \
+          #~ -o "$MULTIQC_DIR" \
+          #~ > "$LOG_DIR/multiqc.log" 2> "$LOG_DIR/multiqc_error.log"
+#~ fi
