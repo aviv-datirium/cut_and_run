@@ -26,13 +26,13 @@ cat <<'BANNER'
 # 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs         #
 # 8  Include/exclude control sample logic (for downstream steps)               #
 # 9  Spike-in alignment (E. coli) with STAR                                    #
-# 10  Host‑genome alignment (STAR)                                             #
+# 10  Host‑genome alignment with STAR                                          #
 # 11  Picard: Add RG + MarkDuplicates                                          #
 # 12  Fragment‑length filtering                                                #   
 # 13  Peak calling (MACS2)                                                     #
-# 14  Spike-in scaling factors (optional)                                      #
-# 15  BigWig generation (with optional scaling)                                #
-# 16  Peak annotation (optional)                                               #
+# 14  Calculateing spike-in scaling factors                                    #
+# 15  BigWig generation (with scaling)                                         #
+# 16  Peak annotation                                                          #
 # 17  MultiQC summary                                                          #
 ################################################################################
 
@@ -200,9 +200,12 @@ while [[ $i -lt ${#FASTQ_FILES[@]} ]]; do
   BASE=$(get_sample_basename "$R1")
 
   echo "  ↳ trimming $BASE" | tee -a "$LOG_DIR/pipeline.log"
-  trim_galore --paired --quality 20 --phred33 \
-              --output_dir "$ALIGNMENT_DIR" "$R1" "$R2" \
-              > "$LOG_DIR/trim_${BASE}.log" 2>&1
+  if ! trim_galore --paired --quality 20 --phred33 --output_dir "$ALIGNMENT_DIR" "$R1" "$R2" \
+                 > "$LOG_DIR/trim_${BASE}.log" 2>&1; then
+  echo "⚠️  Trim Galore exited with non-zero status for $BASE — continuing with raw reads" \
+    | tee -a "$LOG_DIR/pipeline.log"
+  # move on to the next pair without exiting the script
+fi
 
   VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
   VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
