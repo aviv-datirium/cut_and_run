@@ -38,7 +38,7 @@ cat <<'BANNER'
 
 BANNER
 
-set -euo pipefail
+set -o pipefail
 
 # ------------------------------------------------------------------------------
 # 0  Load parameters from config.json
@@ -200,12 +200,9 @@ while [[ $i -lt ${#FASTQ_FILES[@]} ]]; do
   BASE=$(get_sample_basename "$R1")
 
   echo "  ↳ trimming $BASE" | tee -a "$LOG_DIR/pipeline.log"
-  if ! trim_galore --paired --quality 20 --phred33 --output_dir "$ALIGNMENT_DIR" "$R1" "$R2" \
-                 > "$LOG_DIR/trim_${BASE}.log" 2>&1; then
-  echo "⚠️  Trim Galore exited with non-zero status for $BASE — continuing with raw reads" \
-    | tee -a "$LOG_DIR/pipeline.log"
-  # move on to the next pair without exiting the script
-fi
+  trim_galore --paired --quality 20 --phred33 \
+            --output_dir "$ALIGNMENT_DIR" "$R1" "$R2" \
+            > "$LOG_DIR/trim_${BASE}.log" 2>&1
 
   VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
   VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
