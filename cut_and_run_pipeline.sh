@@ -58,7 +58,7 @@ fi
 REFERENCE_GENOME=$(jq -r '.reference_genome' $CONFIG_FILE)
 ANNOTATION_GENES=$(jq -r '.annotation_genes' $CONFIG_FILE)
 CHROM_SIZE=$(jq -r '.chrom_sizes' $CONFIG_FILE)  # chromosome sizes for bedGraphToBigwig
-ECOLI_GENOME=$(jq -r '.ecoli_genome' $CONFIG_FILE)  # for cut&run spike-in
+ECOLI_INDEX=$(jq -r '.ecoli_index' $CONFIG_FILE)  # for cut&run spike-in
 
 # User run parameters
 GENOME_SIZE_STRING=$(jq -r '.genome_size' $CONFIG_FILE)
@@ -136,168 +136,168 @@ fi
 
 echo "Using genome size: $GENOME_SIZE for $GENOME_SIZE_STRING" | tee -a "$LOG_DIR/pipeline.log"
 
-#~ # Step 1: FastQC
-#~ echo "Running FastQC..." | tee -a "$LOG_DIR/pipeline.log"
-#~ for fq in "${FASTQ_FILES[@]}"; do
-    #~ fastqc --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
-#~ done
+# Step 1: FastQC
+echo "Running FastQC..." | tee -a "$LOG_DIR/pipeline.log"
+for fq in "${FASTQ_FILES[@]}"; do
+    fastqc --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
+done
 
-#~ # Step 2: Adapter trimming
-#~ echo "Running Trim Galore and renaming output..." | tee -a "$LOG_DIR/pipeline.log"
-#~ for role in treatment control; do
-    #~ R1=$(jq -r ".samples.${role}.r1 // empty" $CONFIG_FILE)
-    #~ R2=$(jq -r ".samples.${role}.r2 // empty" $CONFIG_FILE)
+# Step 2: Adapter trimming
+echo "Running Trim Galore and renaming output..." | tee -a "$LOG_DIR/pipeline.log"
+for role in treatment control; do
+    R1=$(jq -r ".samples.${role}.r1 // empty" $CONFIG_FILE)
+    R2=$(jq -r ".samples.${role}.r2 // empty" $CONFIG_FILE)
 
-    #~ if [ -n "$R1" ] && [ -n "$R2" ]; then
-        #~ BASE=$(get_sample_basename "$R1")
+    if [ -n "$R1" ] && [ -n "$R2" ]; then
+        BASE=$(get_sample_basename "$R1")
 
-        #~ trim_galore --paired --quality 20 --phred33 \
-            #~ --output_dir "$ALIGNMENT_DIR" \
-            #~ "$R1" "$R2" \
-            #~ > "$LOG_DIR/trim_galore_${BASE}.log" 2> "$LOG_DIR/trim_galore_${BASE}_error.log"
+        trim_galore --paired --quality 20 --phred33 \
+            --output_dir "$ALIGNMENT_DIR" \
+            "$R1" "$R2" \
+            > "$LOG_DIR/trim_galore_${BASE}.log" 2> "$LOG_DIR/trim_galore_${BASE}_error.log"
 
-        #~ # Detect output
-        #~ VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
-        #~ VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
+        # Detect output
+        VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
+        VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
 
-        #~ if [ "$role" == "treatment" ] && { [ ! -f "$VAL1" ] || [ ! -f "$VAL2" ]; }; then
-            #~ echo "❌ Trimmed FASTQ files for treatment not found. Aborting." | tee -a "$LOG_DIR/pipeline.log"
-            #~ exit 1
-        #~ fi
+        if [ "$role" == "treatment" ] && { [ ! -f "$VAL1" ] || [ ! -f "$VAL2" ]; }; then
+            echo "❌ Trimmed FASTQ files for treatment not found. Aborting." | tee -a "$LOG_DIR/pipeline.log"
+            exit 1
+        fi
 
-        #~ if [ -f "$VAL1" ] && [ -f "$VAL2" ]; then
-            #~ mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
-            #~ mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
-        #~ else
-            #~ echo "⚠️  Trimmed files for optional sample '$role' not found. Skipping." | tee -a "$LOG_DIR/pipeline.log"
-        #~ fi
-    #~ fi
-#~ done
-
-
-#~ # Step 3: Align reads to the reference genome using STAR
-#~ echo "Aligning trimmed FASTQ paired-end reads to the reference genome using STAR..." | tee -a "$LOG_DIR/pipeline.log"
-
-#~ $STAR_PATH --runThreadN "$NUM_THREADS" \
-    #~ --genomeDir "$REFERENCE_GENOME" \
-    #~ --readFilesIn "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
-    #~ --readFilesCommand zcat \
-    #~ --outFileNamePrefix "$ALIGNMENT_DIR/${TREATMENT_BASE}." \
-    #~ --outSAMtype BAM SortedByCoordinate \
-    #~ > "$LOG_DIR/STAR_${TREATMENT_BASE}.log" 2> "$LOG_DIR/STAR_${TREATMENT_BASE}_error.log"
-
-#~ if [ -n "$CONTROL_R1" ] && [ -n "$CONTROL_R2" ]; then
-    #~ CONTROL_BASE=$(get_sample_basename "$CONTROL_R1")
-    #~ CONTROL_TRIMMED_R1="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R1.fq.gz"
-    #~ CONTROL_TRIMMED_R2="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R2.fq.gz"
-
-    #~ $STAR_PATH --runThreadN "$NUM_THREADS" \
-        #~ --genomeDir "$REFERENCE_GENOME" \
-        #~ --readFilesIn "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
-        #~ --readFilesCommand zcat \
-        #~ --outFileNamePrefix "$ALIGNMENT_DIR/${CONTROL_BASE}." \
-        #~ --outSAMtype BAM SortedByCoordinate \
-        #~ > "$LOG_DIR/STAR_${CONTROL_BASE}.log" 2> "$LOG_DIR/STAR_${CONTROL_BASE}_error.log"
-#~ fi
-
-#~ # Step 4.1: Remove duplicates using Picard's MarkDuplicates
-#~ echo "Running Picard AddOrReplaceReadGroups + MarkDuplicates..." | tee -a "$LOG_DIR/pipeline.log"
-#~ for bam in "$ALIGNMENT_DIR"/*.Aligned.sortedByCoord.out.bam; do
-    #~ if [ ! -s "$bam" ]; then
-        #~ echo "⚠️ Skipping empty BAM: $bam" | tee -a "$LOG_DIR/pipeline.log"
-        #~ continue
-    #~ fi
-
-    #~ base=$(basename "$bam" .Aligned.sortedByCoord.out.bam)
-
-    #~ # Step 1: Add read groups
-    #~ java -jar "$PICARD_PATH" AddOrReplaceReadGroups \
-        #~ I="$bam" \
-        #~ O="$ALIGNMENT_DIR/${base}.rg.bam" \
-        #~ RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM="${base}" \
-        #~ VALIDATION_STRINGENCY=LENIENT
-
-    #~ if [ $? -ne 0 ]; then
-        #~ echo "❌ AddOrReplaceReadGroups failed for $base." | tee -a "$LOG_DIR/pipeline.log"
-        #~ exit 1
-    #~ fi
-
-    #~ # Step 2: Mark Duplicates
-    #~ java -jar "$PICARD_PATH" MarkDuplicates \
-        #~ I="$ALIGNMENT_DIR/${base}.rg.bam" \
-        #~ O="$ALIGNMENT_DIR/${base}.dedup.bam" \
-        #~ M="$LOG_DIR/${base}.metrics.txt" \
-        #~ REMOVE_DUPLICATES=true \
-        #~ VALIDATION_STRINGENCY=LENIENT
-
-    #~ if [ $? -ne 0 ]; then
-        #~ echo "❌ Picard MarkDuplicates failed for $base." | tee -a "$LOG_DIR/pipeline.log"
-        #~ exit 1
-    #~ fi
-#~ done
-
-#~ # Step 4.2: Filter by fragment size
-#~ echo "Filtering by fragment size: $FRAGMENT_SIZE_FILTER..." | tee -a "$LOG_DIR/pipeline.log"
-#~ for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
-    #~ base=$(basename "$bam" .dedup.bam)
-    #~ if [ "$FRAGMENT_SIZE_FILTER" == "histones" ]; then
-        #~ samtools view -h "$bam" | awk '{if ($9 >= 130 && $9 <= 300 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
-    #~ elif [ "$FRAGMENT_SIZE_FILTER" == "transcription_factors" ]; then
-        #~ samtools view -h "$bam" | awk '{if ($9 < 130 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
-    #~ else
-        #~ samtools view -h "$bam" | awk '{if ($9 < 1000 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
-    #~ fi
-#~ done
-
-#~ # Step 5: Peak calling with MACS2 (both broad and narrow peaks)
-#~ echo "Running MACS2 for peak calling (both broad and gapped peaks)..." | tee -a "$LOG_DIR/pipeline.log"
-#~ TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
-
-#~ # Check if filtered BAM exists
-#~ if [ ! -f "$TREATMENT_FILTERED" ]; then
-    #~ echo "❌ No treatment filtered BAM found: $TREATMENT_FILTERED" | tee -a "$LOG_DIR/pipeline.log"
-    #~ exit 1
-#~ fi
-
-#~ # If control exists and is valid
-#~ if [ -n "$CONTROL_R1" ] && [ -f "$ALIGNMENT_DIR/${CONTROL_BASE}.filtered.bam" ]; then
-    #~ CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
-
-    #~ echo "Calling peaks with treatment vs control..." | tee -a "$LOG_DIR/pipeline.log"
-    #~ macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
-        #~ --broad --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
-
-    #~ macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
-        #~ --call-summits --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
-#~ else
-    #~ echo "Calling peaks with treatment only (no control)..." | tee -a "$LOG_DIR/pipeline.log"
-
-	#~ macs2 callpeak -t "$TREATMENT_FILTERED" \
-		#~ --broad --nomodel --extsize "$BROAD_EXTSIZE" \
-		#~ --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
-
-	#~ macs2 callpeak -t "$TREATMENT_FILTERED" \
-		#~ --call-summits --nomodel --extsize "$NARROW_EXTSIZE" \
-		#~ --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+        if [ -f "$VAL1" ] && [ -f "$VAL2" ]; then
+            mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
+            mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
+        else
+            echo "⚠️  Trimmed files for optional sample '$role' not found. Skipping." | tee -a "$LOG_DIR/pipeline.log"
+        fi
+    fi
+done
 
 
-#~ fi
+# Step 3: Align reads to the reference genome using STAR
+echo "Aligning trimmed FASTQ paired-end reads to the reference genome using STAR..." | tee -a "$LOG_DIR/pipeline.log"
 
-#~ # Step 6: Generate BigWig Files from BAM
-#~ echo "Generating BigWig files from BAM files..." | tee -a "$LOG_DIR/pipeline.log"
-#~ for bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
-    #~ base=$(basename "$bam" .dedup.filtered.bam)
-    #~ bedtools genomecov -ibam "$bam" -bg > "$OUTPUT_DIR/bigwig_bedgraphs/${base}.bedgraph"
-    #~ bedGraphToBigWig "$OUTPUT_DIR/bigwig_bedgraphs/${base}.bedgraph" "$CHROM_SIZE" "$OUTPUT_DIR/bigwig_bedgraphs/${base}.bw"
-#~ done
+$STAR_PATH --runThreadN "$NUM_THREADS" \
+    --genomeDir "$REFERENCE_GENOME" \
+    --readFilesIn "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
+    --readFilesCommand zcat \
+    --outFileNamePrefix "$ALIGNMENT_DIR/${TREATMENT_BASE}." \
+    --outSAMtype BAM SortedByCoordinate \
+    > "$LOG_DIR/STAR_${TREATMENT_BASE}.log" 2> "$LOG_DIR/STAR_${TREATMENT_BASE}_error.log"
 
-#~ # Step 7: Annotate Peaks (optional)
-#~ echo "Annotating peaks using bedtools..." | tee -a "$LOG_DIR/pipeline.log"
-#~ for np in "$OUTPUT_DIR/macs2_peaks"/*.narrowPeak; do
-    #~ base=$(basename "$np" .narrowPeak)
-    #~ bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb > "$OUTPUT_DIR/annotated_peaks/${base}.annotated.bed"
-    #~ awk 'BEGIN{OFS="\t"} {print $1, $2, $3, $10, $11, $12}' "$OUTPUT_DIR/annotated_peaks/${base}.annotated.bed" > "$OUTPUT_DIR/annotated_peaks/${base}.annotated.tsv"
-#~ done
+if [ -n "$CONTROL_R1" ] && [ -n "$CONTROL_R2" ]; then
+    CONTROL_BASE=$(get_sample_basename "$CONTROL_R1")
+    CONTROL_TRIMMED_R1="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R1.fq.gz"
+    CONTROL_TRIMMED_R2="$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R2.fq.gz"
+
+    $STAR_PATH --runThreadN "$NUM_THREADS" \
+        --genomeDir "$REFERENCE_GENOME" \
+        --readFilesIn "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
+        --readFilesCommand zcat \
+        --outFileNamePrefix "$ALIGNMENT_DIR/${CONTROL_BASE}." \
+        --outSAMtype BAM SortedByCoordinate \
+        > "$LOG_DIR/STAR_${CONTROL_BASE}.log" 2> "$LOG_DIR/STAR_${CONTROL_BASE}_error.log"
+fi
+
+# Step 4.1: Remove duplicates using Picard's MarkDuplicates
+echo "Running Picard AddOrReplaceReadGroups + MarkDuplicates..." | tee -a "$LOG_DIR/pipeline.log"
+for bam in "$ALIGNMENT_DIR"/*.Aligned.sortedByCoord.out.bam; do
+    if [ ! -s "$bam" ]; then
+        echo "⚠️ Skipping empty BAM: $bam" | tee -a "$LOG_DIR/pipeline.log"
+        continue
+    fi
+
+    base=$(basename "$bam" .Aligned.sortedByCoord.out.bam)
+
+    # Step 1: Add read groups
+    java -jar "$PICARD_PATH" AddOrReplaceReadGroups \
+        I="$bam" \
+        O="$ALIGNMENT_DIR/${base}.rg.bam" \
+        RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM="${base}" \
+        VALIDATION_STRINGENCY=LENIENT
+
+    if [ $? -ne 0 ]; then
+        echo "❌ AddOrReplaceReadGroups failed for $base." | tee -a "$LOG_DIR/pipeline.log"
+        exit 1
+    fi
+
+    # Step 2: Mark Duplicates
+    java -jar "$PICARD_PATH" MarkDuplicates \
+        I="$ALIGNMENT_DIR/${base}.rg.bam" \
+        O="$ALIGNMENT_DIR/${base}.dedup.bam" \
+        M="$LOG_DIR/${base}.metrics.txt" \
+        REMOVE_DUPLICATES=true \
+        VALIDATION_STRINGENCY=LENIENT
+
+    if [ $? -ne 0 ]; then
+        echo "❌ Picard MarkDuplicates failed for $base." | tee -a "$LOG_DIR/pipeline.log"
+        exit 1
+    fi
+done
+
+# Step 4.2: Filter by fragment size
+echo "Filtering by fragment size: $FRAGMENT_SIZE_FILTER..." | tee -a "$LOG_DIR/pipeline.log"
+for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
+    base=$(basename "$bam" .dedup.bam)
+    if [ "$FRAGMENT_SIZE_FILTER" == "histones" ]; then
+        samtools view -h "$bam" | awk '{if ($9 >= 130 && $9 <= 300 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
+    elif [ "$FRAGMENT_SIZE_FILTER" == "transcription_factors" ]; then
+        samtools view -h "$bam" | awk '{if ($9 < 130 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
+    else
+        samtools view -h "$bam" | awk '{if ($9 < 1000 || $1 ~ /^@/) print $0}' | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
+    fi
+done
+
+# Step 5: Peak calling with MACS2 (both broad and narrow peaks)
+echo "Running MACS2 for peak calling (both broad and gapped peaks)..." | tee -a "$LOG_DIR/pipeline.log"
+TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
+
+# Check if filtered BAM exists
+if [ ! -f "$TREATMENT_FILTERED" ]; then
+    echo "❌ No treatment filtered BAM found: $TREATMENT_FILTERED" | tee -a "$LOG_DIR/pipeline.log"
+    exit 1
+fi
+
+# If control exists and is valid
+if [ -n "$CONTROL_R1" ] && [ -f "$ALIGNMENT_DIR/${CONTROL_BASE}.filtered.bam" ]; then
+    CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
+
+    echo "Calling peaks with treatment vs control..." | tee -a "$LOG_DIR/pipeline.log"
+    macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        --broad --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+
+    macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        --call-summits --outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+else
+    echo "Calling peaks with treatment only (no control)..." | tee -a "$LOG_DIR/pipeline.log"
+
+	macs2 callpeak -t "$TREATMENT_FILTERED" \
+		--broad --nomodel --extsize "$BROAD_EXTSIZE" \
+		--outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+
+	macs2 callpeak -t "$TREATMENT_FILTERED" \
+		--call-summits --nomodel --extsize "$NARROW_EXTSIZE" \
+		--outdir "$OUTPUT_DIR/macs2_peaks" -n "$TREATMENT_BASE"
+
+
+fi
+
+# Step 6: Generate BigWig Files from BAM
+echo "Generating BigWig files from BAM files..." | tee -a "$LOG_DIR/pipeline.log"
+for bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
+    base=$(basename "$bam" .dedup.filtered.bam)
+    bedtools genomecov -ibam "$bam" -bg > "$OUTPUT_DIR/bigwig_bedgraphs/${base}.bedgraph"
+    bedGraphToBigWig "$OUTPUT_DIR/bigwig_bedgraphs/${base}.bedgraph" "$CHROM_SIZE" "$OUTPUT_DIR/bigwig_bedgraphs/${base}.bw"
+done
+
+# Step 7: Annotate Peaks (optional)
+echo "Annotating peaks using bedtools..." | tee -a "$LOG_DIR/pipeline.log"
+for np in "$OUTPUT_DIR/macs2_peaks"/*.narrowPeak; do
+    base=$(basename "$np" .narrowPeak)
+    bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb > "$OUTPUT_DIR/annotated_peaks/${base}.annotated.bed"
+    awk 'BEGIN{OFS="\t"} {print $1, $2, $3, $10, $11, $12}' "$OUTPUT_DIR/annotated_peaks/${base}.annotated.bed" > "$OUTPUT_DIR/annotated_peaks/${base}.annotated.tsv"
+done
 
 # Step 8: MultiQC (aggregate QC results from both FastQC and Alignment)
 echo "Generating MultiQC report for both FastQC and alignment results..." | tee -a "$LOG_DIR/pipeline.log"
