@@ -83,14 +83,14 @@ run_spikein_align() {
   local r1=$1 r2=$2 sample=$3
   echo "[SPIKE‑IN] Aligning $sample to E. coli genome…" | tee -a "$LOG_DIR/pipeline.log"
 
-  STAR --runThreadN "$NUM_THREADS" \
-       --genomeDir "$ECOLI_INDEX" \
-       --readFilesIn "$r1" "$r2" \
-       --readFilesCommand zcat \
-       --outSAMtype BAM SortedByCoordinate \
-       --outFileNamePrefix "$SPIKE_BAM_DIR/${sample}_ecoli_" \
-       > "$LOG_DIR/STAR_${sample}_ecoli.log" \
-       2> "$LOG_DIR/STAR_${sample}_ecoli_error.log"
+  "$STAR_PATH" --runThreadN "$NUM_THREADS" \
+			   --genomeDir "$ECOLI_INDEX" \
+			   --readFilesIn "$r1" "$r2" \
+			   --readFilesCommand zcat \
+			   --outSAMtype BAM SortedByCoordinate \
+			   --outFileNamePrefix "$SPIKE_BAM_DIR/${sample}_ecoli_" \
+			   > "$LOG_DIR/STAR_${sample}_ecoli.log" \
+			   2> "$LOG_DIR/STAR_${sample}_ecoli_error.log"
 
   local tmp="$SPIKE_BAM_DIR/${sample}_ecoli_Aligned.sortedByCoord.out.bam"
   if [[ -f "$tmp" ]]; then
