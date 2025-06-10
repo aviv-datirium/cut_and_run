@@ -162,7 +162,6 @@ echo "Using genome size $GENOME_SIZE for key $GENOME_SIZE_STRING" | tee -a "$LOG
 #~ # 6  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs
 #~ # -----------------------------------------------------------------------------
 #~ echo "[Trim Galore] starting…" | tee -a "$LOG_DIR/pipeline.log"
-
 #~ i=0
 #~ while [[ $i -lt ${#FASTQ_FILES[@]} ]]; do
   #~ R1=${FASTQ_FILES[$i]}
@@ -252,7 +251,7 @@ fi
   #~ *)                     FRAG_CMD='{if ($9 < 1000 || $1 ~ /^@/) print $0}' ;;
 #~ esac
 
-#~ echo "Filtering fragments ($FRAGMENT_SIZE_FILTER)…" | tee -a "$LOG_DIR/pipeline.log"
+#~ echo "Filtering fragments by ($FRAGMENT_SIZE_FILTER)…" | tee -a "$LOG_DIR/pipeline.log"
 #~ for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
   #~ base=$(basename "$bam" .dedup.bam)
   #~ samtools view -h "$bam" | awk "$FRAG_CMD" | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
@@ -261,6 +260,7 @@ fi
 #~ # -----------------------------------------------------------------------------
 #~ # 11  Peak calling (MACS2)
 #~ # -----------------------------------------------------------------------------
+#~ echo "Running MACS2 for peak calling (both broad and narrow peaks)..." | tee -a "$LOG_DIR/pipeline.log"
 #~ TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
 #~ [[ -f "$TREATMENT_FILTERED" ]] || { echo "❌ Treatment BAM missing"; exit 1; }
 
@@ -283,7 +283,6 @@ fi
 # 11.5  Spike-in scaling factors (optional)                                    
 # -----------------------------------------------------------------------------
 echo "[Spike-in] calculating scale factors" | tee -a "$LOG_DIR/pipeline.log"
-
 declare -A SCALE  # associative array sample → factor
 
 # function to count uniquely mapped reads
@@ -312,6 +311,7 @@ done
 # -----------------------------------------------------------------------------
 # 12  BigWig generation (with optional scaling)                                
 # -----------------------------------------------------------------------------
+echo "Generating bigwig for track viewing in IGV..." | tee -a "$LOG_DIR/pipeline.log"
 for host_bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
   samp=$(basename "$host_bam" .dedup.filtered.bam)
 
@@ -332,6 +332,7 @@ done
 # -----------------------------------------------------------------------------
 # 13  Peak annotation (optional)
 # -----------------------------------------------------------------------------
+echo "Annotating peaks with bedtools intersect..." | tee -a "$LOG_DIR/pipeline.log"
 for np in "$PEAK_DIR"/*.narrowPeak; do
   base=$(basename "$np" .narrowPeak)
   bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb > "$ANN_DIR/${base}.annotated.bed"
