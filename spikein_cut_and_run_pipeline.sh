@@ -3,13 +3,12 @@
 cat <<'BANNER'
 
 # ------------------------------------------------------------------------------
-# CUT&RUN PIPELINE WITH E. coli SPIKE‑IN SUPPORT
+# CUT&RUN PIPELINE WITH E. coli SPIKE‑IN SCALING
 # ------------------------------------------------------------------------------
 # This script processes CUT&RUN paired‑end FASTQs through trimming, alignment,
-# duplicate removal, fragment filtering, peak calling, BigWig generation, and
-# optional gene‑feature annotation.  New in this version → automatic alignment
-# of trimmed reads to an E. coli spike‑in genome, producing per‑sample BAMs that
-# feed into MultiQC for QC/normalisation.
+# duplicate removal, fragment filtering, peak calling, BigWig generation,
+# gene‑feature annotation, and graphical reporting. This version includes
+# alignment of trimmed reads to an E. coli genome for normalization and scaling.
 # ------------------------------------------------------------------------------
 
 ################################################################################
@@ -177,7 +176,7 @@ case "$GENOME_SIZE_STRING" in
       fi ;;
 esac
 
-echo "Using genome size $GENOME_SIZE for key $GENOME_SIZE_STRING" | tee -a "$LOG_DIR/pipeline.log"
+echo "Using genome size $GENOME_SIZE for host genome: $GENOME_SIZE_STRING" | tee -a "$LOG_DIR/pipeline.log"
 
 # ------------------------------------------------------------------------------
 # 6  FASTQC (raw reads)
