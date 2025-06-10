@@ -77,8 +77,8 @@ get_sample_basename() {
 # Runs STAR → sorted BAM + logs.
 run_star() {
   local index=$1 r1=$2 r2=$3 prefix=$4 logbase=$5
-  $STAR_PATH --runThreadN "$NUM_THREADS" \
-               --genomeDir  "$index" \
+  "$STAR_PATH" --runThreadN "$NUM_THREADS" \
+               --genomeDir  "$REFERENCE_GENOME" \
                --readFilesIn "$r1" "$r2" \
                --readFilesCommand zcat \
                --outSAMtype BAM SortedByCoordinate \
@@ -92,15 +92,14 @@ run_spikein_align() {
   # Usage: run_spikein_align R1 R2 SAMPLE_BASENAME
   local r1=$1 r2=$2 sample=$3
   echo "[SPIKE‑IN] Aligning $sample to E. coli genome…" | tee -a "$LOG_DIR/pipeline.log"
-
   "$STAR_PATH" --runThreadN "$NUM_THREADS" \
-			   --genomeDir "$ECOLI_INDEX" \
-			   --readFilesIn "$r1" "$r2" \
-			   --readFilesCommand zcat \
-			   --outSAMtype BAM SortedByCoordinate \
-			   --outFileNamePrefix "$SPIKE_BAM_DIR/${sample}_ecoli_" \
-			   > "$LOG_DIR/STAR_${sample}_ecoli.log" \
-			   2> "$LOG_DIR/STAR_${sample}_ecoli_error.log"
+               --genomeDir  "$ECOLI_INDEX" \
+               --readFilesIn "$r1" "$r2" \
+               --readFilesCommand zcat \
+               --outSAMtype BAM SortedByCoordinate \
+               --outFileNamePrefix "$SPIKE_BAM_DIR/${sample}_ecoli_" \
+               > "$LOG_DIR/STAR_${sample}_ecoli.log"  \
+               2> "$LOG_DIR/STAR_${sample}_ecoli_error.log"
 
   local tmp="$SPIKE_BAM_DIR/${sample}_ecoli_Aligned.sortedByCoord.out.bam"
   if [[ -f "$tmp" ]]; then
@@ -187,9 +186,9 @@ echo "Using genome size $GENOME_SIZE for key $GENOME_SIZE_STRING" | tee -a "$LOG
   #~ i=$((i+2))
 #~ done
 
-#-----------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Decide once if a usable control exists (for downstream steps)
-#-----------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 USE_CONTROL=0
 if [[ -n "${CONTROL_BASE:-}" ]] && \
    [[ -f "$ALIGNMENT_DIR/${CONTROL_BASE}_trimmed_R1.fq.gz" ]] && \
@@ -280,14 +279,54 @@ else
         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 fi
 
+# -----------------------------------------------------------------------------
+# 11.5  Spike-in scaling factors (optional)                                    
+# -----------------------------------------------------------------------------
+echo "[Spike-in] calculating scale factors" | tee -a "$LOG_DIR/pipeline.log"
+
+declare -A SCALE  # associative array sample → factor
+
+# function to count uniquely mapped reads
+count_reads () { samtools view -c -F 2304 "$1"; }
+
+for host_bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
+  samp=$(basename "$host_bam" .dedup.filtered.bam)
+
+  ecoli_bam="$SPIKE_BAM_DIR/${samp}.ecoli.sorted.bam"
+  if [[ -f "$ecoli_bam" ]]; then
+    host_reads=$(count_reads "$host_bam")
+    spike_reads=$(count_reads "$ecoli_bam")
+
+    if (( spike_reads > 0 )); then
+      factor=$(awk -v h=$host_reads -v s=$spike_reads 'BEGIN{printf "%.6f", h/s}')
+      echo "  ↳ $samp : host=$host_reads  spike=$spike_reads  scale=$factor" \
+           | tee -a "$LOG_DIR/pipeline.log"
+      SCALE["$samp"]=$factor
+    else
+      echo "  ↳ $samp : spike-in reads = 0 — skipping scaling" \
+           | tee -a "$LOG_DIR/pipeline.log"
+    fi
+  fi
+done
 
 # -----------------------------------------------------------------------------
-# 12  BigWig generation
+# 12  BigWig generation (with optional scaling)                                
 # -----------------------------------------------------------------------------
-for bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
-  base=$(basename "$bam" .dedup.filtered.bam)
-  bedtools genomecov -ibam "$bam" -bg > "$BW_DIR/${base}.bedgraph"
-  bedGraphToBigWig "$BW_DIR/${base}.bedgraph" "$CHROM_SIZE" "$BW_DIR/${base}.bw"
+for host_bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
+  samp=$(basename "$host_bam" .dedup.filtered.bam)
+
+  bedgraph="$BW_DIR/${samp}.bedgraph"
+  bigwig="$BW_DIR/${samp}.bw"
+
+  if [[ -n "${SCALE[$samp]:-}" ]]; then
+    # scale coverage linearly by spike-in factor
+    bedtools genomecov -ibam "$host_bam" -bg | \
+      awk -v f="${SCALE[$samp]}" '{ $4=$4*f; print }' > "$bedgraph"
+  else
+    bedtools genomecov -ibam "$host_bam" -bg > "$bedgraph"
+  fi
+
+  bedGraphToBigWig "$bedgraph" "$CHROM_SIZE" "$bigwig"
 done
 
 # -----------------------------------------------------------------------------
