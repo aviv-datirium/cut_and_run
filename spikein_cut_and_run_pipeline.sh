@@ -138,16 +138,16 @@ esac
 
 echo "Using genome size $GENOME_SIZE for key $GENOME_SIZE_STRING" | tee -a "$LOG_DIR/pipeline.log"
 
-# -----------------------------------------------------------------------------
-# 5  FASTQC (raw reads)
-# -----------------------------------------------------------------------------
-FASTQ_FILES=("$TREATMENT_R1" "$TREATMENT_R2")
-if [[ -n "$CONTROL_R1" ]]; then FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2"); fi
+#~ # -----------------------------------------------------------------------------
+#~ # 5  FASTQC (raw reads)
+#~ # -----------------------------------------------------------------------------
+#~ FASTQ_FILES=("$TREATMENT_R1" "$TREATMENT_R2")
+#~ if [[ -n "$CONTROL_R1" ]]; then FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2"); fi
 
-echo "Running FastQC…" | tee -a "$LOG_DIR/pipeline.log"
-for fq in "${FASTQ_FILES[@]}"; do
-  fastqc --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
-done
+#~ echo "Running FastQC…" | tee -a "$LOG_DIR/pipeline.log"
+#~ for fq in "${FASTQ_FILES[@]}"; do
+  #~ fastqc --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
+#~ done
 
 #~ # -----------------------------------------------------------------------------
 #~ # 6  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs
