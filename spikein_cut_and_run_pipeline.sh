@@ -43,6 +43,16 @@ NUM_THREADS=$(       jq -r '.num_threads'            "$CONFIG_FILE")
 BROAD_EXTSIZE=$( jq -r '.broad_peak_extsize'  "$CONFIG_FILE")
 NARROW_EXTSIZE=$(jq -r '.narrow_peak_extsize' "$CONFIG_FILE")
 
+#-----------------------------------------------------------------------------
+# Paths to tools and software
+#-----------------------------------------------------------------------------
+# Picard tools path
+PICARD_PATH="/mnt/data/home/aviv/tools/picard.jar"  # Path to the Picard jar file (e.g., picard.jar)
+# FastQC tools path
+FASTQC_PATH="/mnt/data/home/aviv/tools/FastQC/fastqc"
+# STAR path
+STAR_PATH="/mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR"
+
 # -----------------------------------------------------------------------------
 # 1  Create required directories
 # -----------------------------------------------------------------------------
@@ -67,7 +77,7 @@ get_sample_basename() {
 # Runs STAR → sorted BAM + logs.
 run_star() {
   local index=$1 r1=$2 r2=$3 prefix=$4 logbase=$5
-  "$STAR_PATH" --runThreadN "$NUM_THREADS" \
+  $STAR_PATH --runThreadN "$NUM_THREADS" \
                --genomeDir  "$index" \
                --readFilesIn "$r1" "$r2" \
                --readFilesCommand zcat \
@@ -146,7 +156,7 @@ echo "Using genome size $GENOME_SIZE for key $GENOME_SIZE_STRING" | tee -a "$LOG
 
 #~ echo "Running FastQC…" | tee -a "$LOG_DIR/pipeline.log"
 #~ for fq in "${FASTQ_FILES[@]}"; do
-  #~ fastqc --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
+  #~ $FASTQC_PATH --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
 #~ done
 
 #~ # -----------------------------------------------------------------------------
@@ -218,7 +228,6 @@ fi
 # -----------------------------------------------------------------------------
 # 9  Picard: Add RG + MarkDuplicates
 # -----------------------------------------------------------------------------
-PICARD_PATH="/mnt/data/home/aviv/tools/picard.jar"
 echo "Running Picard (RG + dedup)…" | tee -a "$LOG_DIR/pipeline.log"
 for bam in "$ALIGNMENT_DIR"/*.Aligned.sortedByCoord.out.bam; do
   [[ ! -s "$bam" ]] && { echo "⚠️ Empty BAM $bam — skipping" | tee -a "$LOG_DIR/pipeline.log"; continue; }
