@@ -13,6 +13,7 @@
   "alignment_dir": "/mnt/data/home/aviv/alignment",
   "output_dir": "/mnt/data/home/aviv/output",
   "reference_genome": "/mnt/data/home/aviv/star_indices/hg38",
+  "ecoli_genome": "/mnt/data/home/aviv/star_indices/ecoli_k12",
   "chrom_sizes": "/mnt/data/home/aviv/chrom/hg38.chrom.sizes",
   "annotation_genes": "/mnt/data/home/aviv/annotation/hg38.refGene.gtf",
   "genome_size": "hs",

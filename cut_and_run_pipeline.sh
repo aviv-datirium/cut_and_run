@@ -58,6 +58,7 @@ fi
 REFERENCE_GENOME=$(jq -r '.reference_genome' $CONFIG_FILE)
 ANNOTATION_GENES=$(jq -r '.annotation_genes' $CONFIG_FILE)
 CHROM_SIZE=$(jq -r '.chrom_sizes' $CONFIG_FILE)  # chromosome sizes for bedGraphToBigwig
+ECOLI_GENOME=$(jq -r '.ecoli_genome' $CONFIG_FILE)  # for cut&run spike-in
 
 # User run parameters
 GENOME_SIZE_STRING=$(jq -r '.genome_size' $CONFIG_FILE)
