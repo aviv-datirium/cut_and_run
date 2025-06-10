@@ -20,7 +20,7 @@ cat <<'BANNER'
 # 2  Create required directories                                               #
 # 3  Utility functions                                                         #
 # 4  Derive filenames for downstream steps                                     #
-# 5  Compute numeric genome size                                               #
+# 5  Compute numeric genome size (currently supporting hs, dm, mm, sc, and ce  #
 #  ---- Computational steps                                                    #
 # 6  FASTQC (raw reads)                                                        #
 # 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs         #
@@ -65,12 +65,12 @@ SPIKE_BAM_DIR=$(jq -r '.spike_bam_dir // empty'     "$CONFIG_FILE")
 [ -z "$SPIKE_BAM_DIR" ] || [ "$SPIKE_BAM_DIR" = "null" ] && \
   SPIKE_BAM_DIR="$ALIGNMENT_DIR/spikein"
 
-GENOME_SIZE_STRING=$(jq -r '.genome_size'           "$CONFIG_FILE")
+GENOME_SIZE_STRING=$(jq -r '.genome_size'            "$CONFIG_FILE")
 FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
 CUSTOM_GENOME_SIZE=$( jq -r '.custom_genome_size'    "$CONFIG_FILE")
 NUM_THREADS=$(       jq -r '.num_threads'            "$CONFIG_FILE")
 
-# In common in cases like CUT&RUN or when read count is low or fragment length is narrow (as expected in histone or TF targeting experiments), MACS2 simply falls back to non-model-based peak calling and recommends
+# When read count is low or fragment length is narrow (as expected in histone or TF targeting experiments), MACS2 simply falls back to non-model-based peak calling and recommends these extsizes
 BROAD_EXTSIZE=$( jq -r '.broad_peak_extsize'  "$CONFIG_FILE")
 NARROW_EXTSIZE=$(jq -r '.narrow_peak_extsize' "$CONFIG_FILE")
 
