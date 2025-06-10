@@ -13,14 +13,14 @@
 ################################################################################
 #              STEPS                                                           #
 ################################################################################
-# Preparatory steps                                                            # 
+# ---- Preparatory steps                                                       # 
 # 0  Load parameters from config.json                                          #
 # 1  Paths to tools and software                                               #
 # 2  Create required directories                                               #
 # 3  Utility functions                                                         #
 # 4  Derive filenames for downstream steps                                     #
 # 5  Compute numeric genome size                                               #
-# Computational steps                                                          #
+# ---- Computational steps                                                     #
 # 6  FASTQC (raw reads)                                                        #
 # 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs         #
 # 8  Include/exclude control sample logic (for downstream steps)               #
