@@ -3,7 +3,7 @@
 cat <<'BANNER'
 
 # ------------------------------------------------------------------------------
-# CUT&RUN PIPELINE WITH E. COLI SPIKE‑IN SCALING
+# CUT&RUN PIPELINE WITH E. COLI SPIKE‑IN SCALING (PE SEQUENCING ONLY)
 # ------------------------------------------------------------------------------
 # This script processes CUT&RUN paired‑end FASTQs through trimming, alignment,
 # duplicate removal, fragment filtering, peak calling, BigWig generation,
@@ -296,7 +296,7 @@ case "$FRAGMENT_SIZE_FILTER" in
   *)                     FRAG_CMD='{if ($9 < 1000 || $1 ~ /^@/) print $0}' ;;
 esac
 
-echo "Filtering fragments by ($FRAGMENT_SIZE_FILTER)…" | tee -a "$LOG_DIR/pipeline.log"
+echo "Filtering fragments by range $FRAGMENT_SIZE_FILTER…" | tee -a "$LOG_DIR/pipeline.log"
 for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
   base=$(basename "$bam" .dedup.bam)
   samtools view -h "$bam" | awk "$FRAG_CMD" | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
