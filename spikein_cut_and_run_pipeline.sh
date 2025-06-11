@@ -233,6 +233,10 @@ else
   echo "⚠️  No trimmed control FASTQs found — proceeding without control." | tee -a "$LOG_DIR/pipeline.log"
 fi
 
+# Build sample list for the rest of the script
+SAMPLES=("$TREATMENT_BASE")
+[[ $USE_CONTROL -eq 1 ]] && SAMPLES+=("$CONTROL_BASE")
+
 #~ # ------------------------------------------------------------------------------
 #~ # 9  Spike-in alignment (E. coli)
 #~ # ------------------------------------------------------------------------------
