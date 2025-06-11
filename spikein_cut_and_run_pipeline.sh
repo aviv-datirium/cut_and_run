@@ -300,15 +300,15 @@ TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
 
 if [[ $USE_CONTROL -eq 1 ]]; then
   CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
-  macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
         --broad         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-  macs2 callpeak -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
         --call-summits  --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 else
-  macs2 callpeak -t "$TREATMENT_FILTERED" \
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
         --broad --nomodel --extsize "$BROAD_EXTSIZE" \
         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-  macs2 callpeak -t "$TREATMENT_FILTERED" \
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
         --call-summits --nomodel --extsize "$NARROW_EXTSIZE" \
         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 fi
