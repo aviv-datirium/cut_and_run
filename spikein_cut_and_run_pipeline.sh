@@ -264,11 +264,6 @@ SAMPLES=("$TREATMENT_BASE")
 #~ # ------------------------------------------------------------------------------
 #~ # 11  Picard AddRG + MarkDuplicates          (only current-run BAMs)            
 #~ # ------------------------------------------------------------------------------
-
-#~ # Build the list of sample basenames produced in THIS run
-#~ SAMPLES=("$TREATMENT_BASE")
-#~ [[ $USE_CONTROL -eq 1 ]] && SAMPLES+=("$CONTROL_BASE")
-
 #~ echo "[Picard] processing ${SAMPLES[*]}" | tee -a "$LOG_DIR/pipeline.log"
 
 #~ for samp in "${SAMPLES[@]}"; do
