@@ -258,7 +258,7 @@ fi
 #~ fi
 
 ###############################################################################
-# 9  Picard AddRG + MarkDuplicates          (only current-run BAMs)            #
+# 11  Picard AddRG + MarkDuplicates          (only current-run BAMs)            #
 ###############################################################################
 
 # Build the list of sample basenames produced in THIS run
@@ -322,20 +322,20 @@ else
         --call-summits --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 fi
 
-# ------------------------------------------------------------------------------
-# 14  Spike-in scaling factors (optional)                                    
-# ------------------------------------------------------------------------------
+###############################################################################
+# 14  Spike-in scaling factors (per-run samples only)                        #
+###############################################################################
 echo "[Spike-in] calculating scale factors" | tee -a "$LOG_DIR/pipeline.log"
-declare -A SCALE  # associative array sample → factor
 
-# function to count uniquely mapped reads
-count_reads () { samtools view -c -F 2304 "$1"; }
+declare -A SCALE   # sample → factor
 
-for host_bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
-  samp=$(basename "$host_bam" .dedup.filtered.bam)
+count_reads() { samtools view -c -F 2304 "$1"; }
 
+for samp in "${SAMPLES[@]}"; do
+  host_bam="$ALIGNMENT_DIR/${samp}.dedup.filtered.bam"
   ecoli_bam="$SPIKE_BAM_DIR/${samp}.ecoli.sorted.bam"
-  if [[ -f "$ecoli_bam" ]]; then
+
+  if [[ -f "$host_bam" && -f "$ecoli_bam" ]]; then
     host_reads=$(count_reads "$host_bam")
     spike_reads=$(count_reads "$ecoli_bam")
 
@@ -345,9 +345,12 @@ for host_bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
            | tee -a "$LOG_DIR/pipeline.log"
       SCALE["$samp"]=$factor
     else
-      echo "  ↳ $samp : spike-in reads = 0 — skipping scaling" \
+      echo "  ↳ $samp : spike reads = 0 — no scaling applied" \
            | tee -a "$LOG_DIR/pipeline.log"
     fi
+  else
+    echo "  ↳ $samp : missing host or spike BAM — skipped" \
+         | tee -a "$LOG_DIR/pipeline.log"
   fi
 done
 
