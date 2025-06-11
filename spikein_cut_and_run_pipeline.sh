@@ -3,7 +3,7 @@
 cat <<'BANNER'
 
 # ------------------------------------------------------------------------------
-# CUT&RUN PIPELINE WITH E. coli SPIKE‑IN SCALING
+# CUT&RUN PIPELINE WITH E. COLI SPIKE‑IN SCALING
 # ------------------------------------------------------------------------------
 # This script processes CUT&RUN paired‑end FASTQs through trimming, alignment,
 # duplicate removal, fragment filtering, peak calling, BigWig generation,
