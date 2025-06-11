@@ -20,7 +20,7 @@ cat <<'BANNER'
 # 2  Create required directories                                               #
 # 3  Utility functions                                                         #
 # 4  Derive filenames for downstream steps                                     #
-# 5  Compute numeric genome size (currently supporting hs, dm, mm, sc, and ce  #
+# 5  Get numeric genome size (currently supporting hs, dm, mm, sc, and ce  #
 #  ---- Computational steps                                                    #
 # 6  FASTQC (raw reads)                                                        #
 # 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs         #
@@ -30,7 +30,7 @@ cat <<'BANNER'
 # 11  Picard: Add RG + MarkDuplicates                                          #
 # 12  Fragment‑length filtering                                                #   
 # 13  Peak calling (MACS2)                                                     #
-# 14  Calculateing spike-in scaling factors                                    #
+# 14  Calculating spike-in scaling factors                                    #
 # 15  BigWig generation (with scaling)                                         #
 # 16  Peak annotation                                                          #
 # 17  MultiQC summary                                                          #
@@ -370,7 +370,6 @@ for samp in "${SAMPLES[@]}"; do
     bedtools genomecov -ibam "$host_bam" -bg -pc | \
       awk -v f="${SCALE[$samp]}" '{ $4=$4*f; print }' > "$scaled_bg"
     bedGraphToBigWig "$scaled_bg" "$CHROM_SIZE" "$BW_DIR/${samp}.bw"
-    rm -f "$scaled_bg"
   else
     echo "  ↳ $samp : no scaleFactor (spike-in absent)" | tee -a "$LOG_DIR/pipeline.log"
     bedtools genomecov -ibam "$host_bam" -bg -pc > "$BW_DIR/${samp}.bedgraph"
