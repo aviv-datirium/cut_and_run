@@ -181,43 +181,43 @@ esac
 
 echo "Using genome size $GENOME_SIZE for host genome: $GENOME_SIZE_STRING" | tee -a "$LOG_DIR/pipeline.log"
 
-# ------------------------------------------------------------------------------
-# 6  FASTQC (raw reads)
-# ------------------------------------------------------------------------------
-FASTQ_FILES=("$TREATMENT_R1" "$TREATMENT_R2")
-if [[ -n "$CONTROL_R1" ]]; then FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2"); fi
+#~ # ------------------------------------------------------------------------------
+#~ # 6  FASTQC (raw reads)
+#~ # ------------------------------------------------------------------------------
+#~ FASTQ_FILES=("$TREATMENT_R1" "$TREATMENT_R2")
+#~ if [[ -n "$CONTROL_R1" ]]; then FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2"); fi
 
-echo "Running FastQC…" | tee -a "$LOG_DIR/pipeline.log"
-for fq in "${FASTQ_FILES[@]}"; do
-  $FASTQC_PATH --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
-done
+#~ echo "Running FastQC…" | tee -a "$LOG_DIR/pipeline.log"
+#~ for fq in "${FASTQ_FILES[@]}"; do
+  #~ $FASTQC_PATH --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
+#~ done
 
-# ------------------------------------------------------------------------------
-# 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs
-# ------------------------------------------------------------------------------
-echo "[Trim Galore] starting…" | tee -a "$LOG_DIR/pipeline.log"
-i=0
-while [[ $i -lt ${#FASTQ_FILES[@]} ]]; do
-  R1=${FASTQ_FILES[$i]}
-  R2=${FASTQ_FILES[$((i+1))]}
-  BASE=$(get_sample_basename "$R1")
+#~ # ------------------------------------------------------------------------------
+#~ # 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs
+#~ # ------------------------------------------------------------------------------
+#~ echo "[Trim Galore] starting…" | tee -a "$LOG_DIR/pipeline.log"
+#~ i=0
+#~ while [[ $i -lt ${#FASTQ_FILES[@]} ]]; do
+  #~ R1=${FASTQ_FILES[$i]}
+  #~ R2=${FASTQ_FILES[$((i+1))]}
+  #~ BASE=$(get_sample_basename "$R1")
 
-  echo "  ↳ trimming $BASE" | tee -a "$LOG_DIR/pipeline.log"
-  trim_galore --paired --quality 20 --phred33 \
-            --output_dir "$ALIGNMENT_DIR" "$R1" "$R2" \
-            > "$LOG_DIR/trim_${BASE}.log" 2>&1
+  #~ echo "  ↳ trimming $BASE" | tee -a "$LOG_DIR/pipeline.log"
+  #~ trim_galore --paired --quality 20 --phred33 \
+            #~ --output_dir "$ALIGNMENT_DIR" "$R1" "$R2" \
+            #~ > "$LOG_DIR/trim_${BASE}.log" 2>&1
 
-  VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
-  VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
+  #~ VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
+  #~ VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
 
-  if [[ -f "$VAL1" && -f "$VAL2" ]]; then
-    mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
-    mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
-  else
-    echo "❌ Trim Galore did not produce trimmed files for $BASE — skipping." | tee -a "$LOG_DIR/pipeline.log"
-  fi
-  i=$((i+2))
-done
+  #~ if [[ -f "$VAL1" && -f "$VAL2" ]]; then
+    #~ mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
+    #~ mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
+  #~ else
+    #~ echo "❌ Trim Galore did not produce trimmed files for $BASE — skipping." | tee -a "$LOG_DIR/pipeline.log"
+  #~ fi
+  #~ i=$((i+2))
+#~ done
 
 # ------------------------------------------------------------------------------
 # 8 Include/exclude control sample logic (for downstream steps)
@@ -233,29 +233,29 @@ else
   echo "⚠️  No trimmed control FASTQs found — proceeding without control." | tee -a "$LOG_DIR/pipeline.log"
 fi
 
-# ------------------------------------------------------------------------------
-# 9  Spike-in alignment (E. coli)
-# ------------------------------------------------------------------------------
-echo "Aligning to the E. coli genome with STAR for subsequent spike-in scaling…" | tee -a "$LOG_DIR/pipeline.log"
-run_spikein_align "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" "$TREATMENT_BASE"
+#~ # ------------------------------------------------------------------------------
+#~ # 9  Spike-in alignment (E. coli)
+#~ # ------------------------------------------------------------------------------
+#~ echo "Aligning to the E. coli genome with STAR for subsequent spike-in scaling…" | tee -a "$LOG_DIR/pipeline.log"
+#~ run_spikein_align "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" "$TREATMENT_BASE"
 
-if [[ $USE_CONTROL -eq 1 ]]; then
-  run_spikein_align "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" "$CONTROL_BASE"
-fi
+#~ if [[ $USE_CONTROL -eq 1 ]]; then
+  #~ run_spikein_align "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" "$CONTROL_BASE"
+#~ fi
 
-# ------------------------------------------------------------------------------
-# 10  Host‑genome alignment (STAR)
-# ------------------------------------------------------------------------------
-echo "Aligning to the host genome with STAR…" | tee -a "$LOG_DIR/pipeline.log"
-run_star "$REFERENCE_GENOME" \
-         "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
-         "$ALIGNMENT_DIR/${TREATMENT_BASE}." "STAR_${TREATMENT_BASE}"
+#~ # ------------------------------------------------------------------------------
+#~ # 10  Host‑genome alignment (STAR)
+#~ # ------------------------------------------------------------------------------
+#~ echo "Aligning to the host genome with STAR…" | tee -a "$LOG_DIR/pipeline.log"
+#~ run_star "$REFERENCE_GENOME" \
+         #~ "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
+         #~ "$ALIGNMENT_DIR/${TREATMENT_BASE}." "STAR_${TREATMENT_BASE}"
 
-if [[ $USE_CONTROL -eq 1 ]]; then
-  run_star "$REFERENCE_GENOME" \
-           "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
-           "$ALIGNMENT_DIR/${CONTROL_BASE}." "STAR_${CONTROL_BASE}"
-fi
+#~ if [[ $USE_CONTROL -eq 1 ]]; then
+  #~ run_star "$REFERENCE_GENOME" \
+           #~ "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
+           #~ "$ALIGNMENT_DIR/${CONTROL_BASE}." "STAR_${CONTROL_BASE}"
+#~ fi
 
 # ------------------------------------------------------------------------------
 # 11  Picard: Add RG + MarkDuplicates
