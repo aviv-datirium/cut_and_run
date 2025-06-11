@@ -257,9 +257,9 @@ fi
            #~ "$ALIGNMENT_DIR/${CONTROL_BASE}." "STAR_${CONTROL_BASE}"
 #~ fi
 
-###############################################################################
-# 11  Picard AddRG + MarkDuplicates          (only current-run BAMs)            #
-###############################################################################
+# ------------------------------------------------------------------------------
+# 11  Picard AddRG + MarkDuplicates          (only current-run BAMs)            
+# ------------------------------------------------------------------------------
 
 # Build the list of sample basenames produced in THIS run
 SAMPLES=("$TREATMENT_BASE")
@@ -322,9 +322,9 @@ else
         --call-summits --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 fi
 
-###############################################################################
-# 14  Spike-in scaling factors (per-run samples only)                        #
-###############################################################################
+# ------------------------------------------------------------------------------
+# 14  Spike-in scaling factors (per-run samples only)                         
+# ------------------------------------------------------------------------------
 echo "[Spike-in] calculating scale factors" | tee -a "$LOG_DIR/pipeline.log"
 
 declare -A SCALE   # sample → factor
