@@ -356,22 +356,27 @@ done
 # ------------------------------------------------------------------------------
 # 15  BigWig generation (with optional scaling)                                
 # ------------------------------------------------------------------------------
-echo "Generating bigwig for track viewing in IGV..." | tee -a "$LOG_DIR/pipeline.log"
-for host_bam in "$ALIGNMENT_DIR"/*.dedup.filtered.bam; do
-  samp=$(basename "$host_bam" .dedup.filtered.bam)
+echo "[BigWig] generating coverage tracks" | tee -a "$LOG_DIR/pipeline.log"
 
-  bedgraph="$BW_DIR/${samp}.bedgraph"
-  bigwig="$BW_DIR/${samp}.bw"
+for samp in "${SAMPLES[@]}"; do
+  host_bam="$ALIGNMENT_DIR/${samp}.dedup.filtered.bam"
+  [[ -f "$host_bam" ]] || { echo "❌ BAM missing for $samp — skipping" | tee -a "$LOG_DIR/pipeline.log"; continue; }
 
+  scale_opt=""
   if [[ -n "${SCALE[$samp]:-}" ]]; then
-    # scale coverage linearly by spike-in factor
-    bedtools genomecov -ibam "$host_bam" -bg | \
-      awk -v f="${SCALE[$samp]}" '{ $4=$4*f; print }' > "$bedgraph"
+    echo "  ↳ $samp : applying scaleFactor ${SCALE[$samp]}" | tee -a "$LOG_DIR/pipeline.log"
+    # bedtools genomecov lacks a scale flag, so we multiply depth via awk
+    scaled_bg="$BW_DIR/${samp}.scaled.bedgraph"
+    bedtools genomecov -ibam "$host_bam" -bg -pc | \
+      awk -v f="${SCALE[$samp]}" '{ $4=$4*f; print }' > "$scaled_bg"
+    bedGraphToBigWig "$scaled_bg" "$CHROM_SIZE" "$BW_DIR/${samp}.bw"
+    rm -f "$scaled_bg"
   else
-    bedtools genomecov -ibam "$host_bam" -bg > "$bedgraph"
+    echo "  ↳ $samp : no scaleFactor (spike-in absent)" | tee -a "$LOG_DIR/pipeline.log"
+    bedtools genomecov -ibam "$host_bam" -bg -pc > "$BW_DIR/${samp}.bedgraph"
+    bedGraphToBigWig "$BW_DIR/${samp}.bedgraph" "$CHROM_SIZE" "$BW_DIR/${samp}.bw"
+    rm -f "$BW_DIR/${samp}.bedgraph"
   fi
-
-  bedGraphToBigWig "$bedgraph" "$CHROM_SIZE" "$bigwig"
 done
 
 # ------------------------------------------------------------------------------
