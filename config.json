@@ -1,8 +1,8 @@
 {
   "samples": {
     "treatment": {
-      "r1": "/mnt/data/home/aviv/test_fastq/M124_APP_Veh_1.fq.gz",
-      "r2": "/mnt/data/home/aviv/test_fastq/M124_APP_Veh_2.fq.gz"
+      "r1": "/mnt/data/home/aviv/fastq/fastq_min/HF1_S29_R1_001.fastq.gz",
+      "r2": "/mnt/data/home/aviv/fastq/fastq_min/HF1_S29_R2_001.fastq.gz"
     },
     "control": {
       "r1": "/mnt/data/home/aviv/test_fastq/control_R1.fastq.gz",
