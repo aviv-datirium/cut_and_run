@@ -317,11 +317,9 @@ if [[ $USE_CONTROL -eq 1 ]]; then
         --call-summits  --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 else
   macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
-        --broad "$BROAD_EXTSIZE" \
-        --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+        --broad --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
   macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
-        --call-summits "$NARROW_EXTSIZE" \
-        --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+        --call-summits --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 fi
 
 # ------------------------------------------------------------------------------
