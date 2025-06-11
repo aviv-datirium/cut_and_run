@@ -375,7 +375,6 @@ for samp in "${SAMPLES[@]}"; do
     echo "  ↳ $samp : no scaleFactor (spike-in absent)" | tee -a "$LOG_DIR/pipeline.log"
     bedtools genomecov -ibam "$host_bam" -bg -pc > "$BW_DIR/${samp}.bedgraph"
     bedGraphToBigWig "$BW_DIR/${samp}.bedgraph" "$CHROM_SIZE" "$BW_DIR/${samp}.bw"
-    rm -f "$BW_DIR/${samp}.bedgraph"
   fi
 done
 
@@ -388,8 +387,8 @@ for samp in "${SAMPLES[@]}"; do
   peak_file="$PEAK_DIR/${samp}_peaks.narrowPeak"
   [[ -f "$peak_file" ]] || { echo "  ↳ $samp : no narrowPeak file — skipping" | tee -a "$LOG_DIR/pipeline.log"; continue; }
 
-  full_out="$ANN_DIR/${samp}.annotated.bed"
-  tsv_out="$ANN_DIR/${samp}.annotated.tsv"
+  full_out="$ANN_DIR/${samp}_peaks.annotated.bed"
+  tsv_out="$ANN_DIR/${samp}_peaks.annotated.tsv"
 
   echo "  ↳ annotating $samp" | tee -a "$LOG_DIR/pipeline.log"
 
