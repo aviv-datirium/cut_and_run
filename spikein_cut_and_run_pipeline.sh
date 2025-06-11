@@ -257,23 +257,34 @@ fi
            #~ "$ALIGNMENT_DIR/${CONTROL_BASE}." "STAR_${CONTROL_BASE}"
 #~ fi
 
-# ------------------------------------------------------------------------------
-# 11  Picard: Add RG + MarkDuplicates
-# ------------------------------------------------------------------------------
-echo "Running Picard (RG + dedup)…" | tee -a "$LOG_DIR/pipeline.log"
-for bam in "$ALIGNMENT_DIR"/*.Aligned.sortedByCoord.out.bam; do
-  [[ ! -s "$bam" ]] && { echo "⚠️ Empty BAM $bam — skipping" | tee -a "$LOG_DIR/pipeline.log"; continue; }
+###############################################################################
+# 9  Picard AddRG + MarkDuplicates          (only current-run BAMs)            #
+###############################################################################
 
-  base=$(basename "$bam" .Aligned.sortedByCoord.out.bam)
-  java -jar "$PICARD_PATH" AddOrReplaceReadGroups I="$bam" \
-       O="$ALIGNMENT_DIR/${base}.rg.bam" \
-       RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM="$base" \
-       VALIDATION_STRINGENCY=LENIENT || { echo "AddRG failed for $base" | tee -a "$LOG_DIR/pipeline.log"; exit 1; }
+# Build the list of sample basenames produced in THIS run
+SAMPLES=("$TREATMENT_BASE")
+[[ $USE_CONTROL -eq 1 ]] && SAMPLES+=("$CONTROL_BASE")
 
-  java -jar "$PICARD_PATH" MarkDuplicates I="$ALIGNMENT_DIR/${base}.rg.bam" \
-       O="$ALIGNMENT_DIR/${base}.dedup.bam" \
-       M="$LOG_DIR/${base}.metrics.txt" REMOVE_DUPLICATES=true \
-       VALIDATION_STRINGENCY=LENIENT || { echo "MarkDuplicates failed for $base" | tee -a "$LOG_DIR/pipeline.log"; exit 1; }
+echo "[Picard] processing ${SAMPLES[*]}" | tee -a "$LOG_DIR/pipeline.log"
+
+for samp in "${SAMPLES[@]}"; do
+  in_bam="$ALIGNMENT_DIR/${samp}.Aligned.sortedByCoord.out.bam"
+  [[ -s "$in_bam" ]] || { echo "❌ BAM not found: $in_bam" | tee -a "$LOG_DIR/pipeline.log"; exit 1; }
+
+  java -jar "$PICARD_PATH" AddOrReplaceReadGroups \
+       I="$in_bam" \
+       O="$ALIGNMENT_DIR/${samp}.rg.bam" \
+       RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM="$samp" \
+       VALIDATION_STRINGENCY=LENIENT
+
+  java -jar "$PICARD_PATH" MarkDuplicates \
+       I="$ALIGNMENT_DIR/${samp}.rg.bam" \
+       O="$ALIGNMENT_DIR/${samp}.dedup.bam" \
+       M="$LOG_DIR/${samp}.metrics.txt" \
+       REMOVE_DUPLICATES=true \
+       VALIDATION_STRINGENCY=LENIENT
+
+  samtools index "$ALIGNMENT_DIR/${samp}.dedup.bam"
 done
 
 # ------------------------------------------------------------------------------
