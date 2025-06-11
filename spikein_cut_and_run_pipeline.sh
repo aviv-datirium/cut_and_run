@@ -233,7 +233,7 @@ fi
 # ------------------------------------------------------------------------------
 # 9  Spike-in alignment (E. coli)
 # ------------------------------------------------------------------------------
-echo "Aligning to E. coli genome with STAR for subsequent spike-in scaling…" | tee -a "$LOG_DIR/pipeline.log"
+echo "Aligning to the E. coli genome with STAR for subsequent spike-in scaling…" | tee -a "$LOG_DIR/pipeline.log"
 run_spikein_align "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" "$TREATMENT_BASE"
 
 if [[ $USE_CONTROL -eq 1 ]]; then
@@ -243,7 +243,7 @@ fi
 # ------------------------------------------------------------------------------
 # 10  Host‑genome alignment (STAR)
 # ------------------------------------------------------------------------------
-echo "Aligning to host genome with STAR…" | tee -a "$LOG_DIR/pipeline.log"
+echo "Aligning to the host genome with STAR…" | tee -a "$LOG_DIR/pipeline.log"
 run_star "$REFERENCE_GENOME" \
          "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
          "$ALIGNMENT_DIR/${TREATMENT_BASE}." "STAR_${TREATMENT_BASE}"
