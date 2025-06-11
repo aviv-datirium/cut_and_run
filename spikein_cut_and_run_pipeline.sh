@@ -382,14 +382,22 @@ done
 # ------------------------------------------------------------------------------
 # 16  Peak annotation
 # ------------------------------------------------------------------------------
-echo "Annotating peaks with bedtools intersect..." | tee -a "$LOG_DIR/pipeline.log"
-for np in "$PEAK_DIR"/*.narrowPeak; do
-  base=$(basename "$np" .narrowPeak)
-  bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb > "$ANN_DIR/${base}.annotated.bed"
+echo "[Peak annotation] intersecting peaks with gene features" | tee -a "$LOG_DIR/pipeline.log"
+
+for samp in "${SAMPLES[@]}"; do
+  peak_file="$PEAK_DIR/${samp}_peaks.narrowPeak"
+  [[ -f "$peak_file" ]] || { echo "  ↳ $samp : no narrowPeak file — skipping" | tee -a "$LOG_DIR/pipeline.log"; continue; }
+
+  full_out="$ANN_DIR/${samp}.annotated.bed"
+  tsv_out="$ANN_DIR/${samp}.annotated.tsv"
+
+  echo "  ↳ annotating $samp" | tee -a "$LOG_DIR/pipeline.log"
+
+  # full BED12 style intersect (peak + gene feature columns)
+  bedtools intersect -a "$peak_file" -b "$ANNOTATION_GENES" -wa -wb > "$full_out"
 
   # concise TSV: peak coords + gene name + strand
-  awk 'BEGIN{OFS="\t"} {print $1,$2,$3,$10,$11,$12}' \
-    "$ANN_DIR/${base}.annotated.bed" > "$ANN_DIR/${base}.annotated.tsv"
+  awk 'BEGIN{OFS="\t"} {print $1,$2,$3,$10,$11,$12}' "$full_out" > "$tsv_out"
 done
 
 # ------------------------------------------------------------------------------
