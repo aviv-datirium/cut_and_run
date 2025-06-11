@@ -70,7 +70,7 @@ FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
 CUSTOM_GENOME_SIZE=$( jq -r '.custom_genome_size'    "$CONFIG_FILE")
 NUM_THREADS=$(       jq -r '.num_threads'            "$CONFIG_FILE")
 
-# When read count is low or fragment length is narrow (as expected in histone or TF targeting experiments), MACS2 simply falls back to non-model-based peak calling and recommends these extsizes
+# When read count is low or fragment length is narrow (as expected in histone or TF targeting experiments), MACS2 simply falls back to non-model-based peak calling and recommends these extsizes. Used in SE only.
 BROAD_EXTSIZE=$( jq -r '.broad_peak_extsize'  "$CONFIG_FILE")
 NARROW_EXTSIZE=$(jq -r '.narrow_peak_extsize' "$CONFIG_FILE")
 
@@ -306,10 +306,10 @@ if [[ $USE_CONTROL -eq 1 ]]; then
         --call-summits  --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 else
   macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
-        --broad --nomodel --extsize "$BROAD_EXTSIZE" \
+        --broad "$BROAD_EXTSIZE" \
         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
   macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
-        --call-summits --nomodel --extsize "$NARROW_EXTSIZE" \
+        --call-summits "$NARROW_EXTSIZE" \
         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
 fi
 
