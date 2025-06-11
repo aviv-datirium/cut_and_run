@@ -33,7 +33,6 @@ cat <<'BANNER'
 # 14  Calculate spike-in scaling factors                                       #
 # 15  BigWig generation (with scaling)                                         #
 # 16  Peak annotation                                                          #
-# 17  MultiQC summary                                                          #
 ################################################################################
 
 BANNER
