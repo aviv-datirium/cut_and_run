@@ -257,70 +257,70 @@ fi
            #~ "$ALIGNMENT_DIR/${CONTROL_BASE}." "STAR_${CONTROL_BASE}"
 #~ fi
 
-# ------------------------------------------------------------------------------
-# 11  Picard AddRG + MarkDuplicates          (only current-run BAMs)            
-# ------------------------------------------------------------------------------
+#~ # ------------------------------------------------------------------------------
+#~ # 11  Picard AddRG + MarkDuplicates          (only current-run BAMs)            
+#~ # ------------------------------------------------------------------------------
 
-# Build the list of sample basenames produced in THIS run
-SAMPLES=("$TREATMENT_BASE")
-[[ $USE_CONTROL -eq 1 ]] && SAMPLES+=("$CONTROL_BASE")
+#~ # Build the list of sample basenames produced in THIS run
+#~ SAMPLES=("$TREATMENT_BASE")
+#~ [[ $USE_CONTROL -eq 1 ]] && SAMPLES+=("$CONTROL_BASE")
 
-echo "[Picard] processing ${SAMPLES[*]}" | tee -a "$LOG_DIR/pipeline.log"
+#~ echo "[Picard] processing ${SAMPLES[*]}" | tee -a "$LOG_DIR/pipeline.log"
 
-for samp in "${SAMPLES[@]}"; do
-  in_bam="$ALIGNMENT_DIR/${samp}.Aligned.sortedByCoord.out.bam"
-  [[ -s "$in_bam" ]] || { echo "❌ BAM not found: $in_bam" | tee -a "$LOG_DIR/pipeline.log"; exit 1; }
+#~ for samp in "${SAMPLES[@]}"; do
+  #~ in_bam="$ALIGNMENT_DIR/${samp}.Aligned.sortedByCoord.out.bam"
+  #~ [[ -s "$in_bam" ]] || { echo "❌ BAM not found: $in_bam" | tee -a "$LOG_DIR/pipeline.log"; exit 1; }
 
-  java -jar "$PICARD_PATH" AddOrReplaceReadGroups \
-       I="$in_bam" \
-       O="$ALIGNMENT_DIR/${samp}.rg.bam" \
-       RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM="$samp" \
-       VALIDATION_STRINGENCY=LENIENT
+  #~ java -jar "$PICARD_PATH" AddOrReplaceReadGroups \
+       #~ I="$in_bam" \
+       #~ O="$ALIGNMENT_DIR/${samp}.rg.bam" \
+       #~ RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM="$samp" \
+       #~ VALIDATION_STRINGENCY=LENIENT
 
-  java -jar "$PICARD_PATH" MarkDuplicates \
-       I="$ALIGNMENT_DIR/${samp}.rg.bam" \
-       O="$ALIGNMENT_DIR/${samp}.dedup.bam" \
-       M="$LOG_DIR/${samp}.metrics.txt" \
-       REMOVE_DUPLICATES=true \
-       VALIDATION_STRINGENCY=LENIENT
+  #~ java -jar "$PICARD_PATH" MarkDuplicates \
+       #~ I="$ALIGNMENT_DIR/${samp}.rg.bam" \
+       #~ O="$ALIGNMENT_DIR/${samp}.dedup.bam" \
+       #~ M="$LOG_DIR/${samp}.metrics.txt" \
+       #~ REMOVE_DUPLICATES=true \
+       #~ VALIDATION_STRINGENCY=LENIENT
 
-  samtools index "$ALIGNMENT_DIR/${samp}.dedup.bam"
-done
+  #~ samtools index "$ALIGNMENT_DIR/${samp}.dedup.bam"
+#~ done
 
-# ------------------------------------------------------------------------------
-# 12  Fragment‑length filtering
-# ------------------------------------------------------------------------------
-case "$FRAGMENT_SIZE_FILTER" in
-  histones)              FRAG_CMD='{if ($9 >= 130 && $9 <= 300 || $1 ~ /^@/) print $0}' ;;
-  transcription_factors) FRAG_CMD='{if ($9 < 130 || $1 ~ /^@/) print $0}' ;;
-  *)                     FRAG_CMD='{if ($9 < 1000 || $1 ~ /^@/) print $0}' ;;
-esac
+#~ # ------------------------------------------------------------------------------
+#~ # 12  Fragment‑length filtering
+#~ # ------------------------------------------------------------------------------
+#~ case "$FRAGMENT_SIZE_FILTER" in
+  #~ histones)              FRAG_CMD='{if ($9 >= 130 && $9 <= 300 || $1 ~ /^@/) print $0}' ;;
+  #~ transcription_factors) FRAG_CMD='{if ($9 < 130 || $1 ~ /^@/) print $0}' ;;
+  #~ *)                     FRAG_CMD='{if ($9 < 1000 || $1 ~ /^@/) print $0}' ;;
+#~ esac
 
-echo "Filtering fragments by range $FRAGMENT_SIZE_FILTER…" | tee -a "$LOG_DIR/pipeline.log"
-for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
-  base=$(basename "$bam" .dedup.bam)
-  samtools view -h "$bam" | awk "$FRAG_CMD" | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
-done
+#~ echo "Filtering fragments by range $FRAGMENT_SIZE_FILTER…" | tee -a "$LOG_DIR/pipeline.log"
+#~ for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
+  #~ base=$(basename "$bam" .dedup.bam)
+  #~ samtools view -h "$bam" | awk "$FRAG_CMD" | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
+#~ done
 
-# ------------------------------------------------------------------------------
-# 13  Peak calling (MACS2)
-# ------------------------------------------------------------------------------
-echo "Running MACS2 for peak calling (both broad and narrow peaks)..." | tee -a "$LOG_DIR/pipeline.log"
-TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
-[[ -f "$TREATMENT_FILTERED" ]] || { echo "❌ Treatment BAM missing"; exit 1; }
+#~ # ------------------------------------------------------------------------------
+#~ # 13  Peak calling (MACS2)
+#~ # ------------------------------------------------------------------------------
+#~ echo "Running MACS2 for peak calling (both broad and narrow peaks)..." | tee -a "$LOG_DIR/pipeline.log"
+#~ TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
+#~ [[ -f "$TREATMENT_FILTERED" ]] || { echo "❌ Treatment BAM missing"; exit 1; }
 
-if [[ $USE_CONTROL -eq 1 ]]; then
-  CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
-  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
-        --broad         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
-        --call-summits  --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-else
-  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
-        --broad --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
-        --call-summits --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-fi
+#~ if [[ $USE_CONTROL -eq 1 ]]; then
+  #~ CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
+  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        #~ --broad         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        #~ --call-summits  --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+#~ else
+  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
+        #~ --broad --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
+        #~ --call-summits --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+#~ fi
 
 # ------------------------------------------------------------------------------
 # 14  Spike-in scaling factors (per-run samples only)                         
