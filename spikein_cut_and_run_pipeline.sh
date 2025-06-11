@@ -7,8 +7,8 @@ cat <<'BANNER'
 # ------------------------------------------------------------------------------
 # This script processes CUT&RUN paired‑end FASTQs through trimming, alignment,
 # duplicate removal, fragment filtering, peak calling, BigWig generation,
-# gene‑feature annotation, and graphical reporting. This version includes
-# alignment of trimmed reads to an E. coli genome for normalization and scaling.
+# gene‑feature annotation, and reporting. This version includes alignment of
+# trimmed reads to the standard E. coli genome for normalization and scaling.
 # ------------------------------------------------------------------------------
 
 ################################################################################
@@ -20,7 +20,7 @@ cat <<'BANNER'
 # 2  Create required directories                                               #
 # 3  Utility functions                                                         #
 # 4  Derive filenames for downstream steps                                     #
-# 5  Get numeric genome size (currently supporting hs, dm, mm, sc, and ce  #
+# 5  Get numeric genome size (currently supporting hs, dm, mm, sc, and ce      #
 #  ---- Computational steps                                                    #
 # 6  FASTQC (raw reads)                                                        #
 # 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs         #
@@ -30,7 +30,7 @@ cat <<'BANNER'
 # 11  Picard: Add RG + MarkDuplicates                                          #
 # 12  Fragment‑length filtering                                                #   
 # 13  Peak calling (MACS2)                                                     #
-# 14  Calculating spike-in scaling factors                                    #
+# 14  Calculate spike-in scaling factors                                       #
 # 15  BigWig generation (with scaling)                                         #
 # 16  Peak annotation                                                          #
 # 17  MultiQC summary                                                          #
@@ -181,43 +181,43 @@ esac
 
 echo "Using genome size $GENOME_SIZE for host genome: $GENOME_SIZE_STRING" | tee -a "$LOG_DIR/pipeline.log"
 
-#~ # ------------------------------------------------------------------------------
-#~ # 6  FASTQC (raw reads)
-#~ # ------------------------------------------------------------------------------
-#~ FASTQ_FILES=("$TREATMENT_R1" "$TREATMENT_R2")
-#~ if [[ -n "$CONTROL_R1" ]]; then FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2"); fi
+# ------------------------------------------------------------------------------
+# 6  FASTQC (raw reads)
+# ------------------------------------------------------------------------------
+FASTQ_FILES=("$TREATMENT_R1" "$TREATMENT_R2")
+if [[ -n "$CONTROL_R1" ]]; then FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2"); fi
 
-#~ echo "Running FastQC…" | tee -a "$LOG_DIR/pipeline.log"
-#~ for fq in "${FASTQ_FILES[@]}"; do
-  #~ $FASTQC_PATH --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
-#~ done
+echo "Running FastQC…" | tee -a "$LOG_DIR/pipeline.log"
+for fq in "${FASTQ_FILES[@]}"; do
+  $FASTQC_PATH --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
+done
 
-#~ # ------------------------------------------------------------------------------
-#~ # 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs
-#~ # ------------------------------------------------------------------------------
-#~ echo "[Trim Galore] starting…" | tee -a "$LOG_DIR/pipeline.log"
-#~ i=0
-#~ while [[ $i -lt ${#FASTQ_FILES[@]} ]]; do
-  #~ R1=${FASTQ_FILES[$i]}
-  #~ R2=${FASTQ_FILES[$((i+1))]}
-  #~ BASE=$(get_sample_basename "$R1")
+# ------------------------------------------------------------------------------
+# 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs
+# ------------------------------------------------------------------------------
+echo "[Trim Galore] starting…" | tee -a "$LOG_DIR/pipeline.log"
+i=0
+while [[ $i -lt ${#FASTQ_FILES[@]} ]]; do
+  R1=${FASTQ_FILES[$i]}
+  R2=${FASTQ_FILES[$((i+1))]}
+  BASE=$(get_sample_basename "$R1")
 
-  #~ echo "  ↳ trimming $BASE" | tee -a "$LOG_DIR/pipeline.log"
-  #~ trim_galore --paired --quality 20 --phred33 \
-            #~ --output_dir "$ALIGNMENT_DIR" "$R1" "$R2" \
-            #~ > "$LOG_DIR/trim_${BASE}.log" 2>&1
+  echo "  ↳ trimming $BASE" | tee -a "$LOG_DIR/pipeline.log"
+  trim_galore --paired --quality 20 --phred33 \
+            --output_dir "$ALIGNMENT_DIR" "$R1" "$R2" \
+            > "$LOG_DIR/trim_${BASE}.log" 2>&1
 
-  #~ VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
-  #~ VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
+  VAL1=$(find "$ALIGNMENT_DIR" -name "*_val_1.fq.gz" | grep "$BASE" | head -n1)
+  VAL2=$(find "$ALIGNMENT_DIR" -name "*_val_2.fq.gz" | grep "$BASE" | head -n1)
 
-  #~ if [[ -f "$VAL1" && -f "$VAL2" ]]; then
-    #~ mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
-    #~ mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
-  #~ else
-    #~ echo "❌ Trim Galore did not produce trimmed files for $BASE — skipping." | tee -a "$LOG_DIR/pipeline.log"
-  #~ fi
-  #~ i=$((i+2))
-#~ done
+  if [[ -f "$VAL1" && -f "$VAL2" ]]; then
+    mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
+    mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
+  else
+    echo "❌ Trim Galore did not produce trimmed files for $BASE — skipping." | tee -a "$LOG_DIR/pipeline.log"
+  fi
+  i=$((i+2))
+done
 
 # ------------------------------------------------------------------------------
 # 8 Include/exclude control sample logic (for downstream steps)
@@ -237,89 +237,89 @@ fi
 SAMPLES=("$TREATMENT_BASE")
 [[ $USE_CONTROL -eq 1 ]] && SAMPLES+=("$CONTROL_BASE")
 
-#~ # ------------------------------------------------------------------------------
-#~ # 9  Spike-in alignment (E. coli)
-#~ # ------------------------------------------------------------------------------
-#~ echo "Aligning to the E. coli genome with STAR for subsequent spike-in scaling…" | tee -a "$LOG_DIR/pipeline.log"
-#~ run_spikein_align "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" "$TREATMENT_BASE"
+# ------------------------------------------------------------------------------
+# 9  Spike-in alignment (E. coli)
+# ------------------------------------------------------------------------------
+echo "Aligning to the E. coli genome with STAR for subsequent spike-in scaling…" | tee -a "$LOG_DIR/pipeline.log"
+run_spikein_align "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" "$TREATMENT_BASE"
 
-#~ if [[ $USE_CONTROL -eq 1 ]]; then
-  #~ run_spikein_align "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" "$CONTROL_BASE"
-#~ fi
+if [[ $USE_CONTROL -eq 1 ]]; then
+  run_spikein_align "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" "$CONTROL_BASE"
+fi
 
-#~ # ------------------------------------------------------------------------------
-#~ # 10  Host‑genome alignment (STAR)
-#~ # ------------------------------------------------------------------------------
-#~ echo "Aligning to the host genome with STAR…" | tee -a "$LOG_DIR/pipeline.log"
-#~ run_star "$REFERENCE_GENOME" \
-         #~ "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
-         #~ "$ALIGNMENT_DIR/${TREATMENT_BASE}." "STAR_${TREATMENT_BASE}"
+# ------------------------------------------------------------------------------
+# 10  Host‑genome alignment (STAR)
+# ------------------------------------------------------------------------------
+echo "Aligning to the host genome with STAR…" | tee -a "$LOG_DIR/pipeline.log"
+run_star "$REFERENCE_GENOME" \
+         "$TREATMENT_TRIMMED_R1" "$TREATMENT_TRIMMED_R2" \
+         "$ALIGNMENT_DIR/${TREATMENT_BASE}." "STAR_${TREATMENT_BASE}"
 
-#~ if [[ $USE_CONTROL -eq 1 ]]; then
-  #~ run_star "$REFERENCE_GENOME" \
-           #~ "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
-           #~ "$ALIGNMENT_DIR/${CONTROL_BASE}." "STAR_${CONTROL_BASE}"
-#~ fi
+if [[ $USE_CONTROL -eq 1 ]]; then
+  run_star "$REFERENCE_GENOME" \
+           "$CONTROL_TRIMMED_R1" "$CONTROL_TRIMMED_R2" \
+           "$ALIGNMENT_DIR/${CONTROL_BASE}." "STAR_${CONTROL_BASE}"
+fi
 
-#~ # ------------------------------------------------------------------------------
-#~ # 11  Picard AddRG + MarkDuplicates          (only current-run BAMs)            
-#~ # ------------------------------------------------------------------------------
-#~ echo "[Picard] processing ${SAMPLES[*]}" | tee -a "$LOG_DIR/pipeline.log"
+# ------------------------------------------------------------------------------
+# 11  Picard AddRG + MarkDuplicates          (only current-run BAMs)            
+# ------------------------------------------------------------------------------
+echo "[Picard] processing ${SAMPLES[*]}" | tee -a "$LOG_DIR/pipeline.log"
 
-#~ for samp in "${SAMPLES[@]}"; do
-  #~ in_bam="$ALIGNMENT_DIR/${samp}.Aligned.sortedByCoord.out.bam"
-  #~ [[ -s "$in_bam" ]] || { echo "❌ BAM not found: $in_bam" | tee -a "$LOG_DIR/pipeline.log"; exit 1; }
+for samp in "${SAMPLES[@]}"; do
+  in_bam="$ALIGNMENT_DIR/${samp}.Aligned.sortedByCoord.out.bam"
+  [[ -s "$in_bam" ]] || { echo "❌ BAM not found: $in_bam" | tee -a "$LOG_DIR/pipeline.log"; exit 1; }
 
-  #~ java -jar "$PICARD_PATH" AddOrReplaceReadGroups \
-       #~ I="$in_bam" \
-       #~ O="$ALIGNMENT_DIR/${samp}.rg.bam" \
-       #~ RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM="$samp" \
-       #~ VALIDATION_STRINGENCY=LENIENT
+  java -jar "$PICARD_PATH" AddOrReplaceReadGroups \
+       I="$in_bam" \
+       O="$ALIGNMENT_DIR/${samp}.rg.bam" \
+       RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM="$samp" \
+       VALIDATION_STRINGENCY=LENIENT
 
-  #~ java -jar "$PICARD_PATH" MarkDuplicates \
-       #~ I="$ALIGNMENT_DIR/${samp}.rg.bam" \
-       #~ O="$ALIGNMENT_DIR/${samp}.dedup.bam" \
-       #~ M="$LOG_DIR/${samp}.metrics.txt" \
-       #~ REMOVE_DUPLICATES=true \
-       #~ VALIDATION_STRINGENCY=LENIENT
+  java -jar "$PICARD_PATH" MarkDuplicates \
+       I="$ALIGNMENT_DIR/${samp}.rg.bam" \
+       O="$ALIGNMENT_DIR/${samp}.dedup.bam" \
+       M="$LOG_DIR/${samp}.metrics.txt" \
+       REMOVE_DUPLICATES=true \
+       VALIDATION_STRINGENCY=LENIENT
 
-  #~ samtools index "$ALIGNMENT_DIR/${samp}.dedup.bam"
-#~ done
+  samtools index "$ALIGNMENT_DIR/${samp}.dedup.bam"
+done
 
-#~ # ------------------------------------------------------------------------------
-#~ # 12  Fragment‑length filtering
-#~ # ------------------------------------------------------------------------------
-#~ case "$FRAGMENT_SIZE_FILTER" in
-  #~ histones)              FRAG_CMD='{if ($9 >= 130 && $9 <= 300 || $1 ~ /^@/) print $0}' ;;
-  #~ transcription_factors) FRAG_CMD='{if ($9 < 130 || $1 ~ /^@/) print $0}' ;;
-  #~ *)                     FRAG_CMD='{if ($9 < 1000 || $1 ~ /^@/) print $0}' ;;
-#~ esac
+# ------------------------------------------------------------------------------
+# 12  Fragment‑length filtering
+# ------------------------------------------------------------------------------
+case "$FRAGMENT_SIZE_FILTER" in
+  histones)              FRAG_CMD='{if ($9 >= 130 && $9 <= 300 || $1 ~ /^@/) print $0}' ;;
+  transcription_factors) FRAG_CMD='{if ($9 < 130 || $1 ~ /^@/) print $0}' ;;
+  *)                     FRAG_CMD='{if ($9 < 1000 || $1 ~ /^@/) print $0}' ;;
+esac
 
-#~ echo "Filtering fragments by range $FRAGMENT_SIZE_FILTER…" | tee -a "$LOG_DIR/pipeline.log"
-#~ for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
-  #~ base=$(basename "$bam" .dedup.bam)
-  #~ samtools view -h "$bam" | awk "$FRAG_CMD" | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
-#~ done
+echo "Filtering fragments by range $FRAGMENT_SIZE_FILTER…" | tee -a "$LOG_DIR/pipeline.log"
+for bam in "$ALIGNMENT_DIR"/*.dedup.bam; do
+  base=$(basename "$bam" .dedup.bam)
+  samtools view -h "$bam" | awk "$FRAG_CMD" | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
+done
 
-#~ # ------------------------------------------------------------------------------
-#~ # 13  Peak calling (MACS2)
-#~ # ------------------------------------------------------------------------------
-#~ echo "Running MACS2 for peak calling (both broad and narrow peaks)..." | tee -a "$LOG_DIR/pipeline.log"
-#~ TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
-#~ [[ -f "$TREATMENT_FILTERED" ]] || { echo "❌ Treatment BAM missing"; exit 1; }
+# ------------------------------------------------------------------------------
+# 13  Peak calling (MACS2)
+# ------------------------------------------------------------------------------
+echo "Running MACS2 for peak calling (both broad and narrow peaks)..." | tee -a "$LOG_DIR/pipeline.log"
+TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
+[[ -f "$TREATMENT_FILTERED" ]] || { echo "❌ Treatment BAM missing"; exit 1; }
 
-#~ if [[ $USE_CONTROL -eq 1 ]]; then
-  #~ CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
-  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
-        #~ --broad         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
-        #~ --call-summits  --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-#~ else
-  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
-        #~ --broad --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
-        #~ --call-summits --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-#~ fi
+if [[ $USE_CONTROL -eq 1 ]]; then
+  CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        --broad         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        --call-summits  --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+else
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
+        --broad --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
+        --call-summits --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+fi
 
 # ------------------------------------------------------------------------------
 # 14  Spike-in scaling factors (per-run samples only)                         
@@ -397,14 +397,5 @@ for samp in "${SAMPLES[@]}"; do
   # concise TSV: peak coords + gene name + strand
   awk 'BEGIN{OFS="\t"} {print $1,$2,$3,$10,$11,$12}' "$full_out" > "$tsv_out"
 done
-
-# ------------------------------------------------------------------------------
-# 17 MultiQC summary                                                          
-# ------------------------------------------------------------------------------
-echo "[MultiQC] aggregating reports" | tee -a "$LOG_DIR/pipeline.log"
-rm "$FASTQC_DIR"/*.zip 2>/dev/null # Clean up FastQC zip files to avoid MultiQC parsing issues
-multiqc "$FASTQC_DIR" "$ALIGNMENT_DIR" "$SPIKE_BAM_DIR" \
-       -o "$MULTIQC_DIR" \
-       > "$LOG_DIR/multiqc.log" 2> "$LOG_DIR/multiqc_error.log"
 
 echo "🎉  CUT&RUN pipeline complete!  Results are in: $OUTPUT_DIR" | tee -a "$LOG_DIR/pipeline.log"
