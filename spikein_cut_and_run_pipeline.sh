@@ -98,10 +98,13 @@ MULTIQC_DIR="$OUTPUT_DIR/multiqc_reports";  mkdir -p "$MULTIQC_DIR"
 # 3  Utility functions
 # ------------------------------------------------------------------------------
 get_sample_basename() {
-  local r1=$1; local base=$(basename "$r1")
-  base=${base%.fastq.gz}; base=${base%.fq.gz}; base=${base%_R1}; \
-  base=${base%_1}; base=${base%.R1}; base=${base%.1}
-  echo "$base" | sed 's/[^a-zA-Z0-9._-]//g'
+  local f=$1
+  local b=${f##*/}           # strip path
+  b=${b%.fastq.gz}; b=${b%.fq.gz}
+  b=${b%_R1_001};  b=${b%_R2_001}   # new ⇒ handle Illumina “_001” chunk
+  b=${b%_R1};      b=${b%_R2}
+  b=${b%_1};       b=${b%_2}
+  echo "$b" | sed 's/[^A-Za-z0-9._-]//g'
 }
 
 # Usage: run_star <STAR_index> <R1> <R2> <outPrefix> <logBase>
