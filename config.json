@@ -23,5 +23,5 @@
   "broad_peak_extsize": 147,
   "narrow_peak_extsize": 200,
   "log_dir": "/mnt/data/home/aviv/output/logs",
-  "num_threads": 12
+  "num_threads": 8
 }

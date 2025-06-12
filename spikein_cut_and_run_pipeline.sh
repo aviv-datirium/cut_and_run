@@ -219,6 +219,10 @@ while [[ $i -lt ${#FASTQ_FILES[@]} ]]; do
   i=$((i+2))
 done
 
+# DEBUGGING
+echo "DEBUG: R1=$R1  R2=$R2  BASE=$(get_sample_basename "$R1")" \
+  | tee -a "$LOG_DIR/pipeline.log"
+
 # ------------------------------------------------------------------------------
 # 8 Include/exclude control sample logic (for downstream steps)
 # ------------------------------------------------------------------------------
