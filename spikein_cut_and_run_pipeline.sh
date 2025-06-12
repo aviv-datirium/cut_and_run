@@ -74,6 +74,16 @@ BROAD_EXTSIZE=$( jq -r '.broad_peak_extsize'  "$CONFIG_FILE")
 NARROW_EXTSIZE=$(jq -r '.narrow_peak_extsize' "$CONFIG_FILE")
 
 # ------------------------------------------------------------------------------
+# Build FASTQ_FILES array 
+# ------------------------------------------------------------------------------
+FASTQ_FILES=("$TREATMENT_R1" "$TREATMENT_R2")
+
+# Only push control files if they exist
+if [[ -n "$CONTROL_R1" && -n "$CONTROL_R2" ]]; then
+  FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2")
+fi
+
+# ------------------------------------------------------------------------------
 # 1 Paths to tools and software
 # ------------------------------------------------------------------------------
 # Picard tools path
@@ -196,6 +206,8 @@ echo "Using genome size $GENOME_SIZE for host genome: $GENOME_SIZE_STRING" | tee
 # 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs
 # ------------------------------------------------------------------------------
 echo "[Trim Galore] starting…" | tee -a "$LOG_DIR/pipeline.log"
+echo "DEBUG: FASTQ_FILES = ${FASTQ_FILES[*]}" | tee -a "$LOG_DIR/pipeline.log"
+
 i=0
 while [[ $i -lt ${#FASTQ_FILES[@]} ]]; do
   R1=${FASTQ_FILES[$i]}
