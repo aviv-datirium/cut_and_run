@@ -1,12 +1,12 @@
 {
   "samples": {
     "treatment": {
-      "r1": "/mnt/data/home/aviv/fastq/fastq_sarah/M124_APP_Veh_1.fq.gz",
-      "r2": "/mnt/data/home/aviv/fastq/fastq_sarah/M124_APP_Veh_2.fq.gz"
+      "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST1_S28_R1_001.fastq.gz",
+      "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST1_S28_R2_001.fastq.gz"
     },
     "control": {
-      "r1": "/mnt/data/home/aviv/test_fastq/control_R1.fastq.gz",
-      "r2": "/mnt/data/home/aviv/test_fastq/control_R2.fastq.gz"
+      "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC1_S26_R1_001.fastq.gz",
+      "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC1_S26_R1_001.fastq.gz"
     }
   },
   "raw_fastq_dir": "/mnt/data/home/aviv/test_fastq",

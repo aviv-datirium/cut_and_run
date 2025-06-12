@@ -73,9 +73,9 @@ NUM_THREADS=$(       jq -r '.num_threads'            "$CONFIG_FILE")
 BROAD_EXTSIZE=$( jq -r '.broad_peak_extsize'  "$CONFIG_FILE")
 NARROW_EXTSIZE=$(jq -r '.narrow_peak_extsize' "$CONFIG_FILE")
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # 1 Paths to tools and software
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Picard tools path
 PICARD_PATH="/mnt/data/home/aviv/tools/picard.jar"  # Path to the Picard jar file (e.g., picard.jar)
 # FastQC tools path
@@ -83,9 +83,9 @@ FASTQC_PATH="/mnt/data/home/aviv/tools/FastQC/fastqc"
 # STAR path
 STAR_PATH="/mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR"
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # 2  Create required directories
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 mkdir -p "$OUTPUT_DIR" "$LOG_DIR" "$ALIGNMENT_DIR" "$SPIKE_BAM_DIR"
 FASTQC_DIR="$OUTPUT_DIR/fastqc_reports";    mkdir -p "$FASTQC_DIR"
 PEAK_DIR="$OUTPUT_DIR/macs2_peaks";         mkdir -p "$PEAK_DIR"
