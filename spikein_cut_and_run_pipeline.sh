@@ -98,13 +98,14 @@ MULTIQC_DIR="$OUTPUT_DIR/multiqc_reports";  mkdir -p "$MULTIQC_DIR"
 # ------------------------------------------------------------------------------
 get_sample_basename() {
   local f=$1
-  local b=${f##*/}           # strip path
+  local b=${f##*/}            # strip directory
   b=${b%.fastq.gz}; b=${b%.fq.gz}
-  b=${b%_R1_001};  b=${b%_R2_001}   # new ⇒ handle Illumina “_001” chunk
-  b=${b%_R1};      b=${b%_R2}
-  b=${b%_1};       b=${b%_2}
+  b=${b%_R1_001};  b=${b%_R2_001}   # ← strip the full _R#_001 suffix
+  b=${b%_R1};      b=${b%_R2}       # fallback for plain _R1/_R2
+  b=${b%_1};       b=${b%_2}        # fallback for _1/_2
   echo "$b" | sed 's/[^A-Za-z0-9._-]//g'
 }
+
 
 # Usage: run_star <STAR_index> <R1> <R2> <outPrefix> <logBase>
 # Runs STAR → sorted BAM + logs.
@@ -180,16 +181,16 @@ esac
 
 echo "Using genome size $GENOME_SIZE for host genome: $GENOME_SIZE_STRING" | tee -a "$LOG_DIR/pipeline.log"
 
-# ------------------------------------------------------------------------------
-# 6  FASTQC (raw reads)
-# ------------------------------------------------------------------------------
-FASTQ_FILES=("$TREATMENT_R1" "$TREATMENT_R2")
-if [[ -n "$CONTROL_R1" ]]; then FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2"); fi
+#~ # ------------------------------------------------------------------------------
+#~ # 6  FASTQC (raw reads)
+#~ # ------------------------------------------------------------------------------
+#~ FASTQ_FILES=("$TREATMENT_R1" "$TREATMENT_R2")
+#~ if [[ -n "$CONTROL_R1" ]]; then FASTQ_FILES+=("$CONTROL_R1" "$CONTROL_R2"); fi
 
-echo "Running FastQC…" | tee -a "$LOG_DIR/pipeline.log"
-for fq in "${FASTQ_FILES[@]}"; do
-  $FASTQC_PATH --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
-done
+#~ echo "Running FastQC…" | tee -a "$LOG_DIR/pipeline.log"
+#~ for fq in "${FASTQ_FILES[@]}"; do
+  #~ $FASTQC_PATH --extract -o "$FASTQC_DIR" "$fq" >> "$LOG_DIR/pipeline.log" 2>&1
+#~ done
 
 # ------------------------------------------------------------------------------
 # 7  Adapter trimming (Trim Galore!)  –  trim ALL declared FASTQ pairs
