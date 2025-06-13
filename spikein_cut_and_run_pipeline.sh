@@ -234,6 +234,7 @@ echo "Using genome size $GENOME_SIZE for host genome: $GENOME_SIZE_STRING" | tee
 #~ done
 
 # DEBUGGING
+echo "DEBUG: FASTQ_FILES = ${FASTQ_FILES[*]}"
 echo "DEBUG: R1=$R1  R2=$R2  BASE=$(get_sample_basename "$R1")" \
   | tee -a "$LOG_DIR/pipeline.log"
 
