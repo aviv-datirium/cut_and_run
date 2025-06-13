@@ -59,6 +59,9 @@ ANNOTATION_GENES=$(jq -r '.annotation_genes'        "$CONFIG_FILE")
 CHROM_SIZE=$(      jq -r '.chrom_sizes'             "$CONFIG_FILE")
 ECOLI_INDEX=$(     jq -r '.ecoli_index'             "$CONFIG_FILE")
 
+# Dbug paths
+echo "DEBUG paths: T1=$TREATMENT_R1  T2=$TREATMENT_R2  C1=$CONTROL_R1  C2=$CONTROL_R2"
+
 # Optional explicit spike‑in BAM directory; default → <alignment>/spikein
 SPIKE_BAM_DIR=$(jq -r '.spike_bam_dir // empty'     "$CONFIG_FILE")
 [ -z "$SPIKE_BAM_DIR" ] || [ "$SPIKE_BAM_DIR" = "null" ] && \
@@ -115,7 +118,6 @@ get_sample_basename() {
   b=${b%_1};       b=${b%_2}        # fallback for _1/_2
   echo "$b" | sed 's/[^A-Za-z0-9._-]//g'
 }
-
 
 # Usage: run_star <STAR_index> <R1> <R2> <outPrefix> <logBase>
 # Runs STAR → sorted BAM + logs.
