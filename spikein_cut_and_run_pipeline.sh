@@ -427,13 +427,13 @@ echo "[DiffBind] treatment vs control" | tee -a "$LOG_DIR/pipeline.log"
 DIFF_DIR="$OUTPUT_DIR/diffbind"
 mkdir -p "$DIFF_DIR"
 
-# Build the sample sheet (ID, condition, peaks)
+# Build the sample sheet (ID, condition, peaks, bam files)
 SHEET="$DIFF_DIR/sample_sheet.csv"
 {
-  echo "SampleID,Condition,Peaks,ScoreCol"
-  echo "${TREATMENT_BASE},treatment,$PEAK_DIR/${TREATMENT_BASE}_peaks.narrowPeak,7"
+  echo "SampleID,Condition,bamReads,Peaks,ScoreCol"
+  echo "${TREATMENT_BASE},treatment,$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam,$PEAK_DIR/${TREATMENT_BASE}_peaks.narrowPeak,7"
   if [[ $USE_CONTROL -eq 1 ]]; then
-    echo "${CONTROL_BASE},control,$PEAK_DIR/${CONTROL_BASE}_peaks.narrowPeak,7"
+    echo "${CONTROL_BASE},control,$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam,$PEAK_DIR/${CONTROL_BASE}_peaks.narrowPeak,7"
   fi
 } > "$SHEET"
 
