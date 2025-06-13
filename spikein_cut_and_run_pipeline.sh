@@ -430,10 +430,10 @@ mkdir -p "$DIFF_DIR"
 # Build the sample sheet (ID, condition, peaks)
 SHEET="$DIFF_DIR/sample_sheet.csv"
 {
-  echo "SampleID,Condition,Peaks"
-  echo "${TREATMENT_BASE},treatment,$PEAK_DIR/${TREATMENT_BASE}_peaks.narrowPeak"
+  echo "SampleID,Condition,Peaks,ScoreCol"
+  echo "${TREATMENT_BASE},treatment,$PEAK_DIR/${TREATMENT_BASE}_peaks.narrowPeak,7"
   if [[ $USE_CONTROL -eq 1 ]]; then
-    echo "${CONTROL_BASE},control,$PEAK_DIR/${CONTROL_BASE}_peaks.narrowPeak"
+    echo "${CONTROL_BASE},control,$PEAK_DIR/${CONTROL_BASE}_peaks.narrowPeak,7"
   fi
 } > "$SHEET"
 
