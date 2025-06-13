@@ -320,25 +320,37 @@ SAMPLES=("$TREATMENT_BASE")
   #~ samtools view -h "$bam" | awk "$FRAG_CMD" | samtools view -bS - > "$ALIGNMENT_DIR/${base}.dedup.filtered.bam"
 #~ done
 
-#~ # ------------------------------------------------------------------------------
-#~ # 13  Peak calling (MACS2)
-#~ # ------------------------------------------------------------------------------
-#~ echo "Running MACS2 for peak calling (both broad and narrow peaks)..." | tee -a "$LOG_DIR/pipeline.log"
-#~ TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
-#~ [[ -f "$TREATMENT_FILTERED" ]] || { echo "❌ Treatment BAM missing"; exit 1; }
+# ------------------------------------------------------------------------------
+# 13  Peak calling (MACS2)
+# ------------------------------------------------------------------------------
+echo "Running MACS2 for peak calling (both broad and narrow peaks)..." | tee -a "$LOG_DIR/pipeline.log"
+TREATMENT_FILTERED="$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam"
+[[ -f "$TREATMENT_FILTERED" ]] || { echo "❌ Treatment BAM missing"; exit 1; }
 
-#~ if [[ $USE_CONTROL -eq 1 ]]; then
-  #~ CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
-  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
-        #~ --broad         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
-        #~ --call-summits  --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-#~ else
-  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
-        #~ --broad --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-  #~ macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
-        #~ --call-summits --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
-#~ fi
+if [[ $USE_CONTROL -eq 1 ]]; then
+  CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        --broad         --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" -c "$CONTROL_FILTERED" \
+        --call-summits  --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+else
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
+        --broad --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+  macs2 callpeak -f BAMPE -t "$TREATMENT_FILTERED" \
+        --call-summits --outdir "$PEAK_DIR" -n "$TREATMENT_BASE"
+fi
+# Calling peaks for control, for downstream use by diffbind
+if [[ $USE_CONTROL -eq 1 ]]; then
+  CONTROL_FILTERED="$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam"
+  if [[ -f "$CONTROL_FILTERED" ]]; then
+    macs2 callpeak -t "$CONTROL_FILTERED" \
+          --broad --nomodel --extsize "$BROAD_EXTSIZE" \
+          -n "${CONTROL_BASE}" --outdir "$PEAK_DIR"
+    macs2 callpeak -t "$CONTROL_FILTERED" \
+          --call-summits --nomodel --extsize "$NARROW_EXTSIZE" \
+          -n "${CONTROL_BASE}" --outdir "$PEAK_DIR"
+  fi
+fi
 
 #~ # ------------------------------------------------------------------------------
 #~ # 14  Spike-in scaling factors (per-run samples only)                         
