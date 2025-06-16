@@ -96,7 +96,7 @@ FASTQC_PATH="/mnt/data/home/aviv/tools/FastQC/fastqc"
 # STAR path
 STAR_PATH="/mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR"
 # SEACR path
-SEACR=/mnt/data/home/aviv/tools/SEACR/SEACR_1.3.sh
+SEACR_SH="$SEACR_DIR/SEACR_1.3.sh"              # shell wrapper
 
 # -----------------------------------------------------------------------------
 # 2  Create required directories
@@ -334,30 +334,38 @@ done
 # ------------------------------------------------------------------------------
 echo "[SEACR] calling peaks" | tee -a "$LOG_DIR/pipeline.log"
 
-# Make BedGraphs
+# ---- make BedGraph for treatment --------------------------------------------
 TREAT_BG="$PEAK_DIR/${TREATMENT_BASE}.bedgraph"
 bam_to_bedgraph "$ALIGNMENT_DIR/${TREATMENT_BASE}.dedup.filtered.bam" "$TREAT_BG"
 
+# ---- if control exists, make BedGraph for control ---------------------------
 if [[ $USE_CONTROL -eq 1 ]]; then
   CONTROL_BG="$PEAK_DIR/${CONTROL_BASE}.bedgraph"
   bam_to_bedgraph "$ALIGNMENT_DIR/${CONTROL_BASE}.dedup.filtered.bam" "$CONTROL_BG"
-fi
 
-# Run SEACR
-if [[ $USE_CONTROL -eq 1 ]]; then
-  # stringent (0.01) and relaxed (0.05) threshold examples
-  bash "$SEACR" "$TREAT_BG" "$CONTROL_BG" non stringent "$PEAK_DIR/${TREATMENT_BASE}_seacr_1e-2.bed"
-  bash "$SEACR" "$TREAT_BG" "$CONTROL_BG" non 0.05      "$PEAK_DIR/${TREATMENT_BASE}_seacr_0.05.bed"
+  # ---------- SEACR control-subtracted peaks (two thresholds) ----------------
+  # stringent (FDR-style 0.01)
+  bash "$SEACR_SH" "$TREAT_BG" "$CONTROL_BG" non stringent \
+       "$PEAK_DIR/${TREATMENT_BASE}_seacr_ctrl_0.01"
+
+  # relaxed (0.05)
+  bash "$SEACR_SH" "$TREAT_BG" "$CONTROL_BG" non 0.05 \
+       "$PEAK_DIR/${TREATMENT_BASE}_seacr_ctrl_0.05"
+
 else
-  # no control → use top X% of background
-  bash "$SEACR" "$TREAT_BG" non stringent "$PEAK_DIR/${TREATMENT_BASE}_seacr_1e-2.bed"
-  bash "$SEACR" "$TREAT_BG" non 0.05      "$PEAK_DIR/${TREATMENT_BASE}_seacr_0.05.bed"
+  # ---------- SEACR with no control (background = treatment) -----------------
+  bash "$SEACR_SH" "$TREAT_BG" 0.01 non stringent \
+       "$PEAK_DIR/${TREATMENT_BASE}_seacr_bg_0.01"
+
+  bash "$SEACR_SH" "$TREAT_BG" 0.05 non stringent \
+       "$PEAK_DIR/${TREATMENT_BASE}_seacr_bg_0.05"
 fi
 
-# Optionally convert BED to narrowPeak format
-for bed in "$PEAK_DIR"/${TREATMENT_BASE}_seacr_*.bed; do
+# ---- convert SEACR BEDs → narrowPeak (6-column dummy) -----------------------
+for bed in "$PEAK_DIR"/${TREATMENT_BASE}_seacr_*".bed"; do
+  [[ -f "$bed" ]] || continue
   awk 'BEGIN{OFS="\t"}{print $1,$2,$3,".",1000,"."}' "$bed" \
-      > "${bed%.bed}.narrowPeak"
+    > "${bed%.bed}.narrowPeak"
 done
 
 
