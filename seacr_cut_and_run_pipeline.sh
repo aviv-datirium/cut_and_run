@@ -95,6 +95,8 @@ PICARD_PATH="/mnt/data/home/aviv/tools/picard.jar"  # Path to the Picard jar fil
 FASTQC_PATH="/mnt/data/home/aviv/tools/FastQC/fastqc"
 # STAR path
 STAR_PATH="/mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR"
+# SEACR path
+SEACR=/mnt/data/home/aviv/tools/SEACR/SEACR_1.3.sh
 
 # -----------------------------------------------------------------------------
 # 2  Create required directories
@@ -421,7 +423,7 @@ done
 echo "[Peak annotation] intersecting peaks with gene features" | tee -a "$LOG_DIR/pipeline.log"
 
 for samp in "${SAMPLES[@]}"; do
-  peak_file="$PEAK_DIR/${samp}_peaks.narrowPeak"
+  peak_file="$PEAK_DIR/${TREATMENT_BASE}_seacr_0.05.narrowPeak"
   [[ -f "$peak_file" ]] || { echo "  ↳ $samp : no narrowPeak file — skipping" | tee -a "$LOG_DIR/pipeline.log"; continue; }
 
   full_out="$ANN_DIR/${samp}_peaks.annotated.bed"
