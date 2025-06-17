@@ -9,7 +9,7 @@
       { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC2_S27_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC2_S27_R2_001.fastq.gz" }
     ]
   },
-  "raw_fastq_dir": "/mnt/data/home/aviv/test_fastq",
+  "raw_fastq_dir": "/mnt/data/home/aviv/fastq/min_msto211h",
   "alignment_dir": "/mnt/data/home/aviv/alignment_replicates",
   "output_dir": "/mnt/data/home/aviv/output_replicates",
   "reference_genome": "/mnt/data/home/aviv/star_indices/hg38",

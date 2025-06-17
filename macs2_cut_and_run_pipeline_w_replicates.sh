@@ -120,15 +120,32 @@ get_sample_basename() {
   printf '%s\n' "$b"
 }
 
-trim_one_pair(){                # R1  R2  BASE
-  log Trim "$3"
-  java -jar "$TRIMMOMATIC_JAR" PE -threads "$NUM_THREADS" -phred33 \
-       "$1" "$2" \
-       "$ALIGNMENT_DIR/${3}_trimmed_R1.fq.gz" /dev/null \
-       "$ALIGNMENT_DIR/${3}_trimmed_R2.fq.gz" /dev/null \
-       ILLUMINACLIP:"$ADAPTER_FA":2:30:10 LEADING:5 TRAILING:5 \
-       SLIDINGWINDOW:4:15 MINLEN:25 \
-       > "$LOG_DIR/trim_${3}.log" 2>&1
+trim_one_pair () {                # $1 = R1  $2 = R2  $3 = SAMPLE_BASENAME
+  local R1="$1"  R2="$2"  BASE="$3"
+
+  log Trim "$BASE" start
+
+  trim_galore --paired --quality 20 --phred33 \
+              --trim1 \
+              --gzip \
+              --cores "$NUM_THREADS" \
+              --output_dir "$ALIGNMENT_DIR" \
+              "$R1" "$R2" \
+              > "$LOG_DIR/trim_${BASE}.log" 2>&1
+
+  # Detect Trim Galore! output: *_val_1.fq.gz / *_val_2.fq.gz
+  local VAL1 VAL2
+  VAL1=$(find "$ALIGNMENT_DIR" -maxdepth 1 -name "${BASE}*val_1.fq.gz" | head -n1)
+  VAL2=$(find "$ALIGNMENT_DIR" -maxdepth 1 -name "${BASE}*val_2.fq.gz" | head -n1)
+
+  if [[ -s $VAL1 && -s $VAL2 ]]; then
+      mv "$VAL1" "$ALIGNMENT_DIR/${BASE}_trimmed_R1.fq.gz"
+      mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
+      log Trim "$BASE" ok
+  else
+      log Trim "$BASE" FAIL "Trim Galore! did not produce trimmed FASTQs"
+      return 1    # downstream loops will skip this sample
+  fi
 }
 
 run_star () {                     # R1  R2  OUTPREFIX  GENOMEDIR
@@ -180,22 +197,21 @@ esac
   #~ run_fastqc "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}"
 #~ done
 
-#~ ###############################################################################
-#~ # 6  TRIMMING  – per-sample logging (start / done)                            #
-#~ ###############################################################################
-#~ for i in "${!TREAT_R1[@]}"; do
-  #~ name=${TREAT_NAMES[$i]}
-  #~ log Trim "$name" start
-  #~ trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "$name"
-  #~ log Trim "$name" done
-#~ done
+###############################################################################
+# 6  TRIMMING  – per-sample logging (start / done)                            #
+###############################################################################
+# Headline
+log Trim ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}  (Trim Galore!)"
 
-#~ for i in "${!CTRL_R1[@]}";  do
-  #~ name=${CTRL_NAMES[$i]}
-  #~ log Trim "$name" start
-  #~ trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "$name"
-  #~ log Trim "$name" done
-#~ done
+# --- treatment replicates ----------------------------------------------------
+for i in "${!TREAT_R1[@]}"; do
+  trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
+done
+
+# --- control replicates (if any) --------------------------------------------
+for i in "${!CTRL_R1[@]}"; do
+  trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
+done
 
 ###############################################################################
 # 7  SPIKE-IN ALIGNMENT (E. coli)                                             #
