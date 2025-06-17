@@ -10,11 +10,11 @@
     ]
   },
   "raw_fastq_dir": "/mnt/data/home/aviv/test_fastq",
-  "alignment_dir": "/mnt/data/home/aviv/alignment",
+  "alignment_dir": "/mnt/data/home/aviv/alignment_replicates",
   "output_dir": "/mnt/data/home/aviv/output",
   "reference_genome": "/mnt/data/home/aviv/star_indices/hg38",
   "ecoli_index": "/mnt/data/home/aviv/star_indices/ecoli_canonical",
-  "spike_bam_dir": "/mnt/data/home/aviv/spikein_bam",
+  "spike_bam_dir": "/mnt/data/home/aviv/spikein_bam_replicates",
   "chrom_sizes": "/mnt/data/home/aviv/chrom/hg38.chrom.sizes",
   "annotation_genes": "/mnt/data/home/aviv/annotation/hg38.refGene.gtf",
   "genome_size": "hs",
@@ -22,6 +22,6 @@
   "fragment_size_filter": "below_1000",
   "broad_peak_extsize": 147,
   "narrow_peak_extsize": 200,
-  "log_dir": "/mnt/data/home/aviv/output/logs",
+  "log_dir": "/mnt/data/home/aviv/output_replicates/logs",
   "num_threads": 16
 }
