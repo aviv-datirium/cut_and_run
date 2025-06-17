@@ -3,7 +3,7 @@
 cat <<'BANNER'
 
 # ------------------------------------------------------------------------------
-# CUT&RUN PIPELINE WITH E. COLI SPIKE‑IN SCALING (PE SEQUENCING ONLY)
+# MACS2 CUT&RUN PIPELINE WITH E. COLI SPIKE‑IN SCALING (PE SEQUENCING ONLY)
 # ------------------------------------------------------------------------------
 # This script processes CUT&RUN paired‑end FASTQs through trimming, alignment,
 # duplicate removal, fragment filtering, peak calling, BigWig generation,

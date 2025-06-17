@@ -1,0 +1,27 @@
+{
+  "samples": {
+    "treatment": [
+      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSR1_S24_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSR1_S24_R2_001.fastq.gz"},
+      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSR2_S25_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSR2_S25_R2_001.fastq.gz"}
+      ],
+    "control": [
+      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC1_S26_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC1_S26_R2_001.fastq.gz" },
+      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC2_S27_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC2_S27_R2_001.fastq.gz" }
+    ]
+  },
+  "raw_fastq_dir": "/mnt/data/home/aviv/test_fastq",
+  "alignment_dir": "/mnt/data/home/aviv/alignment",
+  "output_dir": "/mnt/data/home/aviv/output",
+  "reference_genome": "/mnt/data/home/aviv/star_indices/hg38",
+  "ecoli_index": "/mnt/data/home/aviv/star_indices/ecoli_canonical",
+  "spike_bam_dir": "/mnt/data/home/aviv/spikein_bam",
+  "chrom_sizes": "/mnt/data/home/aviv/chrom/hg38.chrom.sizes",
+  "annotation_genes": "/mnt/data/home/aviv/annotation/hg38.refGene.gtf",
+  "genome_size": "hs",
+  "custom_genome_size": null,
+  "fragment_size_filter": "below_1000",
+  "broad_peak_extsize": 147,
+  "narrow_peak_extsize": 200,
+  "log_dir": "/mnt/data/home/aviv/output/logs",
+  "num_threads": 16
+}

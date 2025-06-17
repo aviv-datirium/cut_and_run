@@ -3,7 +3,7 @@
 cat <<'BANNER'
 
 # ------------------------------------------------------------------------------
-# CUT&RUN PIPELINE WITH E. COLI SPIKE‑IN SCALING (PE SEQUENCING ONLY)
+# SEACR CUT&RUN PIPELINE WITH E. COLI SPIKE‑IN SCALING (PE SEQUENCING ONLY)
 # ------------------------------------------------------------------------------
 # This script processes CUT&RUN paired‑end FASTQs through trimming, alignment,
 # duplicate removal, fragment filtering, peak calling, BigWig generation,
@@ -29,7 +29,7 @@ cat <<'BANNER'
 # 10  Host‑genome alignment with STAR                                          #
 # 11  Picard: Add RG + MarkDuplicates                                          #
 # 12  Fragment‑length filtering                                                #   
-# 13  Peak calling (MACS2)                                                     #
+# 13  Peak calling (SEACR)                                                     #
 # 14  Calculate spike-in scaling factors                                       #
 # 15  BigWig generation (with scaling)                                         #
 # 16  Peak annotation                                                          #
