@@ -110,7 +110,15 @@ log START ALL "Config=$CONFIG_FILE"
 ###############################################################################
 # 3  HELPERS                                                                  #
 ###############################################################################
-get_sample_basename(){ local b=${1##*/}; echo "${b%%[_R12]*}"; }
+get_sample_basename() {
+  # keep EVERYTHING up to the trailing _R1/_R2/_R1_001/_R2_001 token
+  local b=${1##*/}               # strip directory
+  b=${b%.fastq.gz}; b=${b%.fq.gz}
+  b=${b%_R1_001}; b=${b%_R2_001}
+  b=${b%_R1};     b=${b%_R2}
+  b=${b%_1};      b=${b%_2}
+  printf '%s\n' "$b"
+}
 
 trim_one_pair(){                # R1  R2  BASE
   log Trim "$3"
@@ -123,13 +131,14 @@ trim_one_pair(){                # R1  R2  BASE
        > "$LOG_DIR/trim_${3}.log" 2>&1
 }
 
-run_star(){                     # R1  R2  OUTPREFIX  LABEL  GENOMEDIR
-  log "$4" "$5"
-  "$STAR_BIN" --runThreadN "$NUM_THREADS" --genomeDir "$5" \
+run_star() {                       # R1  R2  OUTPREFIX  GENOMEDIR
+  "$STAR_BIN" --runThreadN "$NUM_THREADS" \
+              --genomeDir "$4" \
               --readFilesIn "$1" "$2" --readFilesCommand zcat \
               --outSAMtype BAM SortedByCoordinate \
               --outFileNamePrefix "$3" \
-              > "$LOG_DIR/${4}.log" 2> "$LOG_DIR/${4}_err.log"
+              > "$LOG_DIR/$(basename "$3")STAR.log" \
+              2> "$LOG_DIR/$(basename "$3")STAR_err.log"
 }
 
 bam_to_bedgraph(){ bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "$2"; }
@@ -165,21 +174,25 @@ for i in "${!CTRL_R1[@]}";  do trim_one_pair "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}" 
 ###############################################################################
 # 7  SPIKE-IN ALIGNMENT (E. coli)                                             #
 ###############################################################################
-log SPIKE ALL "samples=${#SAMPLES[@]}"
 for n in "${SAMPLES[@]}"; do
-  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
-           "$SPIKE_DIR/${n}_ecoli_" "SPIKE_$n" "$ECOLI_INDEX"
-  mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  log SPIKE "$n"
+  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
+           "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
+           "$SPIKE_DIR/${n}_ecoli_"  "$ECOLI_INDEX"
+
+  mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
+     "$SPIKE_DIR/${n}.ecoli.sorted.bam"
   samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
 done
 
 ###############################################################################
-# 8  HOST ALIGNMENT                                                          #
+# 8  HOST GENOME ALIGNMENT                                                          #
 ###############################################################################
-log STARhost ALL "samples=${#SAMPLES[@]}"
 for n in "${SAMPLES[@]}"; do
-  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
-           "$ALIGNMENT_DIR/${n}." "STAR_$n" "$REFERENCE_GENOME"
+  log STARhost "$n"
+  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
+           "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
+           "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME"
 done
 
 ###############################################################################
