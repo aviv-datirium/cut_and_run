@@ -131,10 +131,11 @@ trim_one_pair(){                # R1  R2  BASE
        > "$LOG_DIR/trim_${3}.log" 2>&1
 }
 
-run_star() {                       # R1  R2  OUTPREFIX  GENOMEDIR
+run_star () {                     # R1  R2  OUTPREFIX  GENOMEDIR
   "$STAR_BIN" --runThreadN "$NUM_THREADS" \
               --genomeDir "$4" \
-              --readFilesIn "$1" "$2" --readFilesCommand zcat \
+              --readFilesIn "$1" "$2" \
+              --readFilesCommand zcat \
               --outSAMtype BAM SortedByCoordinate \
               --outFileNamePrefix "$3" \
               > "$LOG_DIR/$(basename "$3")STAR.log" \
@@ -158,49 +159,49 @@ case $GENOME_SIZE_STRING in
   sc) GENOME_SIZE=12000000   ;;  *)  GENOME_SIZE=$CUSTOM_GENOME_SIZE ;;
 esac
 
-###############################################################################
-# 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
-###############################################################################
-log FastQC ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}"
+#~ ###############################################################################
+#~ # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
+#~ ###############################################################################
+#~ log FastQC ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}"
 
-run_fastqc () {                    # R1  R2  SAMPLE
-  log FastQC "$3" start
-  if $FASTQC_BIN -o "$FASTQC_DIR" --quiet --extract "$1" "$2" > /dev/null 2>&1; then
-    log FastQC "$3" ok
-  else
-    log FastQC "$3" FAIL
-  fi
-}
+#~ run_fastqc () {                    # R1  R2  SAMPLE
+  #~ log FastQC "$3" start
+  #~ if $FASTQC_BIN -o "$FASTQC_DIR" --quiet --extract "$1" "$2" > /dev/null 2>&1; then
+    #~ log FastQC "$3" ok
+  #~ else
+    #~ log FastQC "$3" FAIL
+  #~ fi
+#~ }
 
-for i in "${!TREAT_R1[@]}"; do
-  run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
-done
-for i in "${!CTRL_R1[@]}";  do
-  run_fastqc "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}"
-done
+#~ for i in "${!TREAT_R1[@]}"; do
+  #~ run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
+#~ done
+#~ for i in "${!CTRL_R1[@]}";  do
+  #~ run_fastqc "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}"
+#~ done
 
-###############################################################################
-# 6  TRIMMING  – per-sample logging (start / done)                            #
-###############################################################################
-for i in "${!TREAT_R1[@]}"; do
-  name=${TREAT_NAMES[$i]}
-  log Trim "$name" start
-  trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "$name"
-  log Trim "$name" done
-done
+#~ ###############################################################################
+#~ # 6  TRIMMING  – per-sample logging (start / done)                            #
+#~ ###############################################################################
+#~ for i in "${!TREAT_R1[@]}"; do
+  #~ name=${TREAT_NAMES[$i]}
+  #~ log Trim "$name" start
+  #~ trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "$name"
+  #~ log Trim "$name" done
+#~ done
 
-for i in "${!CTRL_R1[@]}";  do
-  name=${CTRL_NAMES[$i]}
-  log Trim "$name" start
-  trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "$name"
-  log Trim "$name" done
-done
+#~ for i in "${!CTRL_R1[@]}";  do
+  #~ name=${CTRL_NAMES[$i]}
+  #~ log Trim "$name" start
+  #~ trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "$name"
+  #~ log Trim "$name" done
+#~ done
 
 ###############################################################################
 # 7  SPIKE-IN ALIGNMENT (E. coli)                                             #
 ###############################################################################
 for n in "${SAMPLES[@]}"; do
-  log SPIKE "$n"
+  log SPIKE "$n" start
   run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
            "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
            "$SPIKE_DIR/${n}_ecoli_"  "$ECOLI_INDEX"
@@ -208,20 +209,23 @@ for n in "${SAMPLES[@]}"; do
   mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
      "$SPIKE_DIR/${n}.ecoli.sorted.bam"
   samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  log SPIKE    "$n" done
 done
 
 ###############################################################################
-# 8  HOST GENOME ALIGNMENT                                                          #
+# 8  HOST GENOME ALIGNMENT                                                    #
 ###############################################################################
 for n in "${SAMPLES[@]}"; do
-  log STARhost "$n"
+  log STARhost "$n" start
   run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
            "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
            "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME"
+  log STARhost "$n" done
+
 done
 
 ###############################################################################
-# 9  PICARD RG + DEDUP                                                       #
+# 9  PICARD RG + DEDUP                                                        #
 ###############################################################################
 for n in "${SAMPLES[@]}"; do
   log Picard "$n"
@@ -235,7 +239,7 @@ for n in "${SAMPLES[@]}"; do
 done
 
 ###############################################################################
-# 10  FRAGMENT FILTER                                                        #
+# 10  FRAGMENT FILTER                                                         #
 ###############################################################################
 case $FRAGMENT_SIZE_FILTER in
   histones)              CMD='{if($9>=130&&$9<=300||$1~/^@/)print}';;
@@ -250,7 +254,7 @@ for n in "${SAMPLES[@]}"; do
 done
 
 ###############################################################################
-# 11  MACS2 PEAKS                                                            #
+# 11  MACS2 PEAKS                                                             #
 ###############################################################################
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 merge_bams "$ALIGNMENT_DIR/control_merged.bam" "${CTRL_NAMES[@]/%/.dedup.filtered.bam}" 2>/dev/null
@@ -290,7 +294,7 @@ if [[ -f $CTRL_MRG ]]; then
 fi
 
 ###############################################################################
-# 12  SPIKE SCALE FACTORS                                                    #
+# 12  SPIKE SCALE FACTORS                                                     #
 ###############################################################################
 declare -A SCALE
 for n in "${SAMPLES[@]}"; do
@@ -301,7 +305,7 @@ for n in "${SAMPLES[@]}"; do
 done
 
 ###############################################################################
-# 13  BIGWIG                                                                 #
+# 13  BIGWIG                                                                  #
 ###############################################################################
 for n in "${SAMPLES[@]}"; do
   log BigWig "$n" "scale=${SCALE[$n]:-1}"
@@ -313,7 +317,7 @@ for n in "${SAMPLES[@]}"; do
 done
 
 ###############################################################################
-# 14  PEAK ANNOTATION                                                        #
+# 14  PEAK ANNOTATION                                                         #
 ###############################################################################
 for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
   [[ -f $np ]] || continue
