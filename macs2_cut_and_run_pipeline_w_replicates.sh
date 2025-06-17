@@ -159,17 +159,42 @@ case $GENOME_SIZE_STRING in
 esac
 
 ###############################################################################
-# 5  FASTQC                                                                   #
+# 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 ###############################################################################
-log FastQC ALL "T=${#TREAT_R1[@]} C=${#CTRL_R1[@]}"
-for i in "${!TREAT_R1[@]}"; do $FASTQC_BIN -o "$FASTQC_DIR" --quiet "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" > /dev/null; done
-for i in "${!CTRL_R1[@]}";  do $FASTQC_BIN -o "$FASTQC_DIR" --quiet "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  > /dev/null; done
+log FastQC ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}"
+
+run_fastqc () {                    # R1  R2  SAMPLE
+  log FastQC "$3" start
+  if $FASTQC_BIN -o "$FASTQC_DIR" --quiet --extract "$1" "$2" > /dev/null 2>&1; then
+    log FastQC "$3" ok
+  else
+    log FastQC "$3" FAIL
+  fi
+}
+
+for i in "${!TREAT_R1[@]}"; do
+  run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
+done
+for i in "${!CTRL_R1[@]}";  do
+  run_fastqc "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}"
+done
 
 ###############################################################################
-# 6  TRIMMING                                                                 #
+# 6  TRIMMING  – per-sample logging (start / done)                            #
 ###############################################################################
-for i in "${!TREAT_R1[@]}"; do trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"; done
-for i in "${!CTRL_R1[@]}";  do trim_one_pair "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  "${CTRL_NAMES[$i]}";  done
+for i in "${!TREAT_R1[@]}"; do
+  name=${TREAT_NAMES[$i]}
+  log Trim "$name" start
+  trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "$name"
+  log Trim "$name" done
+done
+
+for i in "${!CTRL_R1[@]}";  do
+  name=${CTRL_NAMES[$i]}
+  log Trim "$name" start
+  trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "$name"
+  log Trim "$name" done
+done
 
 ###############################################################################
 # 7  SPIKE-IN ALIGNMENT (E. coli)                                             #
