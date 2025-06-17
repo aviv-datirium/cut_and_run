@@ -116,6 +116,7 @@ log () {                               # usage:  log "Trim Galore" "R1=$1 R2=$2"
   local stamp=$(date +'%F %T')
   printf '[%s] %-12s %s\n' "$stamp" "$label" "$*" | tee -a "$LOG_DIR/pipeline.log"
 }
+log "TEST" "Logger initialised – writing to $LOG_DIR/pipeline.log"
 
 get_sample_basename(){
   local f=${1##*/}; f=${f%.fastq.gz}; f=${f%.fq.gz}
