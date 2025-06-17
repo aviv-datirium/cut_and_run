@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o pipefail
 
 cat <<'BANNER'
 
@@ -54,36 +55,31 @@ cat <<'BANNER'
 
 BANNER
 
-set -o pipefail
-
+###############################################################################
+# 0  LOAD FROM CONFIG                                                         #
+###############################################################################
 CONFIG_FILE="/mnt/data/home/aviv/cut_and_run/config_replicates.json"
 
-###############################################################################
-# 0  LOAD PATHS FROM CONFIG                                                   #
-###############################################################################
 RAW_FASTQ_DIR=$(jq -r '.raw_fastq_dir'  "$CONFIG_FILE")
 ALIGNMENT_DIR=$(jq -r '.alignment_dir'  "$CONFIG_FILE")
-OUTPUT_DIR=$( jq -r '.output_dir'       "$CONFIG_FILE")
-LOG_DIR=$(    jq -r '.log_dir'          "$CONFIG_FILE")
+OUTPUT_DIR=$(   jq -r '.output_dir'     "$CONFIG_FILE")
+LOG_DIR=$(      jq -r '.log_dir'        "$CONFIG_FILE")
 
-REFERENCE_GENOME=$(jq -r '.reference_genome'   "$CONFIG_FILE")
-ECOLI_INDEX=$(     jq -r '.ecoli_index'        "$CONFIG_FILE")
-ANNOTATION_GENES=$(jq -r '.annotation_genes'   "$CONFIG_FILE")
-CHROM_SIZE=$(      jq -r '.chrom_sizes'        "$CONFIG_FILE")
+REFERENCE_GENOME=$(jq -r '.reference_genome' "$CONFIG_FILE")
+ECOLI_INDEX=$(     jq -r '.ecoli_index'      "$CONFIG_FILE")
+ANNOTATION_GENES=$(jq -r '.annotation_genes' "$CONFIG_FILE")
+CHROM_SIZE=$(      jq -r '.chrom_sizes'      "$CONFIG_FILE")
 
 GENOME_SIZE_STRING=$(jq -r '.genome_size'      "$CONFIG_FILE")
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' "$CONFIG_FILE")
+
 FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
 NUM_THREADS=$(jq    -r '.num_threads'          "$CONFIG_FILE")
 
-# FASTQ replicate lists
 TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE"))
 TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE"))
 CTRL_R1=($( jq -r '.samples.control[]?.r1 // empty' "$CONFIG_FILE"))
 CTRL_R2=($( jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
-
-NUM_TREAT=${#TREAT_R1[@]}
-NUM_CTRL=${#CTRL_R1[@]}
 
 ###############################################################################
 # 1  TOOL PATHS                                                               #
@@ -96,7 +92,7 @@ ADAPTER_FA="/mnt/data/home/aviv/tools/Trimmomatic/adapters/TruSeq3-PE.fa"
 MACS2="macs2"
 
 ###############################################################################
-# 2  CREATE DIRECTORIES                                                       #
+# 2  DIRECTORIES + LOGGER                                                     #
 ###############################################################################
 mkdir -p "$OUTPUT_DIR" "$LOG_DIR" "$ALIGNMENT_DIR"
 FASTQC_DIR="$OUTPUT_DIR/fastqc_reports"
@@ -105,26 +101,21 @@ PEAK_DIR="$OUTPUT_DIR/macs2_peaks"
 BW_DIR="$OUTPUT_DIR/bigwig_bedgraphs"
 ANN_DIR="$OUTPUT_DIR/annotated_peaks"
 for d in "$FASTQC_DIR" "$SPIKE_DIR" "$PEAK_DIR"/{replicate,merged,pooled} \
-         "$BW_DIR" "$ANN_DIR" ; do mkdir -p "$d"; done
+         "$BW_DIR" "$ANN_DIR"; do mkdir -p "$d"; done
 
-###############################################################################
-# 3  UTILITY FUNCTIONS                                                        #
-###############################################################################
-# ── universal logger ─────────────────────────────────────────────────────────
-log () {                               # usage:  log "Trim Galore" "R1=$1 R2=$2"
-  local label="$1"; shift
-  local stamp=$(date +'%F %T')
-  printf '[%s] %-12s %s\n' "$stamp" "$label" "$*" | tee -a "$LOG_DIR/pipeline.log"
-}
-log "TEST" "Logger initialised – writing to $LOG_DIR/pipeline.log"
-
-get_sample_basename(){
-  local f=${1##*/}; f=${f%.fastq.gz}; f=${f%.fq.gz}
-  f=${f%_R1_001}; f=${f%_R2_001}; f=${f%_R1}; f=${f%_R2}; f=${f%_1}; f=${f%_2}
-  printf '%s\n' "$f"
+log () {                                   # log "STEP" "detail ..."
+  printf '[%(%F %T)T] %-10s %s\n' -1 "$1" "${*:2}" | tee -a "$LOG_DIR/pipeline.log"
 }
 
-trim_one_pair(){        # $1 R1  $2 R2  $3 BASE
+log "START" "Config = $CONFIG_FILE"
+
+###############################################################################
+# 3  HELPER FUNCTIONS                                                         #
+###############################################################################
+get_sample_basename(){ local b=${1##*/}; echo "${b%%[_R12]*}"; }
+
+trim_one_pair(){                        # $1 R1  $2 R2  $3 BASE
+  log "Trim" "$3"
   java -jar "$TRIMMOMATIC_JAR" PE -threads "$NUM_THREADS" -phred33 \
        "$1" "$2" \
        "$ALIGNMENT_DIR/${3}_trimmed_R1.fq.gz" /dev/null \
@@ -134,7 +125,8 @@ trim_one_pair(){        # $1 R1  $2 R2  $3 BASE
        > "$LOG_DIR/trim_${3}.log" 2>&1
 }
 
-run_star(){             # $1 R1  $2 R2  $3 OUTPREFIX  $4 LOGBASE  $5 GENOME
+run_star(){                              # $1 R1  $2 R2  $3 OUTPREFIX  $4 LOGBASE  $5 GENOME
+  log "$4" "STAR align"
   "$STAR_BIN" --runThreadN "$NUM_THREADS" \
               --genomeDir "$5" \
               --readFilesIn "$1" "$2" \
@@ -144,153 +136,152 @@ run_star(){             # $1 R1  $2 R2  $3 OUTPREFIX  $4 LOGBASE  $5 GENOME
               > "$LOG_DIR/${4}.log" 2> "$LOG_DIR/${4}_err.log"
 }
 
-bam_to_bedgraph(){      # $1 in.bam  $2 out.bg
-  bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "$2"
-}
+bam_to_bedgraph(){ bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "$2"; }
+
+merge_bams(){ [[ -f "$1" ]] || { samtools merge -f "$1" "${@:2}" && samtools index "$1"; }; }
 
 ###############################################################################
-# 4  BUILD BASENAME ARRAYS                                                    #
+# 4  BASENAMES & GENOME SIZE                                                  #
 ###############################################################################
 TREAT_NAMES=(); for r1 in "${TREAT_R1[@]}"; do TREAT_NAMES+=( "$(get_sample_basename "$r1")" ); done
-CTRL_NAMES=();  for r1 in "${CTRL_R1[@]}";  do CTRL_NAMES+=(  "$(get_sample_basename "$r1")" );  done
+CTRL_NAMES=();  for r1 in "${CTRL_R1[@]}";  do CTRL_NAMES+=( "$(get_sample_basename "$r1")" ); done
+SAMPLES=("${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}")
 
-SAMPLES=("${TREAT_NAMES[@]}"); ((NUM_CTRL)) && SAMPLES+=("${CTRL_NAMES[@]}")
+case $GENOME_SIZE_STRING in
+  hs) GENOME_SIZE=2913022398 ;;
+  mm) GENOME_SIZE=2652783500 ;;
+  dm) GENOME_SIZE=165000000  ;;
+  ce) GENOME_SIZE=1000000000 ;;
+  sc) GENOME_SIZE=12000000   ;;
+  *)  GENOME_SIZE=$CUSTOM_GENOME_SIZE ;;
+esac
 
 ###############################################################################
 # 5  FASTQC                                                                   #
 ###############################################################################
-for ((i=0;i<NUM_TREAT;i++)); do $FASTQC_BIN -o "$FASTQC_DIR" --quiet "${TREAT_R1[$i]}" "${TREAT_R2[$i]}"; done
-for ((i=0;i<NUM_CTRL;i++));  do $FASTQC_BIN -o "$FASTQC_DIR" --quiet "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}";  done
+log "FastQC" "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}"
+for i in "${!TREAT_R1[@]}"; do $FASTQC_BIN --quiet -o "$FASTQC_DIR" "${TREAT_R1[$i]}" "${TREAT_R2[$i]}"  > /dev/null; done
+for i in "${!CTRL_R1[@]}";  do $FASTQC_BIN --quiet -o "$FASTQC_DIR" "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"   > /dev/null; done
 
 ###############################################################################
-# 6  TRIM                                                                    #
+# 6  TRIMMING                                                                 #
 ###############################################################################
-for ((i=0;i<NUM_TREAT;i++)); do trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"; done
-for ((i=0;i<NUM_CTRL;i++));  do trim_one_pair "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  "${CTRL_NAMES[$i]}";  done
+for i in "${!TREAT_R1[@]}"; do trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"; done
+for i in "${!CTRL_R1[@]}";  do trim_one_pair "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  "${CTRL_NAMES[$i]}";  done
 
 ###############################################################################
-# 7  SPIKE-IN ALIGNMENT (E. coli)                                             #
+# 7  SPIKE-IN ALIGNMENT                                                       #
 ###############################################################################
-for name in "${SAMPLES[@]}"; do
-  run_star "$ALIGNMENT_DIR/${name}_trimmed_R1.fq.gz" \
-           "$ALIGNMENT_DIR/${name}_trimmed_R2.fq.gz" \
-           "$SPIKE_DIR/${name}_ecoli_"  "STAR_${name}_ecoli"  "$ECOLI_INDEX"
-  mv "$SPIKE_DIR/${name}_ecoli_Aligned.sortedByCoord.out.bam" \
-     "$SPIKE_DIR/${name}.ecoli.sorted.bam"
-  samtools index "$SPIKE_DIR/${name}.ecoli.sorted.bam"
+for n in "${SAMPLES[@]}"; do
+  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
+           "$SPIKE_DIR/${n}_ecoli_" "SPIKE_$n" "$ECOLI_INDEX"
+  mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
 done
 
 ###############################################################################
-# 8  HOST-GENOME ALIGNMENT (STAR)                                             #
+# 8  HOST ALIGNMENT                                                           #
 ###############################################################################
-for name in "${SAMPLES[@]}"; do
-  run_star "$ALIGNMENT_DIR/${name}_trimmed_R1.fq.gz" \
-           "$ALIGNMENT_DIR/${name}_trimmed_R2.fq.gz" \
-           "$ALIGNMENT_DIR/${name}." "STAR_${name}" "$REFERENCE_GENOME"
+for n in "${SAMPLES[@]}"; do
+  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
+           "$ALIGNMENT_DIR/${n}." "STAR_$n" "$REFERENCE_GENOME"
 done
 
 ###############################################################################
 # 9  PICARD RG + DEDUP                                                        #
 ###############################################################################
-for name in "${SAMPLES[@]}"; do
-  in_bam="$ALIGNMENT_DIR/${name}.Aligned.sortedByCoord.out.bam"
-  [[ -s "$in_bam" ]] || continue
-  java -jar "$PICARD_JAR" AddOrReplaceReadGroups I="$in_bam" \
-       O="$ALIGNMENT_DIR/${name}.rg.bam" RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$name"
-  java -jar "$PICARD_JAR" MarkDuplicates I="$ALIGNMENT_DIR/${name}.rg.bam" \
-       O="$ALIGNMENT_DIR/${name}.dedup.bam" M="$LOG_DIR/${name}.metrics.txt" REMOVE_DUPLICATES=true
-  samtools index "$ALIGNMENT_DIR/${name}.dedup.bam"
+for n in "${SAMPLES[@]}"; do
+  in="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
+  [[ -s $in ]] || continue
+  java -jar "$PICARD_JAR" AddOrReplaceReadGroups I="$in" O="$ALIGNMENT_DIR/${n}.rg.bam" \
+       RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n"
+  java -jar "$PICARD_JAR" MarkDuplicates I="$ALIGNMENT_DIR/${n}.rg.bam" \
+       O="$ALIGNMENT_DIR/${n}.dedup.bam" M="$LOG_DIR/${n}.metrics.txt" REMOVE_DUPLICATES=true
+  samtools index "$ALIGNMENT_DIR/${n}.dedup.bam"
 done
 
 ###############################################################################
-# 10  FRAGMENT FILTERING                                                      #
+# 10  FRAGMENT FILTER                                                         #
 ###############################################################################
 case $FRAGMENT_SIZE_FILTER in
-  histones)              FRAG_CMD='{if ($9>=130&&$9<=300 || $1~/^@/)print}';;
-  transcription_factors) FRAG_CMD='{if ($9<130 || $1~/^@/)print}';;
-  *)                     FRAG_CMD='{if ($9<1000||$1~/^@/)print}';;
+  histones)              CMD='{if($9>=130&&$9<=300||$1~/^@/)print}';;
+  transcription_factors) CMD='{if($9<130||$1~/^@/)print}';;
+  *)                     CMD='{if($9<1000||$1~/^@/)print}';;
 esac
-for name in "${SAMPLES[@]}"; do
-  samtools view -h "$ALIGNMENT_DIR/${name}.dedup.bam" | \
-    awk "$FRAG_CMD" | samtools view -bS - > "$ALIGNMENT_DIR/${name}.dedup.filtered.bam"
-  samtools index "$ALIGNMENT_DIR/${name}.dedup.filtered.bam"
+for n in "${SAMPLES[@]}"; do
+  samtools view -h "$ALIGNMENT_DIR/${n}.dedup.bam" | awk "$CMD" | \
+    samtools view -bS - > "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  samtools index "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
 done
 
 ###############################################################################
-# 11  PEAK CALLING – replicate / merged / pooled (MACS2)                      #
+# 11  MACS2 PEAKS (replicate / merged / pooled)                               #
 ###############################################################################
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
-merge_bams(){ [[ -f "$1" ]] || { samtools merge -f "$1" "${@:2}" && samtools index "$1"; }; }
 
 # A  replicate peaks
-if ((NUM_CTRL)); then
+if ((${#CTRL_NAMES[@]})); then
   CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
   merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]/%/.dedup.filtered.bam}"
 fi
-for name in "${TREAT_NAMES[@]}"; do
-  T_BAM="$ALIGNMENT_DIR/${name}.dedup.filtered.bam"
-  if ((NUM_CTRL)); then
-    $MACS2 callpeak -t "$T_BAM" -c "$CTRL_MRG" -f BAMPE -g $GENOME_SIZE \
-           -n "$name" --outdir "$PEAK_DIR/replicate"
+for n in "${TREAT_NAMES[@]}"; do
+  if ((${#CTRL_NAMES[@]})); then
+    $MACS2 callpeak -t "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" -c "$CTRL_MRG" \
+           -f BAMPE -g $GENOME_SIZE -n "$n" --outdir "$PEAK_DIR/replicate"
   else
-    $MACS2 callpeak -t "$T_BAM" -f BAMPE -g $GENOME_SIZE \
-           -n "$name" --outdir "$PEAK_DIR/replicate"
+    $MACS2 callpeak -t "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" \
+           -f BAMPE -g $GENOME_SIZE -n "$n" --outdir "$PEAK_DIR/replicate"
   fi
 done
 
-# B  merged peaks
-T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
+# B merged peaks
+T_MRG="$ALIGNMENT_DIR/treat_merged.bam"
 merge_bams "$T_MRG" "${TREAT_NAMES[@]/%/.dedup.filtered.bam}"
-if ((NUM_CTRL)); then
+if ((${#CTRL_NAMES[@]})); then
   $MACS2 callpeak -t "$T_MRG" -c "$CTRL_MRG" -f BAMPE -g $GENOME_SIZE \
-         -n treatmentMerged_vs_controlMerged --outdir "$PEAK_DIR/merged"
+         -n treatMerged_vs_ctrlMerged --outdir "$PEAK_DIR/merged"
 else
   $MACS2 callpeak -t "$T_MRG" -f BAMPE -g $GENOME_SIZE \
-         -n treatmentMerged --outdir "$PEAK_DIR/merged"
+         -n treatMerged --outdir "$PEAK_DIR/merged"
 fi
 
-# C  pooled-control vs each replicate
-if ((NUM_CTRL)); then
-  for name in "${TREAT_NAMES[@]}"; do
-    $MACS2 callpeak -t "$ALIGNMENT_DIR/${name}.dedup.filtered.bam" -c "$CTRL_MRG" \
-           -f BAMPE -g $GENOME_SIZE -n "${name}_vs_ctrlPooled" --outdir "$PEAK_DIR/pooled"
+# C pooled-control vs each replicate
+if ((${#CTRL_NAMES[@]})); then
+  for n in "${TREAT_NAMES[@]}"; do
+    $MACS2 callpeak -t "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" -c "$CTRL_MRG" \
+           -f BAMPE -g $GENOME_SIZE -n "${n}_vs_ctrlPooled" --outdir "$PEAK_DIR/pooled"
   done
 fi
 
 ###############################################################################
-# 12  SPIKE-IN SCALE FACTORS                                                  #
+# 12  SPIKE SCALE FACTORS                                                     #
 ###############################################################################
 declare -A SCALE
-count_reads(){ samtools view -c -F 2304 "$1"; }
-for name in "${SAMPLES[@]}"; do
-  host="$ALIGNMENT_DIR/${name}.dedup.filtered.bam"
-  spike="$SPIKE_DIR/${name}.ecoli.sorted.bam"
-  [[ -f $host && -f $spike ]] || continue
-  h=$(count_reads "$host"); s=$(count_reads "$spike")
-  ((s)) && SCALE["$name"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f",h/s}')
+read_count(){ samtools view -c -F 2304 "$1"; }
+for n in "${SAMPLES[@]}"; do
+  h=$(read_count "$ALIGNMENT_DIR/${n}.dedup.filtered.bam")
+  s=$(read_count "$SPIKE_DIR/${n}.ecoli.sorted.bam")
+  ((s)) && SCALE["$n"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f",h/s}')
 done
 
 ###############################################################################
-# 13  BIGWIG GENERATION                                                      #
+# 13  BIGWIG                                                                  #
 ###############################################################################
-for name in "${SAMPLES[@]}"; do
-  bg="$BW_DIR/${name}.bedgraph"
-  bedtools genomecov -ibam "$ALIGNMENT_DIR/${name}.dedup.filtered.bam" -bg -pc > "$bg"
-  [[ -n ${SCALE[$name]} ]] && \
-      awk -v f="${SCALE[$name]}" '{ $4=$4*f; print }' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
-  bedGraphToBigWig "$bg" "$CHROM_SIZE" "$BW_DIR/${name}.bw"
+for n in "${SAMPLES[@]}"; do
+  bg="$BW_DIR/${n}.bedgraph"
+  bam_to_bedgraph "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" "$bg"
+  [[ -n ${SCALE[$n]} ]] && awk -v f="${SCALE[$n]}" '{$4*=$4*f;print}' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
+  bedGraphToBigWig "$bg" "$CHROM_SIZE" "$BW_DIR/${n}.bw"
 done
 
 ###############################################################################
-# 14  PEAK ANNOTATION                                                        #
+# 14  ANNOTATE PEAKS                                                          #
 ###############################################################################
 for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
   [[ -f $np ]] || continue
-  base=$(basename "$np" .narrowPeak)
+  base=${np##*/}; base=${base%.narrowPeak}
   full="$ANN_DIR/${base}.annotated.bed"
-  tsv="$ANN_DIR/${base}.annotated.tsv"
   bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb > "$full"
-  awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$10,$11,$12}' "$full" > "$tsv"
 done
 
-echo "DONE!" "🎉 Pipeline finished!  Outputs in $OUTPUT_DIR"
+log "DONE" "Outputs in $OUTPUT_DIR"
