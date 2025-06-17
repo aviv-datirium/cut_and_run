@@ -50,7 +50,7 @@ cat <<'BANNER'
  REQUIREMENTS
  ────────────
    bash ≥4   ·  samtools ≥1.10   ·  bedtools ≥2.28   ·  STAR ≥2.7
-   Trimmomatic 0.39   ·  Picard ≥2.18   ·  MACS2 ≥2.2
+   Trim Galore 0.6.10   ·  Picard ≥2.18   ·  MACS2 ≥2.2
    R 4.x (for MultiQC/optional DiffBind)   ·  GNU coreutils / awk
 
 BANNER
@@ -120,20 +120,19 @@ get_sample_basename() {
   printf '%s\n' "$b"
 }
 
-trim_one_pair () {                # $1 = R1  $2 = R2  $3 = SAMPLE_BASENAME
-  local R1="$1"  R2="$2"  BASE="$3"
+trim_one_pair () {                # $1 R1  $2 R2  $3 SAMPLE
+  local R1="$1" R2="$2" BASE="$3"
 
   log Trim "$BASE" start
 
   trim_galore --paired --quality 20 --phred33 \
-              --trim1 \
               --gzip \
-              --cores "$NUM_THREADS" \
+              --length 25 \
               --output_dir "$ALIGNMENT_DIR" \
               "$R1" "$R2" \
               > "$LOG_DIR/trim_${BASE}.log" 2>&1
 
-  # Detect Trim Galore! output: *_val_1.fq.gz / *_val_2.fq.gz
+  # detect Trim Galore! outputs
   local VAL1 VAL2
   VAL1=$(find "$ALIGNMENT_DIR" -maxdepth 1 -name "${BASE}*val_1.fq.gz" | head -n1)
   VAL2=$(find "$ALIGNMENT_DIR" -maxdepth 1 -name "${BASE}*val_2.fq.gz" | head -n1)
@@ -143,8 +142,8 @@ trim_one_pair () {                # $1 = R1  $2 = R2  $3 = SAMPLE_BASENAME
       mv "$VAL2" "$ALIGNMENT_DIR/${BASE}_trimmed_R2.fq.gz"
       log Trim "$BASE" ok
   else
-      log Trim "$BASE" FAIL "Trim Galore! did not produce trimmed FASTQs"
-      return 1    # downstream loops will skip this sample
+      log Trim "$BASE" FAIL "no trimmed FASTQs produced"
+      return 1
   fi
 }
 
@@ -176,26 +175,26 @@ case $GENOME_SIZE_STRING in
   sc) GENOME_SIZE=12000000   ;;  *)  GENOME_SIZE=$CUSTOM_GENOME_SIZE ;;
 esac
 
-#~ ###############################################################################
-#~ # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
-#~ ###############################################################################
-#~ log FastQC ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}"
+###############################################################################
+# 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
+###############################################################################
+log FastQC ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}"
 
-#~ run_fastqc () {                    # R1  R2  SAMPLE
-  #~ log FastQC "$3" start
-  #~ if $FASTQC_BIN -o "$FASTQC_DIR" --quiet --extract "$1" "$2" > /dev/null 2>&1; then
-    #~ log FastQC "$3" ok
-  #~ else
-    #~ log FastQC "$3" FAIL
-  #~ fi
-#~ }
+run_fastqc () {                    # R1  R2  SAMPLE
+  log FastQC "$3" start
+  if $FASTQC_BIN -o "$FASTQC_DIR" --quiet --extract "$1" "$2" > /dev/null 2>&1; then
+    log FastQC "$3" ok
+  else
+    log FastQC "$3" FAIL
+  fi
+}
 
-#~ for i in "${!TREAT_R1[@]}"; do
-  #~ run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
-#~ done
-#~ for i in "${!CTRL_R1[@]}";  do
-  #~ run_fastqc "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}"
-#~ done
+for i in "${!TREAT_R1[@]}"; do
+  run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
+done
+for i in "${!CTRL_R1[@]}";  do
+  run_fastqc "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}"
+done
 
 ###############################################################################
 # 6  TRIMMING  – per-sample logging (start / done)                            #
