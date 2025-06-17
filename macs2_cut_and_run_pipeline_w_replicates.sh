@@ -158,6 +158,19 @@ run_star () {                     # R1  R2  OUTPREFIX  GENOMEDIR
               2> "$LOG_DIR/$(basename "$3")STAR_err.log"
 }
 
+run_fastqc () {                     # $1=R1  $2=R2  $3=SAMPLE
+  local R1=$1 R2=$2 SAMPLE=$3
+  log FastQC "$SAMPLE" start
+  $FASTQC_BIN --quiet --extract -o "$FASTQC_DIR" "$R1" "$R2" \
+      >  "$LOG_DIR/fastqc_${SAMPLE}.log" \
+      2> "$LOG_DIR/fastqc_${SAMPLE}.err"
+  if [[ $? -eq 0 ]]; then
+      log FastQC "$SAMPLE" ok
+  else
+      log FastQC "$SAMPLE" FAIL  "see fastqc_${SAMPLE}.err"
+  fi
+}
+
 bam_to_bedgraph(){ bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "$2"; }
 merge_bams(){ [[ -f "$1" ]] || { samtools merge -f "$1" "${@:2}" && samtools index "$1"; }; }
 read_count(){ samtools view -c -F 2304 "$1"; }
@@ -180,20 +193,11 @@ esac
 ###############################################################################
 log FastQC ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}"
 
-run_fastqc () {                    # R1  R2  SAMPLE
-  log FastQC "$3" start
-  if $FASTQC_BIN -o "$FASTQC_DIR" --quiet --extract "$1" "$2" > /dev/null 2>&1; then
-    log FastQC "$3" ok
-  else
-    log FastQC "$3" FAIL
-  fi
-}
-
 for i in "${!TREAT_R1[@]}"; do
   run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
 done
 for i in "${!CTRL_R1[@]}";  do
-  run_fastqc "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}"
+  run_fastqc "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  "${CTRL_NAMES[$i]}"
 done
 
 ###############################################################################
