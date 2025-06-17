@@ -110,6 +110,13 @@ for d in "$FASTQC_DIR" "$SPIKE_DIR" "$PEAK_DIR"/{replicate,merged,pooled} \
 ###############################################################################
 # 3  UTILITY FUNCTIONS                                                        #
 ###############################################################################
+# ── universal logger ─────────────────────────────────────────────────────────
+log () {                               # usage:  log "Trim Galore" "R1=$1 R2=$2"
+  local label="$1"; shift
+  local stamp=$(date +'%F %T')
+  printf '[%s] %-12s %s\n' "$stamp" "$label" "$*" | tee -a "$LOG_DIR/pipeline.log"
+}
+
 get_sample_basename(){
   local f=${1##*/}; f=${f%.fastq.gz}; f=${f%.fq.gz}
   f=${f%_R1_001}; f=${f%_R2_001}; f=${f%_R1}; f=${f%_R2}; f=${f%_1}; f=${f%_2}
@@ -285,4 +292,4 @@ for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
   awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$10,$11,$12}' "$full" > "$tsv"
 done
 
-echo "🎉 Pipeline finished!  Outputs in $OUTPUT_DIR"
+echo "DONE!" "🎉 Pipeline finished!  Outputs in $OUTPUT_DIR"
