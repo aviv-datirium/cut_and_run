@@ -61,7 +61,6 @@ BANNER
 ###############################################################################
 CONFIG_FILE="/mnt/data/home/aviv/cut_and_run/config_replicates_diffbind.json"
 
-RAW_FASTQ_DIR=$(jq -r '.raw_fastq_dir'  "$CONFIG_FILE")
 ALIGNMENT_DIR=$(jq -r '.alignment_dir'  "$CONFIG_FILE")
 OUTPUT_DIR=$(   jq -r '.output_dir'     "$CONFIG_FILE")
 LOG_DIR=$(      jq -r '.log_dir'        "$CONFIG_FILE")
@@ -75,7 +74,6 @@ GENOME_SIZE_STRING=$(jq -r '.genome_size'      "$CONFIG_FILE")
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' "$CONFIG_FILE")
 FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
 NUM_THREADS=$(jq    -r '.num_threads'          "$CONFIG_FILE")
-NUM_TRIMGALORE_THREADS=$(jq    -r '.num_trimgalore_threads'          "$CONFIG_FILE")
 
 TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE"))
 TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE"))
@@ -129,7 +127,7 @@ trim_one_pair () {                # $1 R1  $2 R2  $3 SAMPLE
 
   trim_galore --paired --quality 20 --phred33 \
               --gzip \
-              --cores "$NUM_TRIMGALORE_THREADS" \  # multi-thread Cutadapt + pigz
+              --cores "$NUM_THREADS" \  # multi-thread Cutadapt + pigz
               --length 25 \
               --output_dir "$ALIGNMENT_DIR" \
               "$R1" "$R2" \
@@ -207,7 +205,7 @@ done
 # 6  TRIMMING  – per-sample logging (start / done)                            #
 ###############################################################################
 # Headline
-log Trim ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_TRIMGALORE_THREADS)"
+log Trim ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_THREADS)"
 
 # ── treatment replicates ────────────────────────────────────────────────────
 for i in "${!TREAT_R1[@]}"; do
