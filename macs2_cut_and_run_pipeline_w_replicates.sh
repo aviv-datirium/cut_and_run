@@ -209,6 +209,7 @@ log Trim ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_TH
 
 # ── treatment replicates ────────────────────────────────────────────────────
 for i in "${!TREAT_R1[@]}"; do
+  echo "DEBUG ${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
   trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
 done
 
