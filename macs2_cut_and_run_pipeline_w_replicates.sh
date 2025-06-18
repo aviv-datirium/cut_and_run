@@ -215,6 +215,7 @@ done
 
 # ── control replicates (if any) ─────────────────────────────────────────────
 for i in "${!CTRL_R1[@]}"; do
+  echo "DEBUG ${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}"
   trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
 done
 
