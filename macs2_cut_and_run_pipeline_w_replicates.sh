@@ -120,14 +120,14 @@ get_sample_basename() {
   printf '%s\n' "$b"
 }
 
-trim_one_pair () {                # $1 R1  $2 R2  $3 SAMPLE
+trim_one_pair () {                # $1 R1  $2 R2  $3 SAMPLE multi-thread Cutadapt + pigz
   local R1="$1" R2="$2" BASE="$3"
 
   log Trim "$BASE" start
 
   trim_galore --paired --quality 20 --phred33 \
               --gzip \
-              --cores "$NUM_THREADS" \  # multi-thread Cutadapt + pigz
+              --cores "$NUM_THREADS" \  
               --length 25 \
               --output_dir "$ALIGNMENT_DIR" \
               "$R1" "$R2" \
