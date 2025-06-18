@@ -370,7 +370,7 @@ else
   } > "$SAMPLE_SHEET"
 
   # run R script
-  Rscript /mnt/data/home/aviv/tools/diffbind/diffbind.R \
+  Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R \
           "$SAMPLE_SHEET" "$DIFF_DIR" \
           > "$DIFF_DIR/diffbind.log" 2>&1
 
