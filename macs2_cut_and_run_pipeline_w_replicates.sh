@@ -40,6 +40,7 @@ cat <<'BANNER'
   8  Spike-in scale factors   – host/spike read ratio per replicate
   9  BedGraph + BigWig generation (scaled if factors exist)
  10  Peak-to-gene annotation (bedtools intersect)
+ 11  DiffBind peak comparison
 
  USAGE
  ─────
@@ -50,8 +51,8 @@ cat <<'BANNER'
  REQUIREMENTS
  ────────────
    bash ≥4   ·  samtools ≥1.10   ·  bedtools ≥2.28   ·  STAR ≥2.7
-   Trim Galore 0.6.10   ·  Picard ≥2.18   ·  MACS2 ≥2.2
-   R 4.x (for MultiQC/optional DiffBind)   ·  GNU coreutils / awk
+   Trim Galore 0.6.10 ·  Picard ≥2.18 ·  MACS2 ≥2.2 · cutadapt ≥4.1
+   R 4.x (for optional DiffBind) · GNU coreutils/awk
 
 BANNER
 
@@ -74,6 +75,7 @@ GENOME_SIZE_STRING=$(jq -r '.genome_size'      "$CONFIG_FILE")
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' "$CONFIG_FILE")
 FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
 NUM_THREADS=$(jq    -r '.num_threads'          "$CONFIG_FILE")
+NUM_TRIMGALORE_THREADS=$(jq    -r '.num_trimgalore_threads'          "$CONFIG_FILE")
 
 TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE"))
 TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE"))
@@ -108,7 +110,7 @@ log(){ printf '[%(%F %T)T] %-10s %-15s %s\n' -1 "$1" "$2" "${*:3}" \
 log START ALL "Config=$CONFIG_FILE"
 
 ###############################################################################
-# 3  HELPERS                                                                  #
+# 3  HELPER FUNCTIONS                                                         #
 ###############################################################################
 get_sample_basename() {
   # keep EVERYTHING up to the trailing _R1/_R2/_R1_001/_R2_001 token
@@ -127,6 +129,7 @@ trim_one_pair () {                # $1 R1  $2 R2  $3 SAMPLE
 
   trim_galore --paired --quality 20 --phred33 \
               --gzip \
+              --cores "$NUM_TRIMGALORE_THREADS" # multi-thread Cutadapt + pigz
               --length 25 \
               --output_dir "$ALIGNMENT_DIR" \
               "$R1" "$R2" \
@@ -204,14 +207,14 @@ done
 # 6  TRIMMING  – per-sample logging (start / done)                            #
 ###############################################################################
 # Headline
-log Trim ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}  (Trim Galore!)"
+log Trim ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_TRIMGALORE_THREADS)"
 
-# --- treatment replicates ----------------------------------------------------
+# ── treatment replicates ────────────────────────────────────────────────────
 for i in "${!TREAT_R1[@]}"; do
   trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
 done
 
-# --- control replicates (if any) --------------------------------------------
+# ── control replicates (if any) ─────────────────────────────────────────────
 for i in "${!CTRL_R1[@]}"; do
   trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
 done
@@ -345,5 +348,37 @@ for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
   bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
     > "$ANN_DIR/${b}.annotated.bed"
 done
+
+###############################################################################
+# 15  DIFFBIND  – merged treatment vs merged control peaks                    #
+###############################################################################
+DIFF_DIR="$OUTPUT_DIR/diffbind"
+mkdir -p "$DIFF_DIR"
+
+# ── skip if no control or fewer than 2 treatment replicates ───────────
+if [[ ${#CTRL_NAMES[@]} -eq 0 || ${#TREAT_NAMES[@]} -lt 2 ]]; then
+  log DiffBind ALL "skipped (need ≥2 treatment reps + control)"
+else
+  log DiffBind ALL start
+
+  # build sample sheet
+  SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
+  {
+    echo "SampleID,Condition,bamReads,Peaks,ScoreCol"
+    echo "TreatmentMerged,treatment,$ALIGNMENT_DIR/treat_merged.bam,$PEAK_DIR/merged/treatMerged_vs_ctrlMerged_peaks.narrowPeak,7"
+    echo "ControlMerged,control,$ALIGNMENT_DIR/control_merged.bam,$PEAK_DIR/merged/treatMerged_vs_ctrlMerged_control.narrowPeak,7"
+  } > "$SAMPLE_SHEET"
+
+  # run R script
+  Rscript /mnt/data/home/aviv/tools/diffbind/diffbind.R \
+          "$SAMPLE_SHEET" "$DIFF_DIR" \
+          > "$DIFF_DIR/diffbind.log" 2>&1
+
+  if [[ $? -eq 0 ]]; then
+    log DiffBind ALL ok
+  else
+    log DiffBind ALL FAIL "see $DIFF_DIR/diffbind.log"
+  fi
+fi
 
 log DONE ALL "Outputs in $OUTPUT_DIR"

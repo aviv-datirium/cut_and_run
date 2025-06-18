@@ -10,11 +10,11 @@
     ]
   },
   "raw_fastq_dir": "/mnt/data/home/aviv/fastq/min_msto211h",
-  "alignment_dir": "/mnt/data/home/aviv/alignment_replicates",
-  "output_dir": "/mnt/data/home/aviv/output_replicates",
+  "alignment_dir": "/mnt/data/home/aviv/alignment_replicates_diffbind",
+  "output_dir": "/mnt/data/home/aviv/output_replicates_diffbibd",
   "reference_genome": "/mnt/data/home/aviv/star_indices/hg38",
   "ecoli_index": "/mnt/data/home/aviv/star_indices/ecoli_canonical",
-  "spike_bam_dir": "/mnt/data/home/aviv/spikein_bam_replicates",
+  "spike_bam_dir": "/mnt/data/home/aviv/spikein_bam_replicates_diffbind",
   "chrom_sizes": "/mnt/data/home/aviv/chrom/hg38.chrom.sizes",
   "annotation_genes": "/mnt/data/home/aviv/annotation/hg38.refGene.gtf",
   "genome_size": "hs",
@@ -22,7 +22,7 @@
   "fragment_size_filter": "below_1000",
   "broad_peak_extsize": 147,
   "narrow_peak_extsize": 200,
-  "log_dir": "/mnt/data/home/aviv/output_replicates/logs",
+  "log_dir": "/mnt/data/home/aviv/output_replicates_diffbind/logs",
   "num_threads": 4,
   "num_trimgalore_threads": 4
 }
