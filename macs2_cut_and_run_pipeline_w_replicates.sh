@@ -127,7 +127,7 @@ trim_one_pair () {                # $1 R1  $2 R2  $3 SAMPLE multi-thread Cutadap
 
   trim_galore --paired --quality 20 --phred33 \
               --gzip \
-              --cores "$NUM_THREADS" \  
+              --cores "$NUM_THREADS" \
               --length 25 \
               --output_dir "$ALIGNMENT_DIR" \
               "$R1" "$R2" \
