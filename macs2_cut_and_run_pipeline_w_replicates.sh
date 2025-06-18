@@ -59,7 +59,7 @@ BANNER
 ###############################################################################
 # 0  CONFIG + PATHS                                                           #
 ###############################################################################
-CONFIG_FILE="/mnt/data/home/aviv/cut_and_run/config_replicates.json"
+CONFIG_FILE="/mnt/data/home/aviv/cut_and_run/config_replicates_diffbind.json"
 
 RAW_FASTQ_DIR=$(jq -r '.raw_fastq_dir'  "$CONFIG_FILE")
 ALIGNMENT_DIR=$(jq -r '.alignment_dir'  "$CONFIG_FILE")
