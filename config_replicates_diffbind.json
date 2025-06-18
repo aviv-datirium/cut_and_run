@@ -11,7 +11,8 @@
   },
   "raw_fastq_dir": "/mnt/data/home/aviv/fastq/min_msto211h",
   "alignment_dir": "/mnt/data/home/aviv/alignment_replicates_diffbind",
-  "output_dir": "/mnt/data/home/aviv/output_replicates_diffbibd",
+  "output_dir": "/mnt/data/home/aviv/output_replicates_diffbind",
+  "log_dir": "/mnt/data/home/aviv/output_replicates_diffbind/logs",
   "reference_genome": "/mnt/data/home/aviv/star_indices/hg38",
   "ecoli_index": "/mnt/data/home/aviv/star_indices/ecoli_canonical",
   "spike_bam_dir": "/mnt/data/home/aviv/spikein_bam_replicates_diffbind",
@@ -22,7 +23,6 @@
   "fragment_size_filter": "below_1000",
   "broad_peak_extsize": 147,
   "narrow_peak_extsize": 200,
-  "log_dir": "/mnt/data/home/aviv/output_replicates_diffbind/logs",
   "num_threads": 4,
   "num_trimgalore_threads": 4
 }
