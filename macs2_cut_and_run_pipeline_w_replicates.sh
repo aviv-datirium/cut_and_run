@@ -192,14 +192,14 @@ esac
 ###############################################################################
 # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 ###############################################################################
-log FastQC ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}"
+#~ log FastQC ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}"
 
-for i in "${!TREAT_R1[@]}"; do
-  run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
-done
-for i in "${!CTRL_R1[@]}";  do
-  run_fastqc "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  "${CTRL_NAMES[$i]}"
-done
+#~ for i in "${!TREAT_R1[@]}"; do
+  #~ run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
+#~ done
+#~ for i in "${!CTRL_R1[@]}";  do
+  #~ run_fastqc "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  "${CTRL_NAMES[$i]}"
+#~ done
 
 ###############################################################################
 # 6  TRIMMING  – per-sample logging (start / done)                            #
