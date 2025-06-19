@@ -31,13 +31,13 @@ cat <<'BANNER'
  ───────────
   0  Read paths & parameters (config.json)
   1  FastQC on raw FASTQs
-  2  Trimming (Trimmomatic)   – all treatment & control replicates
-  3  STAR   : E. coli (spike-in)    → per-replicate BAM + index
-  4  STAR   : host genome (hg38/mm10/…) → per-replicate BAM + index
+  2  Trimming (Trimmomatic) – all treatment & control replicates
+  3  STAR   : host genome (hg38/mm10/…) → per-replicate BAM + index
+  4  STAR   : E. coli (spike-in) → per-replicate BAM + index
   5  Picard : add-RG + duplicate removal
   6  Fragment-size filtering (histone/TF/≤1 kb)
   7  MACS2  : replicate, merged, pooled peak calling (BAMPE mode)
-  8  Spike-in scale factors   – host/spike read ratio per replicate
+  8  Spike-in scale factors – host/spike read ratio per replicate
   9  BedGraph + BigWig generation (scaled if factors exist)
  10  Peak-to-gene annotation (bedtools intersect)
  11  DiffBind peak comparison
@@ -45,14 +45,14 @@ cat <<'BANNER'
  USAGE
  ─────
    • Edit config.json with absolute paths and replicate lists.
-   • Run:   bash cutrun_pipeline.sh   (no CLI arguments)
+   • Run: bash macs2_cut_and_run_pipeline_w_replicates.sh (no CLI arguments)
    • Logs stream to stdout *and* to output/logs/pipeline.log
 
  REQUIREMENTS
  ────────────
-   bash ≥4   ·  samtools ≥1.10   ·  bedtools ≥2.28   ·  STAR ≥2.7
-   Trim Galore 0.6.10 ·  Picard ≥2.18 ·  MACS2 ≥2.2 · cutadapt ≥4.1
-   R 4.x (for optional DiffBind) · GNU coreutils/awk
+   bash ≥4 · samtools ≥1.10 · bedtools ≥2.28 · STAR ≥2.7 · Java ≥17
+   Trim Galore 0.6.10 · Picard ≥2.18 · MACS2 ≥2.2 · cutadapt ≥4.1
+   R 4.x (for optional DiffBind) · GNU coreutils/awk · PIGZ
 
 BANNER
 
@@ -74,6 +74,7 @@ GENOME_SIZE_STRING=$(jq -r '.genome_size'      "$CONFIG_FILE")
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' "$CONFIG_FILE")
 FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
 NUM_THREADS=$(jq    -r '.num_threads'          "$CONFIG_FILE")
+NUM_TRIMGALORE_THREADS=$(jq    -r '.num_trimgalore_threads'          "$CONFIG_FILE")
 
 TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE"))
 TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE"))
@@ -127,7 +128,7 @@ trim_one_pair () {                # $1 R1  $2 R2  $3 SAMPLE multi-thread Cutadap
 
   trim_galore --paired --quality 20 --phred33 \
               --gzip \
-              --cores "$NUM_THREADS" \
+              --cores "$NUM_TRIMGALORE_THREADS" \
               --length 25 \
               --output_dir "$ALIGNMENT_DIR" \
               "$R1" "$R2" \
@@ -159,6 +160,13 @@ run_star () {                     # R1  R2  OUTPREFIX  GENOMEDIR
               2> "$LOG_DIR/$(basename "$3")STAR_err.log"
 }
 
+get_unmapped_mates () {
+  local base="$ALIGNMENT_DIR/$1"
+  local m1="${base}.Unmapped.out.mate1"
+  local m2="${base}.Unmapped.out.mate2"
+  [[ -s $m1 && -s $m2 ]] && printf '%s %s\n' "$m1" "$m2"
+}
+
 run_fastqc () {                     # $1=R1  $2=R2  $3=SAMPLE
   local R1=$1 R2=$2 SAMPLE=$3
   log FastQC "$SAMPLE" start
@@ -171,6 +179,18 @@ run_fastqc () {                     # $1=R1  $2=R2  $3=SAMPLE
       log FastQC "$SAMPLE" FAIL  "see fastqc_${SAMPLE}.err"
   fi
 }
+
+merge_bams () {                     # $1 = out.bam   $2.. = input bams
+  [[ -f $1 ]] || { samtools merge -f "$@"; samtools index "$1"; }
+}
+
+T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
+merge_bams "$T_MRG"  "${TREAT_NAMES[@]/%/.dedup.filtered.bam}"
+
+if (( ${#CTRL_NAMES[@]} )); then
+  CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
+  merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]/%/.dedup.filtered.bam}"
+fi
 
 bam_to_bedgraph(){ bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "$2"; }
 merge_bams(){ [[ -f "$1" ]] || { samtools merge -f "$1" "${@:2}" && samtools index "$1"; }; }
@@ -192,7 +212,7 @@ esac
 ###############################################################################
 # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 ###############################################################################
-#~ log FastQC ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}"
+#~ log FastQC ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
 
 #~ for i in "${!TREAT_R1[@]}"; do
   #~ run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
@@ -204,46 +224,49 @@ esac
 ###############################################################################
 # 6  TRIMMING  – per-sample logging (start / done)                            #
 ###############################################################################
-# Headline
-log Trim ALL "T=${#TREAT_R1[@]}  C=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_THREADS)"
+log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_THREADS)"
 
 # ── treatment replicates ────────────────────────────────────────────────────
 for i in "${!TREAT_R1[@]}"; do
-  echo "DEBUG ${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
   trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
 done
 
 # ── control replicates (if any) ─────────────────────────────────────────────
 for i in "${!CTRL_R1[@]}"; do
-  echo "DEBUG ${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}"
   trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
 done
 
 ###############################################################################
-# 7  SPIKE-IN ALIGNMENT (E. coli)                                             #
-###############################################################################
-for n in "${SAMPLES[@]}"; do
-  log SPIKE "$n" start
-  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
-           "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
-           "$SPIKE_DIR/${n}_ecoli_"  "$ECOLI_INDEX"
-
-  mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
-     "$SPIKE_DIR/${n}.ecoli.sorted.bam"
-  samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
-  log SPIKE    "$n" done
-done
-
-###############################################################################
-# 8  HOST GENOME ALIGNMENT                                                    #
+# 7  HOST GENOME ALIGNMENT                                                    #
 ###############################################################################
 for n in "${SAMPLES[@]}"; do
   log STARhost "$n" start
   run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
            "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
-           "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME"
+           "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME" \
+           --outReadsUnmapped Fastx          # ← NEW OPTION
   log STARhost "$n" done
+done
 
+###############################################################################
+# 8  SPIKE-IN ALIGNMENT (E. coli)                                             #
+###############################################################################
+for n in "${SAMPLES[@]}"; do
+  # locate mate FASTQs produced in Step 8
+  read -r U1 U2 < <(get_unmapped_mates "$n")
+
+  if [[ -z $U1 ]]; then
+    log SPIKE "$n" "skip (no unmapped mates)"
+    continue
+  fi
+
+  log SPIKE "$n" start
+  run_star "$U1" "$U2" \
+           "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX"
+  mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
+     "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  log SPIKE "$n" done
 done
 
 ###############################################################################
@@ -276,15 +299,15 @@ for n in "${SAMPLES[@]}"; do
 done
 
 ###############################################################################
-# 11  MACS2 PEAKS                                                             #
+# 11  MACS2 PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 merge_bams "$ALIGNMENT_DIR/control_merged.bam" "${CTRL_NAMES[@]/%/.dedup.filtered.bam}" 2>/dev/null
 CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
 
-# replicate peaks
+# ── A  replicates (unchanged) ────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}"; do
-  log MACS2rep "$n"
+  log MACS2replicates "$n"
   if [[ -f $CTRL_MRG ]]; then
     $MACS2 callpeak -t "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" -c "$CTRL_MRG" \
            -f BAMPE -g "$GENOME_SIZE" -n "$n" --outdir "$PEAK_DIR/replicate"
@@ -294,24 +317,29 @@ for n in "${TREAT_NAMES[@]}"; do
   fi
 done
 
-# merged peaks
-merge_bams "$ALIGNMENT_DIR/treat_merged.bam" "${TREAT_NAMES[@]/%/.dedup.filtered.bam}"
-if [[ -f $CTRL_MRG ]]; then
-  log MACS2mg Merged
-  $MACS2 callpeak -t "$ALIGNMENT_DIR/treat_merged.bam" -c "$CTRL_MRG" \
-         -f BAMPE -g "$GENOME_SIZE" -n treatMerged_vs_ctrlMerged --outdir "$PEAK_DIR/merged"
+# ── B  treatment-merged vs control-merged ────────────────────────────────────
+if (( ${#CTRL_NAMES[@]} )); then
+  macs2 callpeak -t "$T_MRG" -c "$CTRL_MRG" \
+       -f BAMPE -g "$GENOME_SIZE" \
+       -n "treatmentMerged_vs_controlMerged" \
+       --outdir "$PEAK_DIR/merged" \
+       2>&1 | tee -a "$LOG_DIR/macs2_merged.log"
 else
-  log MACS2mg Merged
-  $MACS2 callpeak -t "$ALIGNMENT_DIR/treat_merged.bam" \
-         -f BAMPE -g "$GENOME_SIZE" -n treatMerged --outdir "$PEAK_DIR/merged"
+  macs2 callpeak -t "$T_MRG" \
+       -f BAMPE -g "$GENOME_SIZE" \
+       -n "treatmentMerged" \
+       --outdir "$PEAK_DIR/merged" \
+       2>&1 | tee -a "$LOG_DIR/macs2_merged.log"
 fi
 
-# pooled control vs each replicate
-if [[ -f $CTRL_MRG ]]; then
+# ── C  each replicate vs pooled control ──────────────────────────────────────
+if (( ${#CTRL_NAMES[@]} )); then
   for n in "${TREAT_NAMES[@]}"; do
-    log MACS2pl "$n"
-    $MACS2 callpeak -t "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" -c "$CTRL_MRG" \
-           -f BAMPE -g "$GENOME_SIZE" -n "${n}_vs_ctrlPooled" --outdir "$PEAK_DIR/pooled"
+    macs2 callpeak -t "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" -c "$CTRL_MRG" \
+         -f BAMPE -g "$GENOME_SIZE" \
+         -n "${n}_vs_ctrlPooled" \
+         --outdir "$PEAK_DIR/pooled" \
+         2>&1 | tee -a "$LOG_DIR/macs2_pooled.log"
   done
 fi
 
@@ -363,11 +391,11 @@ else
 
   # build sample sheet
   SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
-  {
-    echo "SampleID,Condition,bamReads,Peaks,ScoreCol"
-    echo "TreatmentMerged,treatment,$ALIGNMENT_DIR/treat_merged.bam,$PEAK_DIR/merged/treatMerged_vs_ctrlMerged_peaks.narrowPeak,7"
-    echo "ControlMerged,control,$ALIGNMENT_DIR/control_merged.bam,$PEAK_DIR/merged/treatMerged_vs_ctrlMerged_control.narrowPeak,7"
-  } > "$SAMPLE_SHEET"
+	{
+	  echo "SampleID,Condition,bamReads,Peaks,ScoreCol"
+	  echo "TreatmentMerged,treatment,$T_MRG,$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_peaks.narrowPeak,7"
+	  echo "ControlMerged,control,$CTRL_MRG,$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_control.narrowPeak,7"
+	} > "$SAMPLE_SHEET"
 
   # run R script
   Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R \
