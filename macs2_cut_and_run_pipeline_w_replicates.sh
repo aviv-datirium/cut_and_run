@@ -202,10 +202,10 @@ merge_bams () {
         return 1 ;;
     1)
         ln -f "${inputs[0]}" "$out"
-        samtools index "$out" ;;
+        samtools index --threads "$NUM_THREADS" "$out" ;;
     *)
-        samtools merge -f "$out" "${inputs[@]}"
-        samtools index "$out" ;;
+        samtools merge --threads "$NUM_THREADS" -f "$out" "${inputs[@]}"
+        samtools index --threads "$NUM_THREADS" "$out" ;;
   esac
 }
 
@@ -318,10 +318,12 @@ esac
 # 11  MERGE BAMs   (treatment & control groups)                               #
 ###############################################################################
 T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
+log SamtoolsMerge "$T_MRG ${TREAT_NAMES[@]}"
 merge_bams "$T_MRG"  "${TREAT_NAMES[@]}"
 
 if (( ${#CTRL_NAMES[@]} )); then
   CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
+  log SamtoolsMerge "$CTRL_MRG ${CTRL_NAMES[@]}"
   merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
 fi
 
