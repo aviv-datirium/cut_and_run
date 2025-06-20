@@ -322,11 +322,15 @@ esac
 ###############################################################################
 # ── make merged BAMs *once*
 T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
+log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
 merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
+log MERGE Treatment Done
 
 if (( ${#CTRL_NAMES[@]} )); then
   CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
+  log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
   merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
+  log MERGE Control Done
 fi
 
 ############################################################################
