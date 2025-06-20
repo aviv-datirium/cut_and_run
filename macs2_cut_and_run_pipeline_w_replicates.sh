@@ -350,6 +350,17 @@ for n in "${TREAT_NAMES[@]}"; do
 done
 
 # ── B  treatment-merged vs control-merged ────────────────────────────────────
+# Only if a control_merged.bam exists
+if [[ -s $CTRL_MRG ]]; then
+  MACS_CMDS+=(
+    "macs2 callpeak \
+        -t $CTRL_MRG \
+        -f BAMPE -g $GENOME_SIZE \
+        -n controlMerged \
+        --outdir $PEAK_DIR/merged"
+  )
+fi
+
 if [[ -s $T_MRG ]]; then
   if [[ -s $CTRL_MRG ]]; then
     MACS_CMDS+=("macs2 callpeak -t $T_MRG -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged_vs_controlMerged --outdir $PEAK_DIR/merged")
@@ -420,35 +431,31 @@ done
 DIFF_DIR="$OUTPUT_DIR/diffbind"
 mkdir -p "$DIFF_DIR"
 
-if [[ ! -s $T_MRG || ! -s $CTRL_MRG ]]; then
-  log DiffBind ALL "skip (missing merged BAMs)"
-  continue   # or 'return', matching your script context
+# ── master guard ──  need:   ≥2 treatment replicates  + 1 control replicate
+#                     AND     both merged BAM files must exist
+if [[  ${#TREAT_NAMES[@]} -lt 2        ||   ${#CTRL_NAMES[@]} -eq 0  \
+   || ! -s $T_MRG                      ||   ! -s $CTRL_MRG ]]; then
+    log DiffBind ALL "skip (need ≥2 treatment reps, ≥1 control, and both merged BAMs)"
+    continue        # or 'return 0' if you are inside a function
 fi
 
-# ── skip if no control or fewer than 2 treatment replicates ───────────
-if [[ ${#CTRL_NAMES[@]} -eq 0 || ${#TREAT_NAMES[@]} -lt 2 ]]; then
-  log DiffBind ALL "skipped (need ≥2 treatment reps + control)"
-else
-  log DiffBind ALL start
+# ── all requirements satisfied – run DiffBind ───────────────────────────────
+log DiffBind ALL start
 
   # build sample sheet
   SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
 	{
 	  echo "SampleID,Condition,bamReads,Peaks,ScoreCol"
 	  echo "TreatmentMerged,treatment,$T_MRG,$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_peaks.narrowPeak,7"
-	  echo "ControlMerged,control,$CTRL_MRG,$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_control.narrowPeak,7"
+	  echo "ControlMerged,control,$CTRL_MRG,$PEAK_DIR/merged/controlMerged_peaks.narrowPeak,7"
 	} > "$SAMPLE_SHEET"
 
   # run R script
   Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R \
           "$SAMPLE_SHEET" "$DIFF_DIR" \
-          > "$DIFF_DIR/diffbind.log" 2>&1
+          > "$DIFF_DIR/diffbind.log" 2>&1 \
+           && log DiffBind ALL ok \
+           || log DiffBind ALL FAIL
 
-  if [[ $? -eq 0 ]]; then
-    log DiffBind ALL ok
-  else
-    log DiffBind ALL FAIL "see $DIFF_DIR/diffbind.log"
-  fi
-fi
-
+# PIPELINE COMPLETED
 log DONE ALL "Outputs in $OUTPUT_DIR"
