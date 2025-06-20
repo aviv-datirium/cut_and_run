@@ -182,15 +182,15 @@ run_fastqc () {                     # $1=R1  $2=R2  $3=SAMPLE
 
 ###############################################################################
 # merge_bams  <out.bam>  <sampleName> ...                                     #
-#   • skips if zero valid BAMs                                                #
-#   • symlinks a single BAM (fast)                                            #
-#   • merges and indexes when ≥2 BAMs                                         #
+#   • 0 inputs  → skip with log                                               #
+#   • 1 input   → ln -f (fast)                                                #
+#   • ≥2 inputs → samtools merge + index                                      #
 ###############################################################################
 merge_bams () {
   local out=$1; shift
   local inputs=()
 
-  # collect existing BAMs only
+  # collect only existing filtered BAMs
   for s in "$@"; do
     bam="$ALIGNMENT_DIR/${s}.dedup.filtered.bam"
     [[ -s $bam ]] && inputs+=("$bam")
@@ -202,10 +202,12 @@ merge_bams () {
         return 1 ;;
     1)
         ln -f "${inputs[0]}" "$out"
-        samtools index --threads "$NUM_THREADS" "$out" ;;
+        samtools index -@ "$NUM_THREADS" "$out" ;;
     *)
-        samtools merge --threads "$NUM_THREADS" -f "$out" "${inputs[@]}"
-        samtools index --threads "$NUM_THREADS" "$out" ;;
+        samtools merge -@ "$NUM_THREADS" -f "$out" "${inputs[@]}" \
+          && samtools index -@ "$NUM_THREADS" "$out" \
+          && log MERGE "$(basename "$out")" "done (${#inputs[@]} inputs)" \
+          || { log MERGE "$(basename "$out")" "FAIL (samtools merge)"; return 1; }
   esac
 }
 
@@ -317,13 +319,12 @@ esac
 ###############################################################################
 # 11  MERGE BAMs   (treatment & control groups)                               #
 ###############################################################################
+# ── make merged BAMs *once*
 T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
-log SamtoolsMerge "$T_MRG ${TREAT_NAMES[@]}"
-merge_bams "$T_MRG"  "${TREAT_NAMES[@]}"
+merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
 
 if (( ${#CTRL_NAMES[@]} )); then
   CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
-  log SamtoolsMerge "$CTRL_MRG ${CTRL_NAMES[@]}"
   merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
 fi
 
@@ -422,7 +423,7 @@ mkdir -p "$DIFF_DIR"
 
 if [[ ! -s $T_MRG || ! -s $CTRL_MRG ]]; then
   log DiffBind ALL "skip (missing merged BAMs)"
-  return 0        # or `continue`, depending on your function/loop context
+  continue   # or 'return', matching your script context
 fi
 
 # ── skip if no control or fewer than 2 treatment replicates ───────────
