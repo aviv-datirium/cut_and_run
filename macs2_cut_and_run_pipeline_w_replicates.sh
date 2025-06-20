@@ -317,113 +317,113 @@ esac
   #~ samtools index "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
 #~ done
 
-###############################################################################
-# 11  MERGE BAMs   (treatment & control groups)                               #
-###############################################################################
-# ── make merged BAMs *once*
-T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
-log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
-merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
-log MERGE Treatment Done
+#~ ###############################################################################
+#~ # 11  MERGE BAMs   (treatment & control groups)                               #
+#~ ###############################################################################
+#~ # ── make merged BAMs *once*
+#~ T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
+#~ log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
+#~ merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
+#~ log MERGE Treatment Done
 
-if (( ${#CTRL_NAMES[@]} )); then
-  CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
-  log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
-  merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
-  log MERGE Control Done
-fi
+#~ if (( ${#CTRL_NAMES[@]} )); then
+  #~ CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
+  #~ log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
+  #~ merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
+  #~ log MERGE Control Done
+#~ fi
 
-############################################################################
-# 12  MACS2 PEAKS: replicate, merged, pooled                               #
-############################################################################
-mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
-CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
+#~ ############################################################################
+#~ # 12  MACS2 PEAKS: replicate, merged, pooled                               #
+#~ ############################################################################
+#~ mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
+#~ CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
 
-# ── A  replicates (unchanged) ────────────────────────────────────────────────
-for n in "${TREAT_NAMES[@]}"; do
-  T_BAM="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-  if [[ -s $CTRL_MRG ]]; then
-    MACS_CMDS+=("macs2 callpeak -t $T_BAM -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n $n --outdir $PEAK_DIR/replicate")
-  else
-    MACS_CMDS+=("macs2 callpeak -t $T_BAM        -f BAMPE -g $GENOME_SIZE -n $n --outdir $PEAK_DIR/replicate")
-  fi
-done
+#~ # ── A  replicates (unchanged) ────────────────────────────────────────────────
+#~ for n in "${TREAT_NAMES[@]}"; do
+  #~ T_BAM="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  #~ if [[ -s $CTRL_MRG ]]; then
+    #~ MACS_CMDS+=("macs2 callpeak -t $T_BAM -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n $n --outdir $PEAK_DIR/replicate")
+  #~ else
+    #~ MACS_CMDS+=("macs2 callpeak -t $T_BAM        -f BAMPE -g $GENOME_SIZE -n $n --outdir $PEAK_DIR/replicate")
+  #~ fi
+#~ done
 
-# ── B  treatment-merged vs control-merged ────────────────────────────────────
-# Only if a control_merged.bam exists
-if [[ -s $CTRL_MRG ]]; then
-  MACS_CMDS+=(
-    "macs2 callpeak \
-        -t $CTRL_MRG \
-        -f BAMPE -g $GENOME_SIZE \
-        -n controlMerged \
-        --outdir $PEAK_DIR/merged"
-  )
-fi
+#~ # ── B  treatment-merged vs control-merged ────────────────────────────────────
+#~ # Only if a control_merged.bam exists
+#~ if [[ -s $CTRL_MRG ]]; then
+  #~ MACS_CMDS+=(
+    #~ "macs2 callpeak \
+        #~ -t $CTRL_MRG \
+        #~ -f BAMPE -g $GENOME_SIZE \
+        #~ -n controlMerged \
+        #~ --outdir $PEAK_DIR/merged"
+  #~ )
+#~ fi
 
-if [[ -s $T_MRG ]]; then
-  if [[ -s $CTRL_MRG ]]; then
-    MACS_CMDS+=("macs2 callpeak -t $T_MRG -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged_vs_controlMerged --outdir $PEAK_DIR/merged")
-  else
-    MACS_CMDS+=("macs2 callpeak -t $T_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged --outdir $PEAK_DIR/merged")
-  fi
-else
-  log MACS2merged ALL "skip (missing merged BAM)"
-fi
+#~ if [[ -s $T_MRG ]]; then
+  #~ if [[ -s $CTRL_MRG ]]; then
+    #~ MACS_CMDS+=("macs2 callpeak -t $T_MRG -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged_vs_controlMerged --outdir $PEAK_DIR/merged")
+  #~ else
+    #~ MACS_CMDS+=("macs2 callpeak -t $T_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged --outdir $PEAK_DIR/merged")
+  #~ fi
+#~ else
+  #~ log MACS2merged ALL "skip (missing merged BAM)"
+#~ fi
 
-# ── C  each replicate vs pooled control ──────────────────────────────────────
-if [[ -s $CTRL_MRG ]]; then
-  for n in "${TREAT_NAMES[@]}"; do
-    MACS_CMDS+=("macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n ${n}_vs_ctrlPooled --outdir $PEAK_DIR/pooled")
-  done
-fi
+#~ # ── C  each replicate vs pooled control ──────────────────────────────────────
+#~ if [[ -s $CTRL_MRG ]]; then
+  #~ for n in "${TREAT_NAMES[@]}"; do
+    #~ MACS_CMDS+=("macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n ${n}_vs_ctrlPooled --outdir $PEAK_DIR/pooled")
+  #~ done
+#~ fi
 
-# ── run all commands with GNU parallel (or serial fallback) ──────────────────
-if command -v parallel >/dev/null 2>&1; then
-  log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 ::: "${MACS_CMDS[@]}" \
-    2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
-else
-  log MACS2 ALL "GNU parallel not found – running jobs serially"
-  for cmd in "${MACS_CMDS[@]}"; do
-    echo "[MACS2] $cmd" | tee -a "$LOG_DIR/macs2_serial.log"
-    eval "$cmd" 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
-  done
-fi
+#~ # ── run all commands with GNU parallel (or serial fallback) ──────────────────
+#~ if command -v parallel >/dev/null 2>&1; then
+  #~ log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  #~ parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 ::: "${MACS_CMDS[@]}" \
+    #~ 2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
+#~ else
+  #~ log MACS2 ALL "GNU parallel not found – running jobs serially"
+  #~ for cmd in "${MACS_CMDS[@]}"; do
+    #~ echo "[MACS2] $cmd" | tee -a "$LOG_DIR/macs2_serial.log"
+    #~ eval "$cmd" 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
+  #~ done
+#~ fi
 
-###############################################################################
-# 13  SPIKE SCALE FACTORS                                                     #
-###############################################################################
-declare -A SCALE
-for n in "${SAMPLES[@]}"; do
-  h=$(read_count "$ALIGNMENT_DIR/${n}.dedup.filtered.bam")
-  s=$(read_count "$SPIKE_DIR/${n}.ecoli.sorted.bam")
-  ((s)) && SCALE["$n"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f",h/s}')
-  log Scale "$n" "host=$h spike=$s scale=${SCALE[$n]:-NA}"
-done
+#~ ###############################################################################
+#~ # 13  SPIKE SCALE FACTORS                                                     #
+#~ ###############################################################################
+#~ declare -A SCALE
+#~ for n in "${SAMPLES[@]}"; do
+  #~ h=$(read_count "$ALIGNMENT_DIR/${n}.dedup.filtered.bam")
+  #~ s=$(read_count "$SPIKE_DIR/${n}.ecoli.sorted.bam")
+  #~ ((s)) && SCALE["$n"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f",h/s}')
+  #~ log Scale "$n" "host=$h spike=$s scale=${SCALE[$n]:-NA}"
+#~ done
 
-###############################################################################
-# 14  BIGWIG                                                                  #
-###############################################################################
-for n in "${SAMPLES[@]}"; do
-  log BigWig "$n" "scale=${SCALE[$n]:-1}"
-  bg="$BW_DIR/${n}.bedgraph"
-  bam_to_bedgraph "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" "$bg"
-  [[ -n ${SCALE[$n]} ]] && \
-      awk -v f="${SCALE[$n]}" '{$4=$4*f;print}' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
-  bedGraphToBigWig "$bg" "$CHROM_SIZE" "$BW_DIR/${n}.bw"
-done
+#~ ###############################################################################
+#~ # 14  BIGWIG                                                                  #
+#~ ###############################################################################
+#~ for n in "${SAMPLES[@]}"; do
+  #~ log BigWig "$n" "scale=${SCALE[$n]:-1}"
+  #~ bg="$BW_DIR/${n}.bedgraph"
+  #~ bam_to_bedgraph "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" "$bg"
+  #~ [[ -n ${SCALE[$n]} ]] && \
+      #~ awk -v f="${SCALE[$n]}" '{$4=$4*f;print}' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
+  #~ bedGraphToBigWig "$bg" "$CHROM_SIZE" "$BW_DIR/${n}.bw"
+#~ done
 
-###############################################################################
-# 15  PEAK ANNOTATION                                                         #
-###############################################################################
-for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
-  [[ -f $np ]] || continue
-  b=${np##*/}; b=${b%.narrowPeak}
-  log Annotate "$b"
-  bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
-    > "$ANN_DIR/${b}.annotated.bed"
-done
+#~ ###############################################################################
+#~ # 15  PEAK ANNOTATION                                                         #
+#~ ###############################################################################
+#~ for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
+  #~ [[ -f $np ]] || continue
+  #~ b=${np##*/}; b=${b%.narrowPeak}
+  #~ log Annotate "$b"
+  #~ bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
+    #~ > "$ANN_DIR/${b}.annotated.bed"
+#~ done
 
 ###############################################################################
 # 16  DIFFBIND  – merged treatment vs merged control peaks                    #
@@ -431,35 +431,42 @@ done
 DIFF_DIR="$OUTPUT_DIR/diffbind"
 mkdir -p "$DIFF_DIR"
 
-# ── master guard ──  need:   ≥2 treatment replicates  + 1 control replicate
-#                     AND     both merged BAM files must exist
-if [[  ${#TREAT_NAMES[@]} -lt 2        ||   ${#CTRL_NAMES[@]} -eq 0  \
-   || ! -s $T_MRG                      ||   ! -s $CTRL_MRG ]]; then
-    log DiffBind ALL "skip (need ≥2 treatment reps, ≥1 control, and both merged BAMs)"
-    continue        # or 'return 0' if you are inside a function
+# ── guard: need at least 2 replicates per group ──────────────────────────────
+T_N=${#TREAT_NAMES[@]}
+C_N=${#CTRL_NAMES[@]}
+if (( T_N < 2 || C_N < 2 )); then
+  log DiffBind ALL "skip (need ≥2 replicates per group; have T=$T_N  C=$C_N)"
+  continue            # use 'continue', 'return', or 'exit 0' as fits your context
+fi
+
+# ── guard: merged BAMs must exist ────────────────────────────────────────────
+if [[ ! -s $T_MRG || ! -s $CTRL_MRG ]]; then
+  log DiffBind ALL "skip (missing merged BAMs)"
+  continue
 fi
 
 # ── all requirements satisfied – run DiffBind ───────────────────────────────
 log DiffBind ALL start
 
-for f in "$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_peaks.narrowPeak" \
-         "$PEAK_DIR/merged/controlMerged_peaks.narrowPeak"; do
-    [[ -s $f ]] || { log DiffBind ALL "skip (missing or empty $f)"; continue 2; }
-done
-
-  # build sample sheet
-  SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
+  # build replicate-level sample sheet
+SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
 	{
 	  echo "SampleID,Condition,bamReads,Peaks,ScoreCol"
-	  echo "TreatmentMerged,treatment,$T_MRG,$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_peaks.narrowPeak,7"
-	  echo "ControlMerged,control,$CTRL_MRG,$PEAK_DIR/merged/controlMerged_peaks.narrowPeak,7"
+	  # treatment replicates
+	  for n in "${TREAT_NAMES[@]}"; do
+	    echo "${n},treatment,$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$PEAK_DIR/replicate/${n}_peaks.narrowPeak,7"
+	  done
+	  # control replicates
+	  for n in "${CTRL_NAMES[@]}"; do
+	    echo "${n},control,$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$PEAK_DIR/replicate/${n}_peaks.narrowPeak,7"
+	  done
 	} > "$SAMPLE_SHEET"
 
   # run R script
   Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R \
           "$SAMPLE_SHEET" "$DIFF_DIR" \
           > "$DIFF_DIR/diffbind.log" 2>&1 \
-           && log DiffBind ALL ok \
+           && log DiffBind ALL OK \
            || log DiffBind ALL FAIL
 
 # PIPELINE COMPLETED
