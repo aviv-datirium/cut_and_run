@@ -1,8 +1,8 @@
 {
   "samples": {
     "treatment": [
-      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSR1_S24_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSR1_S24_R2_001.fastq.gz"},
-      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSR2_S25_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSR2_S25_R2_001.fastq.gz"}
+      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST1_S28_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST1_S28_R2_001.fastq.gz"},
+      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST2_S29_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST2_S29_R2_001.fastq.gz"}
       ],
     "control": [
       { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC1_S26_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC1_S26_R2_001.fastq.gz" },

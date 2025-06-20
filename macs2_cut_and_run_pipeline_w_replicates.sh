@@ -231,91 +231,91 @@ esac
 ###############################################################################
 # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 ###############################################################################
-#~ log FastQC ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
+log FastQC ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
 
-#~ for i in "${!TREAT_R1[@]}"; do
-  #~ run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
-#~ done
-#~ for i in "${!CTRL_R1[@]}";  do
-  #~ run_fastqc "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  "${CTRL_NAMES[$i]}"
-#~ done
+for i in "${!TREAT_R1[@]}"; do
+  run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
+done
+for i in "${!CTRL_R1[@]}";  do
+  run_fastqc "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  "${CTRL_NAMES[$i]}"
+done
 
-#~ ############################################################################
-#~ # 6  TRIMMING  – per-sample logging (start / done)                         #
-#~ ############################################################################
-#~ log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_PARALLEL_THREADS)"
+############################################################################
+# 6  TRIMMING  – per-sample logging (start / done)                         #
+############################################################################
+log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_PARALLEL_THREADS)"
 
-#~ # ── treatment replicates ────────────────────────────────────────────────────
-#~ for i in "${!TREAT_R1[@]}"; do
-  #~ trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
-#~ done
+# ── treatment replicates ────────────────────────────────────────────────────
+for i in "${!TREAT_R1[@]}"; do
+  trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
+done
 
-#~ # ── control replicates (if any) ─────────────────────────────────────────────
-#~ for i in "${!CTRL_R1[@]}"; do
-  #~ trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
-#~ done
+# ── control replicates (if any) ─────────────────────────────────────────────
+for i in "${!CTRL_R1[@]}"; do
+  trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
+done
 
-#~ ############################################################################
-#~ # 7  HOST GENOME ALIGNMENT                                                 #
-#~ ############################################################################
-#~ for n in "${SAMPLES[@]}"; do
-  #~ log STARhost "$n" start
-  #~ run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
-           #~ "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
-           #~ "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME" \
-           #~ --outReadsUnmapped Fastx          # ← NEW OPTION
-  #~ log STARhost "$n" done
-#~ done
+############################################################################
+# 7  HOST GENOME ALIGNMENT                                                 #
+############################################################################
+for n in "${SAMPLES[@]}"; do
+  log STARhost "$n" start
+  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
+           "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
+           "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME" \
+           --outReadsUnmapped Fastx          # ← NEW OPTION
+  log STARhost "$n" done
+done
 
-#~ ############################################################################
-#~ # 8  SPIKE-IN ALIGNMENT (E. coli)                                          #
-#~ ############################################################################
-#~ for n in "${SAMPLES[@]}"; do
-  #~ # locate mate FASTQs produced in Step 8
-  #~ read -r U1 U2 < <(get_unmapped_mates "$n")
+############################################################################
+# 8  SPIKE-IN ALIGNMENT (E. coli)                                          #
+############################################################################
+for n in "${SAMPLES[@]}"; do
+  # locate mate FASTQs produced in Step 8
+  read -r U1 U2 < <(get_unmapped_mates "$n")
 
-  #~ if [[ -z $U1 ]]; then
-    #~ log SPIKE "$n" "skip (no unmapped mates)"
-    #~ continue
-  #~ fi
+  if [[ -z $U1 ]]; then
+    log SPIKE "$n" "skip (no unmapped mates)"
+    continue
+  fi
 
-  #~ log SPIKE "$n" start
-  #~ run_star "$U1" "$U2" \
-           #~ "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX"
-  #~ mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
-     #~ "$SPIKE_DIR/${n}.ecoli.sorted.bam"
-  #~ samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
-  #~ log SPIKE "$n" done
-#~ done
+  log SPIKE "$n" start
+  run_star "$U1" "$U2" \
+           "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX"
+  mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
+     "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  log SPIKE "$n" done
+done
 
-#~ ############################################################################
-#~ # 9  PICARD RG + DEDUP                                                     #
-#~ ############################################################################
-#~ for n in "${SAMPLES[@]}"; do
-  #~ log Picard "$n"
-  #~ in="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
-  #~ [[ -s $in ]] || continue
-  #~ java -jar "$PICARD_JAR" AddOrReplaceReadGroups I="$in" O="$ALIGNMENT_DIR/${n}.rg.bam" \
-       #~ RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" > /dev/null
-  #~ java -jar "$PICARD_JAR" MarkDuplicates I="$ALIGNMENT_DIR/${n}.rg.bam" \
-       #~ O="$ALIGNMENT_DIR/${n}.dedup.bam" M="$LOG_DIR/${n}.metrics.txt" REMOVE_DUPLICATES=true > /dev/null
-  #~ samtools index "$ALIGNMENT_DIR/${n}.dedup.bam"
-#~ done
+############################################################################
+# 9  PICARD RG + DEDUP                                                     #
+############################################################################
+for n in "${SAMPLES[@]}"; do
+  log Picard "$n"
+  in="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
+  [[ -s $in ]] || continue
+  java -jar "$PICARD_JAR" AddOrReplaceReadGroups I="$in" O="$ALIGNMENT_DIR/${n}.rg.bam" \
+       RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" > /dev/null
+  java -jar "$PICARD_JAR" MarkDuplicates I="$ALIGNMENT_DIR/${n}.rg.bam" \
+       O="$ALIGNMENT_DIR/${n}.dedup.bam" M="$LOG_DIR/${n}.metrics.txt" REMOVE_DUPLICATES=true > /dev/null
+  samtools index "$ALIGNMENT_DIR/${n}.dedup.bam"
+done
 
-#~ ############################################################################
-#~ # 10  FRAGMENT FILTER                                                      #
-#~ ############################################################################
-#~ case $FRAGMENT_SIZE_FILTER in
-  #~ histones)              CMD='{if($9>=130&&$9<=300||$1~/^@/)print}';;
-  #~ transcription_factors) CMD='{if($9<130||$1~/^@/)print}';;
-  #~ *)                     CMD='{if($9<1000||$1~/^@/)print}';;
-#~ esac
-#~ for n in "${SAMPLES[@]}"; do
-  #~ log FragFilt "$n"
-  #~ samtools view -h "$ALIGNMENT_DIR/${n}.dedup.bam" | awk "$CMD" | \
-    #~ samtools view -bS - > "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-  #~ samtools index "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-#~ done
+############################################################################
+# 10  FRAGMENT FILTER                                                      #
+############################################################################
+case $FRAGMENT_SIZE_FILTER in
+  histones)              CMD='{if($9>=130&&$9<=300||$1~/^@/)print}';;
+  transcription_factors) CMD='{if($9<130||$1~/^@/)print}';;
+  *)                     CMD='{if($9<1000||$1~/^@/)print}';;
+esac
+for n in "${SAMPLES[@]}"; do
+  log FragFilt "$n"
+  samtools view -h "$ALIGNMENT_DIR/${n}.dedup.bam" | awk "$CMD" | \
+    samtools view -bS - > "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  samtools index "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+done
 
 ###############################################################################
 # 11  MERGE BAMs   (treatment & control groups)                               #
@@ -441,15 +441,20 @@ fi
 SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
 echo "SampleID,Condition,bamReads,Peaks,ScoreCol" > "$SAMPLE_SHEET"
 
+# treatment replicates
+rep=1
 for n in "${TREAT_NAMES[@]}"; do
   peaks="$PEAK_DIR/replicate/${n}_peaks.narrowPeak"
   [[ -s $peaks ]] || { log DiffBind "$n" "skip (no peaks)"; continue; }
-  echo "${n},treatment,$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" >> "$SAMPLE_SHEET"
+  echo "${n},treatment,${rep},$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" >> "$SAMPLE_SHEET"
 done
+
+# control replicates
+rep=1
 for n in "${CTRL_NAMES[@]}"; do
   peaks="$PEAK_DIR/replicate/${n}_peaks.narrowPeak"
   [[ -s $peaks ]] || { log DiffBind "$n" "skip (no peaks)"; continue; }
-  echo "${n},control,$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" >> "$SAMPLE_SHEET"
+  echo "${n},control,${rep},$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" >> "$SAMPLE_SHEET"
 done
 
 # after filtering rows
