@@ -333,63 +333,63 @@ esac
   #~ log MERGE Control Done
 #~ fi
 
-#~ ############################################################################
-#~ # 12  MACS2 PEAKS: replicate, merged, pooled                               #
-#~ ############################################################################
-#~ mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
-#~ CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
+############################################################################
+# 12  MACS2 PEAKS: replicate, merged, pooled                               #
+############################################################################
+mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
+CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
 
-#~ # ── A  replicates (unchanged) ────────────────────────────────────────────────
-#~ for n in "${TREAT_NAMES[@]}"; do
-  #~ T_BAM="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-  #~ if [[ -s $CTRL_MRG ]]; then
-    #~ MACS_CMDS+=("macs2 callpeak -t $T_BAM -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n $n --outdir $PEAK_DIR/replicate")
-  #~ else
-    #~ MACS_CMDS+=("macs2 callpeak -t $T_BAM        -f BAMPE -g $GENOME_SIZE -n $n --outdir $PEAK_DIR/replicate")
-  #~ fi
-#~ done
+# ── A  replicates (unchanged) ────────────────────────────────────────────────
+for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
+  BAM="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  macs2 callpeak -t "$BAM" \
+       -f BAMPE -g "$GENOME_SIZE" \
+       -n "$n" \
+       --outdir "$PEAK_DIR/replicate" \
+       2>&1 | tee -a "$LOG_DIR/macs2_replicate.log"
+done
 
-#~ # ── B  treatment-merged vs control-merged ────────────────────────────────────
-#~ # Only if a control_merged.bam exists
-#~ if [[ -s $CTRL_MRG ]]; then
-  #~ MACS_CMDS+=(
-    #~ "macs2 callpeak \
-        #~ -t $CTRL_MRG \
-        #~ -f BAMPE -g $GENOME_SIZE \
-        #~ -n controlMerged \
-        #~ --outdir $PEAK_DIR/merged"
-  #~ )
-#~ fi
+# ── B  treatment-merged vs control-merged ────────────────────────────────────
+# Only if a control_merged.bam exists
+if [[ -s $CTRL_MRG ]]; then
+  MACS_CMDS+=(
+    "macs2 callpeak \
+        -t $CTRL_MRG \
+        -f BAMPE -g $GENOME_SIZE \
+        -n controlMerged \
+        --outdir $PEAK_DIR/merged"
+  )
+fi
 
-#~ if [[ -s $T_MRG ]]; then
-  #~ if [[ -s $CTRL_MRG ]]; then
-    #~ MACS_CMDS+=("macs2 callpeak -t $T_MRG -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged_vs_controlMerged --outdir $PEAK_DIR/merged")
-  #~ else
-    #~ MACS_CMDS+=("macs2 callpeak -t $T_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged --outdir $PEAK_DIR/merged")
-  #~ fi
-#~ else
-  #~ log MACS2merged ALL "skip (missing merged BAM)"
-#~ fi
+if [[ -s $T_MRG ]]; then
+  if [[ -s $CTRL_MRG ]]; then
+    MACS_CMDS+=("macs2 callpeak -t $T_MRG -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged_vs_controlMerged --outdir $PEAK_DIR/merged")
+  else
+    MACS_CMDS+=("macs2 callpeak -t $T_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged --outdir $PEAK_DIR/merged")
+  fi
+else
+  log MACS2merged ALL "skip (missing merged BAM)"
+fi
 
-#~ # ── C  each replicate vs pooled control ──────────────────────────────────────
-#~ if [[ -s $CTRL_MRG ]]; then
-  #~ for n in "${TREAT_NAMES[@]}"; do
-    #~ MACS_CMDS+=("macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n ${n}_vs_ctrlPooled --outdir $PEAK_DIR/pooled")
-  #~ done
-#~ fi
+# ── C  each replicate vs pooled control ──────────────────────────────────────
+if [[ -s $CTRL_MRG ]]; then
+  for n in "${TREAT_NAMES[@]}"; do
+    MACS_CMDS+=("macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n ${n}_vs_ctrlPooled --outdir $PEAK_DIR/pooled")
+  done
+fi
 
-#~ # ── run all commands with GNU parallel (or serial fallback) ──────────────────
-#~ if command -v parallel >/dev/null 2>&1; then
-  #~ log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  #~ parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 ::: "${MACS_CMDS[@]}" \
-    #~ 2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
-#~ else
-  #~ log MACS2 ALL "GNU parallel not found – running jobs serially"
-  #~ for cmd in "${MACS_CMDS[@]}"; do
-    #~ echo "[MACS2] $cmd" | tee -a "$LOG_DIR/macs2_serial.log"
-    #~ eval "$cmd" 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
-  #~ done
-#~ fi
+# ── run all commands with GNU parallel (or serial fallback) ──────────────────
+if command -v parallel >/dev/null 2>&1; then
+  log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 ::: "${MACS_CMDS[@]}" \
+    2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
+else
+  log MACS2 ALL "GNU parallel not found – running jobs serially"
+  for cmd in "${MACS_CMDS[@]}"; do
+    echo "[MACS2] $cmd" | tee -a "$LOG_DIR/macs2_serial.log"
+    eval "$cmd" 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
+  done
+fi
 
 #~ ###############################################################################
 #~ # 13  SPIKE SCALE FACTORS                                                     #
@@ -430,40 +430,29 @@ esac
 ###############################################################################
 DIFF_DIR="$OUTPUT_DIR/diffbind"
 mkdir -p "$DIFF_DIR"
-DIFF_DIR="$OUTPUT_DIR/diffbind"
-mkdir -p "$DIFF_DIR"
 
-# ---------- MASTER GUARD -----------------------------------------------------
 T_N=${#TREAT_NAMES[@]}
 C_N=${#CTRL_NAMES[@]}
 if (( T_N < 2 || C_N < 2 )); then
-  log DiffBind ALL "skip (need ≥2 replicates per group; have T=$T_N C=$C_N)"
-  exit 0          # ↳ if this block is inside a function: use 'return 0'
+  log DiffBind ALL "skip (need ≥2 replicates per group; T=$T_N C=$C_N)"
+  exit 0            # top-level; use 'return 0' if inside a function
 fi
 
-if [[ ! -s $T_MRG || ! -s $CTRL_MRG ]]; then
-  log DiffBind ALL "skip (missing merged BAMs)"
-  exit 0
-fi
-
-# ---------- BUILD SAMPLE SHEET ----------------------------------------------
 SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
 echo "SampleID,Condition,bamReads,Peaks,ScoreCol" > "$SAMPLE_SHEET"
 
-add_row () {  # $1 sample  $2 condition
-  bam="$ALIGNMENT_DIR/${1}.dedup.filtered.bam"
-  peaks="$PEAK_DIR/replicate/${1}_peaks.narrowPeak"
-  if [[ -s $bam && -s $peaks ]]; then
-      echo "${1},${2},${bam},${peaks},7" >> "$SAMPLE_SHEET"
-  else
-      log DiffBind "$1" "skip (missing bam or peaks)"
-  fi
-}
+for n in "${TREAT_NAMES[@]}"; do
+  peaks="$PEAK_DIR/replicate/${n}_peaks.narrowPeak"
+  [[ -s $peaks ]] || { log DiffBind "$n" "skip (no peaks)"; continue; }
+  echo "${n},treatment,$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" >> "$SAMPLE_SHEET"
+done
+for n in "${CTRL_NAMES[@]}"; do
+  peaks="$PEAK_DIR/replicate/${n}_peaks.narrowPeak"
+  [[ -s $peaks ]] || { log DiffBind "$n" "skip (no peaks)"; continue; }
+  echo "${n},control,$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" >> "$SAMPLE_SHEET"
+done
 
-for s in "${TREAT_NAMES[@]}"; do add_row "$s" treatment; done
-for s in "${CTRL_NAMES[@]}";  do add_row "$s" control;  done
-
-# ---------- VERIFY FINAL ROW COUNTS -----------------------------------------
+# after filtering rows
 t_rows=$(grep -c ',treatment,' "$SAMPLE_SHEET")
 c_rows=$(grep -c ',control,'   "$SAMPLE_SHEET")
 if (( t_rows < 2 || c_rows < 2 )); then
@@ -471,16 +460,11 @@ if (( t_rows < 2 || c_rows < 2 )); then
   exit 0
 fi
 
-# ---------- RUN DiffBind (R script) -----------------------------------------
 log DiffBind ALL start
 Rscript /path/to/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" \
-       > "$DIFF_DIR/diffbind.log" 2>&1
+       > "$DIFF_DIR/diffbind.log" 2>&1 \
+  && log DiffBind ALL ok \
+  || log DiffBind ALL FAIL
 
-if [[ $? -eq 0 ]]; then
-  log DiffBind ALL ok
-else
-  log DiffBind ALL FAIL
-fi
-
-# PIPELINE COMPLETED
+# PIPELINE COMPLETED ##########################################################
 log DONE ALL "Outputs in $OUTPUT_DIR"
