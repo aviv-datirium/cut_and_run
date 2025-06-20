@@ -430,44 +430,57 @@ esac
 ###############################################################################
 DIFF_DIR="$OUTPUT_DIR/diffbind"
 mkdir -p "$DIFF_DIR"
+DIFF_DIR="$OUTPUT_DIR/diffbind"
+mkdir -p "$DIFF_DIR"
 
-# ── guard: need at least 2 replicates per group ──────────────────────────────
+# ---------- MASTER GUARD -----------------------------------------------------
 T_N=${#TREAT_NAMES[@]}
 C_N=${#CTRL_NAMES[@]}
 if (( T_N < 2 || C_N < 2 )); then
-  log DiffBind ALL "skip (need ≥2 replicates per group; have T=$T_N  C=$C_N)"
-  continue            # use 'continue', 'return', or 'exit 0' as fits your context
+  log DiffBind ALL "skip (need ≥2 replicates per group; have T=$T_N C=$C_N)"
+  exit 0          # ↳ if this block is inside a function: use 'return 0'
 fi
 
-# ── guard: merged BAMs must exist ────────────────────────────────────────────
 if [[ ! -s $T_MRG || ! -s $CTRL_MRG ]]; then
   log DiffBind ALL "skip (missing merged BAMs)"
-  continue
+  exit 0
 fi
 
-# ── all requirements satisfied – run DiffBind ───────────────────────────────
-log DiffBind ALL start
-
-  # build replicate-level sample sheet
+# ---------- BUILD SAMPLE SHEET ----------------------------------------------
 SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
-	{
-	  echo "SampleID,Condition,bamReads,Peaks,ScoreCol"
-	  # treatment replicates
-	  for n in "${TREAT_NAMES[@]}"; do
-	    echo "${n},treatment,$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$PEAK_DIR/replicate/${n}_peaks.narrowPeak,7"
-	  done
-	  # control replicates
-	  for n in "${CTRL_NAMES[@]}"; do
-	    echo "${n},control,$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$PEAK_DIR/replicate/${n}_peaks.narrowPeak,7"
-	  done
-	} > "$SAMPLE_SHEET"
+echo "SampleID,Condition,bamReads,Peaks,ScoreCol" > "$SAMPLE_SHEET"
 
-  # run R script
-  Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R \
-          "$SAMPLE_SHEET" "$DIFF_DIR" \
-          > "$DIFF_DIR/diffbind.log" 2>&1 \
-           && log DiffBind ALL OK \
-           || log DiffBind ALL FAIL
+add_row () {  # $1 sample  $2 condition
+  bam="$ALIGNMENT_DIR/${1}.dedup.filtered.bam"
+  peaks="$PEAK_DIR/replicate/${1}_peaks.narrowPeak"
+  if [[ -s $bam && -s $peaks ]]; then
+      echo "${1},${2},${bam},${peaks},7" >> "$SAMPLE_SHEET"
+  else
+      log DiffBind "$1" "skip (missing bam or peaks)"
+  fi
+}
+
+for s in "${TREAT_NAMES[@]}"; do add_row "$s" treatment; done
+for s in "${CTRL_NAMES[@]}";  do add_row "$s" control;  done
+
+# ---------- VERIFY FINAL ROW COUNTS -----------------------------------------
+t_rows=$(grep -c ',treatment,' "$SAMPLE_SHEET")
+c_rows=$(grep -c ',control,'   "$SAMPLE_SHEET")
+if (( t_rows < 2 || c_rows < 2 )); then
+  log DiffBind ALL "skip (after filtering, T=$t_rows C=$c_rows)"
+  exit 0
+fi
+
+# ---------- RUN DiffBind (R script) -----------------------------------------
+log DiffBind ALL start
+Rscript /path/to/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" \
+       > "$DIFF_DIR/diffbind.log" 2>&1
+
+if [[ $? -eq 0 ]]; then
+  log DiffBind ALL ok
+else
+  log DiffBind ALL FAIL
+fi
 
 # PIPELINE COMPLETED
 log DONE ALL "Outputs in $OUTPUT_DIR"
