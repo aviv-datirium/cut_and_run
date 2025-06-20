@@ -442,6 +442,11 @@ fi
 # ── all requirements satisfied – run DiffBind ───────────────────────────────
 log DiffBind ALL start
 
+for f in "$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_peaks.narrowPeak" \
+         "$PEAK_DIR/merged/controlMerged_peaks.narrowPeak"; do
+    [[ -s $f ]] || { log DiffBind ALL "skip (missing or empty $f)"; continue 2; }
+done
+
   # build sample sheet
   SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
 	{
