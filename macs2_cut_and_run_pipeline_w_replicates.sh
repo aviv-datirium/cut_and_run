@@ -243,7 +243,7 @@ esac
 #~ ############################################################################
 #~ # 6  TRIMMING  – per-sample logging (start / done)                         #
 #~ ############################################################################
-#~ log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_THREADS)"
+#~ log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_PARALLEL_THREADS)"
 
 #~ # ── treatment replicates ────────────────────────────────────────────────────
 #~ for i in "${!TREAT_R1[@]}"; do
