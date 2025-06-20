@@ -317,21 +317,21 @@ esac
   #~ samtools index "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
 #~ done
 
-#~ ###############################################################################
-#~ # 11  MERGE BAMs   (treatment & control groups)                               #
-#~ ###############################################################################
-#~ # ── make merged BAMs *once*
-#~ T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
-#~ log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
-#~ merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
-#~ log MERGE Treatment Done
+###############################################################################
+# 11  MERGE BAMs   (treatment & control groups)                               #
+###############################################################################
+# ── make merged BAMs *once*
+T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
+log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
+merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
+log MERGE Treatment Done
 
-#~ if (( ${#CTRL_NAMES[@]} )); then
-  #~ CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
-  #~ log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
-  #~ merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
-  #~ log MERGE Control Done
-#~ fi
+if (( ${#CTRL_NAMES[@]} )); then
+  CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
+  log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
+  merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
+  log MERGE Control Done
+fi
 
 ############################################################################
 # 12  MACS2 PEAKS: replicate, merged, pooled                               #
@@ -391,39 +391,39 @@ else
   done
 fi
 
-#~ ###############################################################################
-#~ # 13  SPIKE SCALE FACTORS                                                     #
-#~ ###############################################################################
-#~ declare -A SCALE
-#~ for n in "${SAMPLES[@]}"; do
-  #~ h=$(read_count "$ALIGNMENT_DIR/${n}.dedup.filtered.bam")
-  #~ s=$(read_count "$SPIKE_DIR/${n}.ecoli.sorted.bam")
-  #~ ((s)) && SCALE["$n"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f",h/s}')
-  #~ log Scale "$n" "host=$h spike=$s scale=${SCALE[$n]:-NA}"
-#~ done
+###############################################################################
+# 13  SPIKE SCALE FACTORS                                                     #
+###############################################################################
+declare -A SCALE
+for n in "${SAMPLES[@]}"; do
+  h=$(read_count "$ALIGNMENT_DIR/${n}.dedup.filtered.bam")
+  s=$(read_count "$SPIKE_DIR/${n}.ecoli.sorted.bam")
+  ((s)) && SCALE["$n"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f",h/s}')
+  log Scale "$n" "host=$h spike=$s scale=${SCALE[$n]:-NA}"
+done
 
-#~ ###############################################################################
-#~ # 14  BIGWIG                                                                  #
-#~ ###############################################################################
-#~ for n in "${SAMPLES[@]}"; do
-  #~ log BigWig "$n" "scale=${SCALE[$n]:-1}"
-  #~ bg="$BW_DIR/${n}.bedgraph"
-  #~ bam_to_bedgraph "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" "$bg"
-  #~ [[ -n ${SCALE[$n]} ]] && \
-      #~ awk -v f="${SCALE[$n]}" '{$4=$4*f;print}' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
-  #~ bedGraphToBigWig "$bg" "$CHROM_SIZE" "$BW_DIR/${n}.bw"
-#~ done
+###############################################################################
+# 14  BIGWIG                                                                  #
+###############################################################################
+for n in "${SAMPLES[@]}"; do
+  log BigWig "$n" "scale=${SCALE[$n]:-1}"
+  bg="$BW_DIR/${n}.bedgraph"
+  bam_to_bedgraph "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" "$bg"
+  [[ -n ${SCALE[$n]} ]] && \
+      awk -v f="${SCALE[$n]}" '{$4=$4*f;print}' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
+  bedGraphToBigWig "$bg" "$CHROM_SIZE" "$BW_DIR/${n}.bw"
+done
 
-#~ ###############################################################################
-#~ # 15  PEAK ANNOTATION                                                         #
-#~ ###############################################################################
-#~ for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
-  #~ [[ -f $np ]] || continue
-  #~ b=${np##*/}; b=${b%.narrowPeak}
-  #~ log Annotate "$b"
-  #~ bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
-    #~ > "$ANN_DIR/${b}.annotated.bed"
-#~ done
+###############################################################################
+# 15  PEAK ANNOTATION                                                         #
+###############################################################################
+for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
+  [[ -f $np ]] || continue
+  b=${np##*/}; b=${b%.narrowPeak}
+  log Annotate "$b"
+  bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
+    > "$ANN_DIR/${b}.annotated.bed"
+done
 
 ###############################################################################
 # 16  DIFFBIND  – merged treatment vs merged control peaks                    #
