@@ -332,7 +332,6 @@ fi
 # 12  MACS2 PEAKS: replicate, merged, pooled                               #
 ############################################################################
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
-merge_bams "$ALIGNMENT_DIR/control_merged.bam" "${CTRL_NAMES[@]/%/.dedup.filtered.bam}" 2>/dev/null
 CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
 
 # ── A  replicates (unchanged) ────────────────────────────────────────────────
