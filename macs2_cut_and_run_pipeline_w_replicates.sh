@@ -4,9 +4,9 @@ set -o pipefail
 
 cat <<'BANNER'
 
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ CUT&RUN PIPELINE (Paired-End) -- Replicates · E. coli Spike-in · MACS2 Peaks ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ CUT&RUN PIPELINE (Paired-End) - Replicates · E. coli Spike-in · MACS2 Peaks ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  This Bash workflow trims, aligns, deduplicates, filters, and peak-calls
  replicated CUT&RUN libraries.  It supports an optional IgG/empty-vector control
  set, scales coverage tracks by E. coli spike-in, and writes three MACS2 peak
@@ -45,7 +45,7 @@ cat <<'BANNER'
 
  USAGE
  ─────
-   • Edit config.json with absolute paths and replicate lists.
+   • Edit config_replicates_diffbind.json with absolute paths and replicate lists.
    • Run: bash macs2_cut_and_run_pipeline_w_replicates.sh (no CLI arguments)
    • Logs stream to stdout *and* to output/logs/pipeline.log
 
@@ -107,7 +107,7 @@ for d in "$FASTQC_DIR" "$SPIKE_DIR" "$PEAK_DIR"/{replicate,merged,pooled} \
 log(){ printf '[%(%F %T)T] %-10s %-15s %s\n' -1 "$1" "$2" "${*:3}" \
       | tee -a "$LOG_DIR/pipeline.log"; }
 
-log START ALL "Config=$CONFIG_FILE"
+log START Paramaters "Config=$CONFIG_FILE"
 
 ###############################################################################
 # 3  HELPER FUNCTIONS                                                         #
@@ -175,7 +175,7 @@ run_fastqc () {                     # $1=R1  $2=R2  $3=SAMPLE
       >  "$LOG_DIR/fastqc_${SAMPLE}.log" \
       2> "$LOG_DIR/fastqc_${SAMPLE}.err"
   if [[ $? -eq 0 ]]; then
-      log FastQC "$SAMPLE" ok
+      log FastQC "$SAMPLE" OK
   else
       log FastQC "$SAMPLE" FAIL  "see fastqc_${SAMPLE}.err"
   fi
@@ -231,7 +231,7 @@ esac
 ###############################################################################
 # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 ###############################################################################
-log FastQC ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
+log FastQC Conditions "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
 
 for i in "${!TREAT_R1[@]}"; do
   run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
@@ -240,9 +240,9 @@ for i in "${!CTRL_R1[@]}";  do
   run_fastqc "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  "${CTRL_NAMES[$i]}"
 done
 
-############################################################################
-# 6  TRIMMING  – per-sample logging (start / done)                         #
-############################################################################
+###############################################################################
+# 6  TRIMMING  – per-sample logging (start / done)                            #
+###############################################################################
 log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_PARALLEL_THREADS)"
 
 # ── treatment replicates ────────────────────────────────────────────────────
@@ -255,9 +255,9 @@ for i in "${!CTRL_R1[@]}"; do
   trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
 done
 
-############################################################################
-# 7  HOST GENOME ALIGNMENT                                                 #
-############################################################################
+###############################################################################
+# 7  HOST GENOME ALIGNMENT                                                    #
+###############################################################################
 for n in "${SAMPLES[@]}"; do
   log STARhost "$n" start
   run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
@@ -267,9 +267,9 @@ for n in "${SAMPLES[@]}"; do
   log STARhost "$n" done
 done
 
-############################################################################
-# 8  SPIKE-IN ALIGNMENT (E. coli)                                          #
-############################################################################
+###############################################################################
+# 8  SPIKE-IN ALIGNMENT (E. coli)                                             #
+###############################################################################
 for n in "${SAMPLES[@]}"; do
   # locate mate FASTQs produced in Step 8
   read -r U1 U2 < <(get_unmapped_mates "$n")
@@ -288,9 +288,9 @@ for n in "${SAMPLES[@]}"; do
   log SPIKE "$n" done
 done
 
-############################################################################
-# 9  PICARD RG + DEDUP                                                     #
-############################################################################
+###############################################################################
+# 9  PICARD RG + DEDUP                                                        #
+###############################################################################
 for n in "${SAMPLES[@]}"; do
   log Picard "$n"
   in="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
@@ -302,9 +302,9 @@ for n in "${SAMPLES[@]}"; do
   samtools index "$ALIGNMENT_DIR/${n}.dedup.bam"
 done
 
-############################################################################
-# 10  FRAGMENT FILTER                                                      #
-############################################################################
+###############################################################################
+# 10  FRAGMENT FILTER                                                         #
+###############################################################################
 case $FRAGMENT_SIZE_FILTER in
   histones)              CMD='{if($9>=130&&$9<=300||$1~/^@/)print}';;
   transcription_factors) CMD='{if($9<130||$1~/^@/)print}';;
@@ -333,9 +333,9 @@ if (( ${#CTRL_NAMES[@]} )); then
   log MERGE Control Done
 fi
 
-############################################################################
-# 12  MACS2 PEAKS: replicate, merged, pooled                               #
-############################################################################
+###############################################################################
+# 12  MACS2 PEAKS: replicate, merged, pooled                                  #
+###############################################################################
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
 
@@ -446,7 +446,9 @@ rep=1
 for n in "${TREAT_NAMES[@]}"; do
   peaks="$PEAK_DIR/replicate/${n}_peaks.narrowPeak"
   [[ -s $peaks ]] || { log DiffBind "$n" "skip (no peaks)"; continue; }
-  echo "${n},treatment,${rep},$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" >> "$SAMPLE_SHEET"
+  echo "${n},treatment,${rep},$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" \
+       >> "$SAMPLE_SHEET"
+  ((rep++))
 done
 
 # control replicates
@@ -454,7 +456,9 @@ rep=1
 for n in "${CTRL_NAMES[@]}"; do
   peaks="$PEAK_DIR/replicate/${n}_peaks.narrowPeak"
   [[ -s $peaks ]] || { log DiffBind "$n" "skip (no peaks)"; continue; }
-  echo "${n},control,${rep},$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" >> "$SAMPLE_SHEET"
+  echo "${n},control,${rep},$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" \
+       >> "$SAMPLE_SHEET"
+  ((rep++))
 done
 
 # after filtering rows
