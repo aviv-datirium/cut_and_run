@@ -425,9 +425,16 @@ for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
     > "$ANN_DIR/${b}.annotated.bed"
 done
 
+# In the main script call it conditionally
+if [[ $RUN_ONLY_DIFFBIND == "yes" ]]; then
+    run_diffbind
+    exit 0
+fi
+
 ###############################################################################
 # 16  DIFFBIND  – merged treatment vs merged control peaks                    #
 ###############################################################################
+run_diffbind (){
 DIFF_DIR="$OUTPUT_DIR/diffbind"
 mkdir -p "$DIFF_DIR"
 
@@ -439,24 +446,24 @@ if (( T_N < 2 || C_N < 2 )); then
 fi
 
 SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
-echo "SampleID,Condition,bamReads,Peaks,ScoreCol" > "$SAMPLE_SHEET"
+echo "SampleID,Tissue,Factor,Condition,Replicate,bamReads,Peaks,ScoreCol" > "$SAMPLE_SHEET"
 
 # treatment replicates
 rep=1
-for n in "${TREAT_NAMES[@]}"; do
-  peaks="$PEAK_DIR/replicate/${n}_peaks.narrowPeak"
-  [[ -s $peaks ]] || { log DiffBind "$n" "skip (no peaks)"; continue; }
-  echo "${n},treatment,${rep},$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" \
+for s in "${TREAT_NAMES[@]}"; do
+  peaks="$PEAK_DIR/replicate/${s}_peaks.narrowPeak"
+  [[ -s $peaks ]] || { log DiffBind "$s" "skip (no peaks)"; continue; }
+  echo "${s},NA,NA,treatment,${rep},$ALIGNMENT_DIR/${s}.dedup.filtered.bam,$peaks,7" \
        >> "$SAMPLE_SHEET"
   ((rep++))
 done
 
 # control replicates
 rep=1
-for n in "${CTRL_NAMES[@]}"; do
-  peaks="$PEAK_DIR/replicate/${n}_peaks.narrowPeak"
-  [[ -s $peaks ]] || { log DiffBind "$n" "skip (no peaks)"; continue; }
-  echo "${n},control,${rep},$ALIGNMENT_DIR/${n}.dedup.filtered.bam,$peaks,7" \
+for s in "${CTRL_NAMES[@]}"; do
+  peaks="$PEAK_DIR/replicate/${s}_peaks.narrowPeak"
+  [[ -s $peaks ]] || { log DiffBind "$s" "skip (no peaks)"; continue; }
+  echo "${s},NA,NA,control,${rep},$ALIGNMENT_DIR/${s}.dedup.filtered.bam,$peaks,7" \
        >> "$SAMPLE_SHEET"
   ((rep++))
 done
@@ -474,6 +481,7 @@ Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" \
        > "$DIFF_DIR/diffbind.log" 2>&1 \
   && log DiffBind ALL ok \
   || log DiffBind ALL FAIL
+}
 
 # PIPELINE COMPLETED ##########################################################
 log DONE ALL "Outputs in $OUTPUT_DIR"
