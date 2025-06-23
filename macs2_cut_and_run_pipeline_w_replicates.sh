@@ -187,6 +187,55 @@ run_fastqc () {                     # $1=R1  $2=R2  $3=SAMPLE
   fi
 }
 
+run_diffbind () {
+DIFF_DIR="$OUTPUT_DIR/diffbind"
+mkdir -p "$DIFF_DIR"
+
+T_N=${#TREAT_NAMES[@]}
+C_N=${#CTRL_NAMES[@]}
+if (( T_N < 2 || C_N < 2 )); then
+  log DiffBind ALL "skip (need ≥2 replicates per group; T=$T_N C=$C_N)"
+  exit 0            # top-level; use 'return 0' if inside a function
+fi
+
+SAMPLE_SHEET="$DIFF_DIR/diffbind_samples.csv"
+echo "SampleID,Tissue,Factor,Condition,Replicate,bamReads,Peaks,ScoreCol" > "$SAMPLE_SHEET"
+
+# treatment replicates
+rep=1
+for s in "${TREAT_NAMES[@]}"; do
+  peaks="$PEAK_DIR/replicate/${s}_peaks.narrowPeak"
+  [[ -s $peaks ]] || { log DiffBind "$s" "skip (no peaks)"; continue; }
+  echo "${s},NA,NA,treatment,${rep},$ALIGNMENT_DIR/${s}.dedup.filtered.bam,$peaks,7" \
+       >> "$SAMPLE_SHEET"
+  ((rep++))
+done
+
+# control replicates
+rep=1
+for s in "${CTRL_NAMES[@]}"; do
+  peaks="$PEAK_DIR/replicate/${s}_peaks.narrowPeak"
+  [[ -s $peaks ]] || { log DiffBind "$s" "skip (no peaks)"; continue; }
+  echo "${s},NA,NA,control,${rep},$ALIGNMENT_DIR/${s}.dedup.filtered.bam,$peaks,7" \
+       >> "$SAMPLE_SHEET"
+  ((rep++))
+done
+
+# after filtering rows
+t_rows=$(grep -c ',treatment,' "$SAMPLE_SHEET")
+c_rows=$(grep -c ',control,'   "$SAMPLE_SHEET")
+if (( t_rows < 2 || c_rows < 2 )); then
+  log DiffBind ALL "skip (after filtering, T=$t_rows C=$c_rows)"
+  exit 0
+fi
+
+log DiffBind ALL start
+Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" \
+       > "$DIFF_DIR/diffbind.log" 2>&1 \
+  && log DiffBind ALL ok \
+  || log DiffBind ALL FAIL
+}
+
 ###############################################################################
 # merge_bams  <out.bam>  <sampleName> ...                                     #
 #   • 0 inputs  → skip with log                                               #
@@ -434,7 +483,7 @@ done
 ###############################################################################
 # 16  DIFFBIND  – merged treatment vs merged control peaks                    #
 ###############################################################################
-run_diffbind (){
+run_diffbind () {
 DIFF_DIR="$OUTPUT_DIR/diffbind"
 mkdir -p "$DIFF_DIR"
 
