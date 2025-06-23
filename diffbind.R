@@ -26,7 +26,7 @@ db <- dba.contrast(db, categories = DBA_CONDITION, minMembers = 2)
 db <- dba.analyze(db, method = DBA_DESEQ2)
 
 ## 3. Save DESeq2 report
-rep <- dba.report(db, method = DBA_DESEQ2, th = 0.05)   # FDR ≤ 0.05
+rep <- dba.report(db, method = DBA_DESEQ2, th = 0.1)   # FDR ≤ 0.05
 write.csv(as.data.frame(rep),
           file = file.path(outdir, "diffbind_DESeq2_report.csv"),
           row.names = FALSE)
