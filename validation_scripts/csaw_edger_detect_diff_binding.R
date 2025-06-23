@@ -10,6 +10,7 @@
 
 library(csaw)
 library(edgeR)
+library(rtracklayer)
 
 bam.files <- c(        # filtered BAMs
   "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MST1_S28.dedup.filtered.bam",
@@ -35,9 +36,8 @@ res <- glmQLFTest(fit, coef=2)              # treatment vs control
 tab <- res$table
 sig  <- tab$FDR < 0.05
 merged <- mergeWindows(rowRanges(windows)[sig], tol=100)
-combined <- combineTests(merged$id, res$table)
+combined <- combineTests(merged$id, res$table[sig, ])
 
 # 4. Export BED of significant regions
-library(rtracklayer)
 bed <- rowRanges(merged$region)
 export(bed[combined$FDR<0.05], "csaw_diffPeaks.bed")

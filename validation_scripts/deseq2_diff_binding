@@ -1,0 +1,15 @@
+1. cat replicate/*.narrowPeak |
+  bedtools sort | bedtools merge > union.bed
+
+2. Count reads per sample in union.bed with featureCounts -p or
+bedtools multicov.
+
+3. Analyse with DESeq2
+
+library(DESeq2)
+counts <- read.table("union_counts.txt", header=TRUE, row.names=1)
+cond   <- factor(c("trt","trt","ctl","ctl"))
+dds    <- DESeqDataSetFromMatrix(counts, DataFrame(cond), ~ cond)
+dds    <- DESeq(dds)
+res    <- results(dds, alpha=0.1, lfcThreshold=0.5)
+sig    <- subset(res, padj<0.1)
