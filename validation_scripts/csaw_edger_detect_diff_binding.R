@@ -36,6 +36,9 @@ res     <- glmQLFTest(fit, coef = 2)      # trt vs ctl
 merged   <- mergeWindows(rowRanges(windows), tol = 100)
 combined <- combineTests(merged$id, res$table)
 
+# ensure numeric
+combined$logFC <- as.numeric(combined$logFC)
+
 keep     <- combined$FDR < 0.05 & abs(combined$logFC) > 0.5
 sig.reg  <- merged$region[keep]
 final    <- combined[keep ,]
