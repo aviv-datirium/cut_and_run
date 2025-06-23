@@ -1,17 +1,17 @@
-'''
-Idea: Slide small windows (e.g. 150 bp) across the genome, count fragments
-per sample, normalise with edgeR, then merge significant adjacent windows.
 
-Why it often beats DiffBind
+#~ Idea: Slide small windows (e.g. 150 bp) across the genome, count fragments
+#~ per sample, normalise with edgeR, then merge significant adjacent windows.
 
-    - No reliance on peak callers → detects subtle shifts within broad regions.
-    - edgeR’s tagwise dispersion is robust with two replicates per group.
-'''
+#~ Why it often beats DiffBind
+
+#~     - No reliance on peak callers → detects subtle shifts within broad regions.
+#~     - edgeR’s tagwise dispersion is robust with two replicates per group.
+
 
 library(csaw)
 library(edgeR)
 
-bam.files <- c(        # your filtered BAMs
+bam.files <- c(        # filtered BAMs
   "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MST1_S28.dedup.filtered.bam",
   "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MST2_S29.dedup.filtered.bam",
   "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MSC1_S26.dedup.filtered.bam",
