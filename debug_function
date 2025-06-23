@@ -1,0 +1,13 @@
+run_block () {
+	block of code for debuging/testing
+	...
+	}
+
+# In the main script call it conditionally
+if [[ $RUN_ONLY_BLOCK == "yes" ]]; then
+    run_block
+    exit 0
+fi
+
+and run:
+RUN_ONLY_BLOCK=yes bash pipeline.sh
