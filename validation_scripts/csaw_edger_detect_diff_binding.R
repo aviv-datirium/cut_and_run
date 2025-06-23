@@ -7,13 +7,18 @@
 #~     - No reliance on peak callers → detects subtle shifts within broad regions.
 #~     - edgeR’s tagwise dispersion is robust with two replicates per group.
 
+
 library(csaw)
 library(edgeR)
 library(rtracklayer)
 
-# --- inputs ---
-bam.files <- c("...S28.bam","...S29.bam","...S26.bam","...S27.bam")
-groups    <- factor(c("trt","trt","ctl","ctl"))
+# Inputs
+bam.files <- c(        # filtered BAMs
+  "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MST1_S28.dedup.filtered.bam",
+  "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MST2_S29.dedup.filtered.bam",
+  "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MSC1_S26.dedup.filtered.bam",
+  "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MSC2_S27.dedup.filtered.bam")
+groups <- factor(c("trt","trt","ctl","ctl"))
 
 # 1 count sliding windows
 param    <- readParam(minq = 10, pe = "both")
