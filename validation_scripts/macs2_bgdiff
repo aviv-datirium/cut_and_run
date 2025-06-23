@@ -1,11 +1,16 @@
 # MACS2 bgdiff
 
-macs2 bdgdiff --t1 treat_pileup.bdg  --c1 treat_controllambda.bdg \
-              --t2 ctrl_pileup.bdg   --c2 ctrl_controllambda.bdg \
-              --o-prefix macs2_diff
 
 macs2 callpeak -t treatment.bam -c control.bam -f BAMPE -g hs -B -n treat
 macs2 callpeak -t control.bam  -f BAMPE -g hs      -B -n ctrl
+
+and then:
+
+macs2 bdgdiff --t1 treat_treat_pileup.bdg  --c1 treat_control_lambda.bdg --t2 ctrl_treat_pileup.bdg --c2 ctrl_control_lambda.bdg --o-prefix macs2_diff
+
+macs2 bdgdiff --t1 treat_pileup.bdg  --c1 treat_controllambda.bdg \
+              --t2 ctrl_pileup.bdg   --c2 ctrl_controllambda.bdg \
+              --o-prefix macs2_diff
 
 # Pros Uses MACS’s smooth pile-up; no extra software.
 # Cons Needs per-sample control bedGraphs; single-rep input per side.

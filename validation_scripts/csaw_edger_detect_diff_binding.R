@@ -7,42 +7,34 @@
 #~     - No reliance on peak callers → detects subtle shifts within broad regions.
 #~     - edgeR’s tagwise dispersion is robust with two replicates per group.
 
-
 library(csaw)
 library(edgeR)
 library(rtracklayer)
 
-bam.files <- c(        # filtered BAMs
-  "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MST1_S28.dedup.filtered.bam",
-  "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MST2_S29.dedup.filtered.bam",
-  "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MSC1_S26.dedup.filtered.bam",
-  "/mnt/data/home/aviv/alignment_replicates_diffbind/MYC-MSC2_S27.dedup.filtered.bam")
+# --- inputs ---
+bam.files <- c("...S28.bam","...S29.bam","...S26.bam","...S27.bam")
+groups    <- factor(c("trt","trt","ctl","ctl"))
 
-groups <- factor(c("trt","trt","ctl","ctl"))
+# 1 count sliding windows
+param    <- readParam(minq = 10, pe = "both")
+windows  <- windowCounts(bam.files, width = 150, ext = 200, param = param)
 
-# 1. Count reads in 150-bp windows
-param <- readParam(minq=10, pe="both")      # paired-end, MAPQ≥10
-windows <- windowCounts(bam.files, width=150, ext=200, param=param)
+# 2 edgeR QL test
+y       <- asDGEList(windows)
+y       <- calcNormFactors(y)
+design  <- model.matrix(~ groups)
+y       <- estimateDisp(y, design)
+fit     <- glmQLFit(y, design)
+res     <- glmQLFTest(fit, coef = 2)      # trt vs ctl
 
-# 2. EdgeR differential test
-y <- asDGEList(windows)
-y <- calcNormFactors(y)
-design <- model.matrix(~groups)
-y <- estimateDisp(y, design)
-fit <- glmQLFit(y, design)
-res <- glmQLFTest(fit, coef=2)              # treatment vs control
-
-# 3. Merge contiguous sig windows (FDR<0.05)
-#tab <- res$table
-#sig  <- tab$FDR < 0.05
-merged <- mergeWindows(rowRanges(windows), tol = 100)
+# 3 merge & combine
+merged   <- mergeWindows(rowRanges(windows), tol = 100)
 combined <- combineTests(merged$id, res$table)
 
-# 3. Filter the combined regions for FDR / log-fold afterwards
-keep <- combined$FDR < 0.05 & combined$logFC > 0.5   # adjust thresholds
-final <- cbind(merged$region[keep], combined[keep ,])
+keep     <- combined$FDR < 0.05 & abs(combined$logFC) > 0.5
+sig.reg  <- merged$region[keep]
+final    <- combined[keep ,]
 
-# 4. Export BED of significant regions
-#bed <- rowRanges(merged$region)
-bed <- rowRanges(final$region)
-export(bed[combined$FDR<0.05], "csaw_diffPeaks.bed")
+# 4 export
+export(sig.reg, "csaw_diffPeaks.bed")
+write.csv(final,  "csaw_diffPeaks.csv")
