@@ -57,6 +57,12 @@ cat <<'BANNER'
 
 BANNER
 
+# In the main script call it conditionally
+if [[ $RUN_ONLY_DIFFBIND == "yes" ]]; then
+    run_diffbind
+    exit 0
+fi
+
 ###############################################################################
 # 0  CONFIG + PATHS                                                           #
 ###############################################################################
@@ -424,12 +430,6 @@ for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
   bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
     > "$ANN_DIR/${b}.annotated.bed"
 done
-
-# In the main script call it conditionally
-if [[ $RUN_ONLY_DIFFBIND == "yes" ]]; then
-    run_diffbind
-    exit 0
-fi
 
 ###############################################################################
 # 16  DIFFBIND  – merged treatment vs merged control peaks                    #
