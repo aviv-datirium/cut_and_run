@@ -57,12 +57,6 @@ cat <<'BANNER'
 
 BANNER
 
-# In the main script call it conditionally
-if [[ $RUN_ONLY_DIFFBIND == "yes" ]]; then
-    run_diffbind
-    exit 0
-fi
-
 ###############################################################################
 # 0  CONFIG + PATHS                                                           #
 ###############################################################################
@@ -269,6 +263,12 @@ Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" \
 
 bam_to_bedgraph(){ bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "$2"; }
 read_count(){ samtools view -c -F 2304 "$1"; }
+
+# In the main script call it conditionally
+if [[ $RUN_ONLY_DIFFBIND == "yes" ]]; then
+    run_diffbind
+    exit 0
+fi
 
 ###############################################################################
 # 4  BASENAMES + GENOME SIZE                                                  #
