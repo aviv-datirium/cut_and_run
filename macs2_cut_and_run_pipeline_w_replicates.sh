@@ -187,6 +187,37 @@ run_fastqc () {                     # $1=R1  $2=R2  $3=SAMPLE
   fi
 }
 
+###############################################################################
+# merge_bams  <out.bam>  <sampleName> ...                                     #
+#   • 0 inputs  → skip with log                                               #
+#   • 1 input   → ln -f (fast)                                                #
+#   • ≥2 inputs → samtools merge + index                                      #
+###############################################################################
+merge_bams () {
+  local out=$1; shift
+  local inputs=()
+
+  # collect only existing filtered BAMs
+  for s in "$@"; do
+    bam="$ALIGNMENT_DIR/${s}.dedup.filtered.bam"
+    [[ -s $bam ]] && inputs+=("$bam")
+  done
+
+  case ${#inputs[@]} in
+    0)
+        log MERGE "$(basename "$out")" "skip (no input BAMs)"
+        return 1 ;;
+    1)
+        ln -f "${inputs[0]}" "$out"
+        samtools index -@ "$NUM_THREADS" "$out" ;;
+    *)
+        samtools merge -@ "$NUM_THREADS" -f "$out" "${inputs[@]}" \
+          && samtools index -@ "$NUM_THREADS" "$out" \
+          && log MERGE "$(basename "$out")" "done (${#inputs[@]} inputs)" \
+          || { log MERGE "$(basename "$out")" "FAIL (samtools merge)"; return 1; }
+  esac
+}
+
 run_diffbind () {
 DIFF_DIR="$OUTPUT_DIR/diffbind"
 mkdir -p "$DIFF_DIR"
@@ -234,37 +265,6 @@ Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" \
        > "$DIFF_DIR/diffbind.log" 2>&1 \
   && log DiffBind ALL ok \
   || log DiffBind ALL FAIL
-}
-
-###############################################################################
-# merge_bams  <out.bam>  <sampleName> ...                                     #
-#   • 0 inputs  → skip with log                                               #
-#   • 1 input   → ln -f (fast)                                                #
-#   • ≥2 inputs → samtools merge + index                                      #
-###############################################################################
-merge_bams () {
-  local out=$1; shift
-  local inputs=()
-
-  # collect only existing filtered BAMs
-  for s in "$@"; do
-    bam="$ALIGNMENT_DIR/${s}.dedup.filtered.bam"
-    [[ -s $bam ]] && inputs+=("$bam")
-  done
-
-  case ${#inputs[@]} in
-    0)
-        log MERGE "$(basename "$out")" "skip (no input BAMs)"
-        return 1 ;;
-    1)
-        ln -f "${inputs[0]}" "$out"
-        samtools index -@ "$NUM_THREADS" "$out" ;;
-    *)
-        samtools merge -@ "$NUM_THREADS" -f "$out" "${inputs[@]}" \
-          && samtools index -@ "$NUM_THREADS" "$out" \
-          && log MERGE "$(basename "$out")" "done (${#inputs[@]} inputs)" \
-          || { log MERGE "$(basename "$out")" "FAIL (samtools merge)"; return 1; }
-  esac
 }
 
 bam_to_bedgraph(){ bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "$2"; }
@@ -483,7 +483,6 @@ done
 ###############################################################################
 # 16  DIFFBIND  – merged treatment vs merged control peaks                    #
 ###############################################################################
-run_diffbind () {
 DIFF_DIR="$OUTPUT_DIR/diffbind"
 mkdir -p "$DIFF_DIR"
 
@@ -530,7 +529,6 @@ Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" \
        > "$DIFF_DIR/diffbind.log" 2>&1 \
   && log DiffBind ALL ok \
   || log DiffBind ALL FAIL
-}
 
 # PIPELINE COMPLETED ##########################################################
 log DONE ALL "Outputs in $OUTPUT_DIR"
