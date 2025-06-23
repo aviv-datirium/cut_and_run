@@ -264,12 +264,6 @@ Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" \
 bam_to_bedgraph(){ bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "$2"; }
 read_count(){ samtools view -c -F 2304 "$1"; }
 
-# In the main script call it conditionally
-if [[ $RUN_ONLY_DIFFBIND == "yes" ]]; then
-    run_diffbind
-    exit 0
-fi
-
 ###############################################################################
 # 4  BASENAMES + GENOME SIZE                                                  #
 ###############################################################################
@@ -282,6 +276,12 @@ case $GENOME_SIZE_STRING in
   dm) GENOME_SIZE=165000000  ;;  ce) GENOME_SIZE=1000000000 ;;
   sc) GENOME_SIZE=12000000   ;;  *)  GENOME_SIZE=$CUSTOM_GENOME_SIZE ;;
 esac
+
+# In the main script call it conditionally
+if [[ $RUN_ONLY_DIFFBIND == "yes" ]]; then
+    run_diffbind
+    exit 0
+fi
 
 ###############################################################################
 # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
