@@ -33,11 +33,16 @@ fit <- glmQLFit(y, design)
 res <- glmQLFTest(fit, coef=2)              # treatment vs control
 
 # 3. Merge contiguous sig windows (FDR<0.05)
-tab <- res$table
-sig  <- tab$FDR < 0.05
-merged <- mergeWindows(rowRanges(windows)[sig], tol=100)
-combined <- combineTests(merged$id, res$table[sig, ])
+#tab <- res$table
+#sig  <- tab$FDR < 0.05
+merged <- mergeWindows(rowRanges(windows), tol = 100)
+combined <- combineTests(merged$id, res$table)
+
+# 3. Filter the combined regions for FDR / log-fold afterwards
+keep <- combined$FDR < 0.05 & combined$logFC > 0.5   # adjust thresholds
+final <- cbind(merged$region[keep], combined[keep ,])
 
 # 4. Export BED of significant regions
-bed <- rowRanges(merged$region)
+#bed <- rowRanges(merged$region)
+bed <- rowRanges(final$region)
 export(bed[combined$FDR<0.05], "csaw_diffPeaks.bed")
