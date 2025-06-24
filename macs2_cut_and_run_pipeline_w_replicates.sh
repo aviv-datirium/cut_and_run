@@ -96,6 +96,16 @@ MACS2="macs2"
 # 2  FOLDERS + LOGGER                                                         #
 ###############################################################################
 mkdir -p "$OUTPUT_DIR" "$LOG_DIR" "$ALIGNMENT_DIR"
+
+# timestamp the old log (if any) before we start the new one
+RUN_TS=$(date +'%Y%m%d_%H%M%S')                       # e.g. 20250624_104832
+if [[ -f $LOG_DIR/pipeline.log ]]; then
+    mv "$LOG_DIR/pipeline.log" \
+       "$LOG_DIR/pipeline_${RUN_TS}.log"
+fi
+# create a fresh empty logfile for this run
+: > "$LOG_DIR/pipeline.log"
+                               
 FASTQC_DIR="$OUTPUT_DIR/fastqc_reports"
 SPIKE_DIR="$ALIGNMENT_DIR/spikein"
 PEAK_DIR="$OUTPUT_DIR/macs2_peaks"
@@ -311,31 +321,103 @@ done
 ###############################################################################
 # 9  PICARD RG + DEDUP                                                        #
 ###############################################################################
-for n in "${SAMPLES[@]}"; do
-  log Picard "$n"
-  in="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
-  [[ -s $in ]] || continue
-  java -jar "$PICARD_JAR" AddOrReplaceReadGroups I="$in" O="$ALIGNMENT_DIR/${n}.rg.bam" \
-       RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" > /dev/null
-  java -jar "$PICARD_JAR" MarkDuplicates I="$ALIGNMENT_DIR/${n}.rg.bam" \
-       O="$ALIGNMENT_DIR/${n}.dedup.bam" M="$LOG_DIR/${n}.metrics.txt" REMOVE_DUPLICATES=true > /dev/null
-  samtools index "$ALIGNMENT_DIR/${n}.dedup.bam"
-done
+#~ for n in "${SAMPLES[@]}"; do
+  #~ log Picard "$n"
+  #~ in="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
+  #~ [[ -s $in ]] || continue
+  #~ java -jar "$PICARD_JAR" AddOrReplaceReadGroups I="$in" O="$ALIGNMENT_DIR/${n}.rg.bam" \
+       #~ RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" > /dev/null
+  #~ java -jar "$PICARD_JAR" MarkDuplicates I="$ALIGNMENT_DIR/${n}.rg.bam" \
+       #~ O="$ALIGNMENT_DIR/${n}.dedup.bam" M="$LOG_DIR/${n}.metrics.txt" REMOVE_DUPLICATES=true > /dev/null
+  #~ samtools index -@ "$NUM_THREADS" "$ALIGNMENT_DIR/${n}.dedup.bam"
+#~ done
+
+picard_dedup () {                    # $1 = sample basename
+  local n="$1"
+  log Picard "$n" start
+
+  local inbam="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
+  [[ -s $inbam ]] || { log Picard "$n" "skip (missing BAM)"; return; }
+
+  java -jar "$PICARD_JAR" AddOrReplaceReadGroups \
+       I="$inbam" \
+       O="$ALIGNMENT_DIR/${n}.rg.bam" \
+       RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" \
+       VALIDATION_STRINGENCY=LENIENT \
+       >>"$LOG_DIR/picard_${n}.log" 2>&1
+
+  java -jar "$PICARD_JAR" MarkDuplicates \
+       I="$ALIGNMENT_DIR/${n}.rg.bam" \
+       O="$ALIGNMENT_DIR/${n}.dedup.bam" \
+       M="$LOG_DIR/${n}.metrics.txt" \
+       REMOVE_DUPLICATES=true \
+       VALIDATION_STRINGENCY=LENIENT \
+       >>"$LOG_DIR/picard_${n}.log" 2>&1
+
+  samtools index "$ALIGNMENT_DIR/${n}.dedup.bam" \
+       >>"$LOG_DIR/picard_${n}.log" 2>&1
+
+  log Picard "$n" done
+}
+export -f picard_dedup log
+export PICARD_JAR ALIGNMENT_DIR LOG_DIR NUM_THREADS
+
+if command -v parallel >/dev/null 2>&1; then
+  log Picard ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           picard_dedup ::: "${SAMPLES[@]}"
+else
+  log Picard ALL "GNU parallel not found – running serially"
+  for n in "${SAMPLES[@]}"; do picard_dedup "$n"; done
+fi
 
 ###############################################################################
 # 10  FRAGMENT FILTER                                                         #
 ###############################################################################
+#~ case $FRAGMENT_SIZE_FILTER in
+  #~ histones)              CMD='{if($9>=130&&$9<=300||$1~/^@/)print}';;
+  #~ transcription_factors) CMD='{if($9<130||$1~/^@/)print}';;
+  #~ *)                     CMD='{if($9<1000||$1~/^@/)print}';;
+#~ esac
+#~ for n in "${SAMPLES[@]}"; do
+  #~ log FragFilt "$n"
+  #~ samtools view -h "$ALIGNMENT_DIR/${n}.dedup.bam" | awk "$CMD" | \
+    #~ samtools view -bS - > "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  #~ samtools index -@ "$NUM_THREADS" "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+#~ done
+
+# pick the awk condition once
 case $FRAGMENT_SIZE_FILTER in
-  histones)              CMD='{if($9>=130&&$9<=300||$1~/^@/)print}';;
-  transcription_factors) CMD='{if($9<130||$1~/^@/)print}';;
-  *)                     CMD='{if($9<1000||$1~/^@/)print}';;
+  histones)              AWK_CMD='{if($9>=130 && $9<=300 || $1~/^@/)print}';;
+  transcription_factors) AWK_CMD='{if($9<130 || $1~/^@/)print}';;
+  *)                     AWK_CMD='{if($9<1000||$1~/^@/)print}';;
 esac
-for n in "${SAMPLES[@]}"; do
-  log FragFilt "$n"
-  samtools view -h "$ALIGNMENT_DIR/${n}.dedup.bam" | awk "$CMD" | \
-    samtools view -bS - > "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-  samtools index "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-done
+
+frag_filter () {                    # $1 = sample basename
+  local n="$1"
+  log FragFilt "$n" start
+
+  samtools view -h "$ALIGNMENT_DIR/${n}.dedup.bam" \
+    | awk "$AWK_CMD" \
+    | samtools view -bS - \
+        > "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" 2>>"$LOG_DIR/fragfilt_${n}.log"
+
+  samtools index "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" \
+        >>"$LOG_DIR/fragfilt_${n}.log" 2>&1
+
+  log FragFilt "$n" done
+}
+export -f frag_filter log
+export ALIGNMENT_DIR LOG_DIR NUM_THREADS AWK_CMD
+
+if command -v parallel >/dev/null 2>&1; then
+  log FragFilt ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           frag_filter ::: "${SAMPLES[@]}"
+else
+  log FragFilt ALL "GNU parallel not found – running serially"
+  for n in "${SAMPLES[@]}"; do frag_filter "$n"; done
+fi
 
 ###############################################################################
 # 11  MERGE BAMs   (treatment & control groups)                               #
@@ -414,36 +496,125 @@ fi
 ###############################################################################
 # 13  SPIKE SCALE FACTORS                                                     #
 ###############################################################################
-declare -A SCALE
+#~ declare -A SCALE
+#~ for n in "${SAMPLES[@]}"; do
+  #~ h=$(read_count "$ALIGNMENT_DIR/${n}.dedup.filtered.bam")
+  #~ s=$(read_count "$SPIKE_DIR/${n}.ecoli.sorted.bam")
+  #~ ((s)) && SCALE["$n"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f",h/s}')
+  #~ log Scale "$n" "host=$h spike=$s scale=${SCALE[$n]:-NA}"
+#~ done
+
+declare -A SCALE                    # sample → host/spike factor
+read_count () { samtools view -c -F 2304 "$1"; }
+
 for n in "${SAMPLES[@]}"; do
-  h=$(read_count "$ALIGNMENT_DIR/${n}.dedup.filtered.bam")
-  s=$(read_count "$SPIKE_DIR/${n}.ecoli.sorted.bam")
-  ((s)) && SCALE["$n"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f",h/s}')
-  log Scale "$n" "host=$h spike=$s scale=${SCALE[$n]:-NA}"
+  host_bam="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  spike_bam="$SPIKE_DIR/${n}.ecoli.sorted.bam"
+
+  # ── skip if spike-in BAM is missing or empty ──────────────────────────────
+  if [[ ! -s $spike_bam ]]; then
+      log Scale "$n" "no spike-in BAM – scale=1"
+      SCALE["$n"]=1
+      continue
+  fi
+  # -------------------------------------------------------------------------
+
+  h=$(read_count "$host_bam")
+  s=$(read_count "$spike_bam")
+
+  if (( s > 0 )); then
+      SCALE["$n"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f", h/s}')
+  else
+      SCALE["$n"]=1
+  fi
+
+  log Scale "$n" "host=$h  spike=$s  scale=${SCALE[$n]}"
 done
 
 ###############################################################################
-# 14  BIGWIG                                                                  #
+# 14  BIGWIG GENERATION                                                       #
 ###############################################################################
-for n in "${SAMPLES[@]}"; do
-  log BigWig "$n" "scale=${SCALE[$n]:-1}"
-  bg="$BW_DIR/${n}.bedgraph"
-  bam_to_bedgraph "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" "$bg"
-  [[ -n ${SCALE[$n]} ]] && \
-      awk -v f="${SCALE[$n]}" '{$4=$4*f;print}' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
+#~ for n in "${SAMPLES[@]}"; do
+  #~ log BigWig "$n" "scale=${SCALE[$n]:-1}"
+  #~ bg="$BW_DIR/${n}.bedgraph"
+  #~ bam_to_bedgraph "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" "$bg"
+  #~ [[ -n ${SCALE[$n]} ]] && \
+      #~ awk -v f="${SCALE[$n]}" '{$4=$4*f;print}' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
+  #~ bedGraphToBigWig "$bg" "$CHROM_SIZE" "$BW_DIR/${n}.bw"
+#~ done
+
+bigwig_one () {                       # $1 = sample basename
+  local n="$1"
+  local bg="$BW_DIR/${n}.bedgraph"
+  local bam="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  local scalef="${SCALE[$n]:-1}"
+
+  log BigWig "$n" "start  scale=$scalef"
+
+  # BedGraph
+  bedtools genomecov -ibam "$bam" -bg -pc > "$bg"
+
+  # optional spike-in scaling
+  if [[ $scalef != 1 ]]; then
+      awk -v f="$scalef" '{$4=$4*f; print }' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
+  fi
+
+  # BigWig
   bedGraphToBigWig "$bg" "$CHROM_SIZE" "$BW_DIR/${n}.bw"
-done
+
+  log BigWig "$n" done
+}
+export -f bigwig_one log
+export BW_DIR ALIGNMENT_DIR CHROM_SIZE SCALE
+
+if command -v parallel >/dev/null 2>&1; then
+  log BigWig ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           bigwig_one ::: "${SAMPLES[@]}"
+else
+  log BigWig ALL "GNU parallel not found – running serially"
+  for n in "${SAMPLES[@]}"; do bigwig_one "$n"; done
+fi
 
 ###############################################################################
 # 15  PEAK ANNOTATION                                                         #
 ###############################################################################
-for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
-  [[ -f $np ]] || continue
-  b=${np##*/}; b=${b%.narrowPeak}
-  log Annotate "$b"
+#~ for np in "$PEAK_DIR"/{replicate,merged,pooled}/*.narrowPeak; do
+  #~ log Annotating "$np"
+  #~ [[ -f $np ]] || continue
+  #~ b=${np##*/}; b=${b%.narrowPeak}
+  #~ log Annotate "$b"
+  #~ bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
+    #~ > "$ANN_DIR/${b}.annotated.bed"
+#~ done
+
+annotate_one () {                     # $1 = full path to narrowPeak
+  local np="$1"
+  [[ -f $np ]] || { log Annotating "$(basename "$np")" "skip (no file)"; return; }
+
+  local base=${np##*/}; base=${base%.narrowPeak}
+  log Annotate "$base" start
+
   bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
-    > "$ANN_DIR/${b}.annotated.bed"
-done
+      > "$ANN_DIR/${base}.annotated.bed"
+
+  log Annotate "$base" done
+}
+
+export -f annotate_one log
+export ANNOTATION_GENES ANN_DIR
+
+# Collect all narrowPeak paths into an array
+mapfile -t NP_FILES < <(find "$PEAK_DIR" -type f -name "*.narrowPeak" | sort)
+
+if command -v parallel >/dev/null 2>&1; then
+  log Annotate ALL "running ${#NP_FILES[@]} peaks with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           annotate_one ::: "${NP_FILES[@]}"
+else
+  log Annotate ALL "GNU parallel not found – running serially"
+  for np in "${NP_FILES[@]}"; do annotate_one "$np"; done
+fi
 
 ###############################################################################
 # 16  DIFFBIND  – merged treatment vs merged control peaks                    #
