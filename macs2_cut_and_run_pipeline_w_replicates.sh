@@ -212,6 +212,10 @@ merge_bams () {
   esac
 }
 
+fastqc_cmd () {   # $1 = FASTQ file
+  printf '%q --extract -o %q %q' "$FASTQC_BIN" "$FASTQC_DIR" "$1"
+}
+
 bam_to_bedgraph(){ bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "$2"; }
 read_count(){ samtools view -c -F 2304 "$1"; }
 
@@ -233,12 +237,25 @@ esac
 ###############################################################################
 log FastQC Conditions "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
 
-for i in "${!TREAT_R1[@]}"; do
-  run_fastqc "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}"
-done
-for i in "${!CTRL_R1[@]}";  do
-  run_fastqc "${CTRL_R1[$i]}"  "${CTRL_R2[$i]}"  "${CTRL_NAMES[$i]}"
-done
+ALL_FASTQS=("${TREAT_R1[@]}" "${TREAT_R2[@]}" "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}")
+
+if command -v parallel >/dev/null 2>&1; then
+  log FastQC ALL "running ${#ALL_FASTQS[@]} files with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+
+  # Build the list of commands and feed to parallel
+  printf '%s\n' "${ALL_FASTQS[@]}" \
+    | parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+      "$(typeset -f fastqc_cmd); fastqc_cmd {}" \
+    2>&1 | tee -a "$LOG_DIR/fastqc_parallel.log"
+
+else
+  log FastQC ALL "GNU parallel not found – running serially"
+  for fq in "${ALL_FASTQS[@]}"; do
+     cmd=$(fastqc_cmd "$fq")
+     echo "[FastQC] $cmd" | tee -a "$LOG_DIR/fastqc_serial.log"
+     eval "$cmd" 2>&1 | tee -a "$LOG_DIR/fastqc_serial.log"
+  done
+fi
 
 ###############################################################################
 # 6  TRIMMING  – per-sample logging (start / done)                            #
