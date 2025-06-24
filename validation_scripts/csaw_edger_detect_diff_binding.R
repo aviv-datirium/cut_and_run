@@ -37,7 +37,7 @@ merged   <- mergeWindows(rowRanges(windows), tol = 100)
 combined <- combineTests(merged$id, res$table)
 
 # ensure numeric
-#combined$logFC <- as.numeric(combined$logFC)
+combined$logFC <- as.numeric(combined$logFC)
 
 # 'effect' is already numeric; convert defensively
 combined$effect <- as.numeric(combined$effect)
@@ -48,4 +48,4 @@ final    <- combined[keep ,]
 
 # 4 export
 export(sig.reg, "csaw_diffPeaks.bed")
-write.csv(final,  "csaw_diffPeaks.csv")
+write.csv(as.data.frame(final),  "csaw_diffPeaks.csv")
