@@ -37,9 +37,12 @@ merged   <- mergeWindows(rowRanges(windows), tol = 100)
 combined <- combineTests(merged$id, res$table)
 
 # ensure numeric
-combined$logFC <- as.numeric(combined$logFC)
+#combined$logFC <- as.numeric(combined$logFC)
 
-keep     <- combined$FDR < 0.05 & abs(combined$logFC) > 0.5
+# 'effect' is already numeric; convert defensively
+combined$effect <- as.numeric(combined$effect)
+
+keep <- combined$FDR < 0.05 & abs(combined$effect) > 0.5   # |log2FC| ≥ 0.5
 sig.reg  <- merged$region[keep]
 final    <- combined[keep ,]
 
