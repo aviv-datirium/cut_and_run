@@ -236,27 +236,24 @@ ALL_FASTQS=( "${TREAT_R1[@]}" "${TREAT_R2[@]}"
              "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}" )
 
 # -- helper: run one FastQC job with logging ----------------------------------
-# helper
-run_fastqc () {
-  local fq="$1"
-  local base=$(basename "$fq")
-
+run_fastqc () {                       # $1 = FASTQ
+  local fq="$1" base=$(basename "$fq")
   log FastQC "$base" start
   if "$FASTQC_BIN" --extract -o "$FASTQC_DIR" "$fq" \
-        >> "$LOG_DIR/fastqc_${base}.log" 2>&1 ; then
+        >>"$LOG_DIR/fastqc_${base}.log" 2>&1; then
       log FastQC "$base" done
   else
       log FastQC "$base" FAIL
   fi
 }
-
 export -f run_fastqc log
-export LOG_DIR FASTQC_DIR FASTQC_BIN            # <<< NEW
+export LOG_DIR FASTQC_DIR FASTQC_BIN
 
 if command -v parallel >/dev/null 2>&1; then
   log FastQC ALL "running ${#ALL_FASTQS[@]} files with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           "run_fastqc {}" ::: "${ALL_FASTQS[@]}"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           "run_fastqc {}" ::: "${ALL_FASTQS[@]}" \
+    2>&1 | tee -a "$LOG_DIR/fastqc_parallel.log"
 else
   log FastQC ALL "GNU parallel not found – running serially"
   for fq in "${ALL_FASTQS[@]}"; do run_fastqc "$fq"; done
