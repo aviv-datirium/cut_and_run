@@ -98,7 +98,7 @@ MACS2="macs2"
 mkdir -p "$OUTPUT_DIR" "$LOG_DIR" "$ALIGNMENT_DIR"
 
 # timestamp the old log (if any) before we start the new one
-RUN_TS=$(date +'%Y%m%d_%H%M%S')                       # e.g. 20250624_104832
+RUN_TS=$(date +'%Y%m%d_%H%M%S')                 # e.g. 20250624_104832
 if [[ -f $LOG_DIR/pipeline.log ]]; then
     mv "$LOG_DIR/pipeline.log" \
        "$LOG_DIR/pipeline_${RUN_TS}.log"
@@ -224,6 +224,12 @@ merge_bams () {
 
 bam_to_bedgraph(){ bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "$2"; }
 read_count(){ samtools view -c -F 2304 "$1"; }
+
+# In the main script call it conditionally
+if [[ $RUN_ONLY_BLOCK == "yes" ]]; then
+    run_block
+    exit 0
+fi
 
 ###############################################################################
 # 4  BASENAMES + GENOME SIZE                                                  #
@@ -666,5 +672,44 @@ Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" "
   && log DiffBind ALL ok \
   || log DiffBind ALL FAIL
 
+###############################################################################
+# 17  Motif enrichment with HOMER                                             #
+###############################################################################
+run_block () {
+HOMER_OUT="$OUTPUT_DIR/motifs"
+mkdir -p "$HOMER_OUT"
+
+run_homer () {                     # $1 = /full/path/peaks.narrowPeak
+  local peak="$1"
+  [[ -f $peak ]] || { log HOMER "$(basename "$peak")" "skip (no file)"; return; }
+
+  local base=${peak##*/}           # MYC-MST1_S28_peaks.narrowPeak
+  base=${base%.narrowPeak}         # MYC-MST1_S28_peaks
+  local outdir="$HOMER_OUT/$base"
+  mkdir -p "$outdir"
+
+  log HOMER "$base" start
+  findMotifsGenome.pl "$peak" "$HOMER_GENOME" "$outdir" \
+      -size given -mask -p "$NUM_THREADS" \
+      > "$outdir/homer.log" 2>&1
+  log HOMER "$base" done
+}
+
+export -f run_homer log
+export HOMER_GENOME HOMER_OUT NUM_THREADS
+
+# Collect all narrowPeak files
+mapfile -t PEAK_FILES < <(find "$PEAK_DIR" -type f -name "*.narrowPeak" | sort)
+
+if command -v parallel >/dev/null 2>&1; then
+  log HOMER ALL "running ${#PEAK_FILES[@]} peak sets with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           run_homer ::: "${PEAK_FILES[@]}"
+else
+  log HOMER ALL "GNU parallel not found – running serially"
+  for p in "${PEAK_FILES[@]}"; do run_homer "$p"; done
+fi
+
 # PIPELINE COMPLETED ##########################################################
 log DONE ALL "Outputs in $OUTPUT_DIR"
+}
