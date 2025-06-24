@@ -236,22 +236,23 @@ ALL_FASTQS=( "${TREAT_R1[@]}" "${TREAT_R2[@]}"
              "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}" )
 
 # -- helper: run one FastQC job with logging ----------------------------------
-run_fastqc () {                    # $1 = FASTQ
+# helper
+run_fastqc () {
   local fq="$1"
-  local base
-  base=$(basename "$fq")
+  local base=$(basename "$fq")
 
   log FastQC "$base" start
   if "$FASTQC_BIN" --extract -o "$FASTQC_DIR" "$fq" \
-        >>"$LOG_DIR/fastqc_$base.log" 2>&1 ; then
+        >> "$LOG_DIR/fastqc_${base}.log" 2>&1 ; then
       log FastQC "$base" done
   else
       log FastQC "$base" FAIL
   fi
 }
-export -f run_fastqc log            # make them visible to parallel subshells
 
-# -- GNU parallel or serial fallback -----------------------------------------
+export -f run_fastqc log
+export LOG_DIR FASTQC_DIR FASTQC_BIN            # <<< NEW
+
 if command -v parallel >/dev/null 2>&1; then
   log FastQC ALL "running ${#ALL_FASTQS[@]} files with GNU parallel (-j $NUM_PARALLEL_THREADS)"
   parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
