@@ -41,7 +41,7 @@ print(colnames(combined))
 
 # --- ensure 'logFC' is numeric ----------------------------------------------
 if ("logFC" %in% colnames(combined)) {
-    combined$logFC <- as.numeric(as.character(combined$logFC))
+    combined$rep.logFC <- as.numeric(as.character(combined$rep.logFC))
 } else {
     stop("combineTests did not return a 'logFC' column; please check names()")
 }
@@ -50,7 +50,7 @@ if ("logFC" %in% colnames(combined)) {
 combined$effect <- as.numeric(combined$effect)
 
 # --- filtering --------------------------------------------------------------
-keep <- combined$FDR < 0.05 & abs(combined$logFC) > 0.5
+keep <- combined$FDR < 0.05 & abs(combined$rep.logFC) > 0.5   # |log2FC| ≥0.5
 sig.reg <- merged$region[keep]
 stats    <- combined[keep ,]
 
