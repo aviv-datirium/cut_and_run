@@ -52,7 +52,7 @@ cat <<'BANNER'
  REQUIREMENTS
  ────────────
    bash ≥4 · samtools ≥1.10 · bedtools ≥2.28 · STAR ≥2.7 · Java ≥17
-   Trim Galore 0.6.10 · Picard ≥2.18 · MACS2 ≥2.2 · cutadapt ≥4.1
+   Trim Galore ≥0.6.10 · Picard ≥2.18 · MACS2 ≥2.2 · cutadapt ≥4.1
    R 4.x (for optional DiffBind) · GNU coreutils/awk · PIGZ · GNU Parallel
 
 BANNER
@@ -232,7 +232,6 @@ esac
 # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 ###############################################################################
 log FastQC Conditions "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
-log FastQC ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
 
 ALL_FASTQS=( "${TREAT_R1[@]}" "${TREAT_R2[@]}"
              "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}" )
