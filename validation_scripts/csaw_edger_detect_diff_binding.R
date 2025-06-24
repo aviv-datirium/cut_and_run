@@ -36,25 +36,19 @@ res     <- glmQLFTest(fit, coef = 2)      # trt vs ctl
 merged   <- mergeWindows(rowRanges(windows), tol = 100)
 combined <- combineTests(merged$id, res$table)
 
-# --- inspect once to be sure -------------------------------------------------
-print(colnames(combined))
-
-# --- ensure 'logFC' is numeric ----------------------------------------------
+# check / coerce representative logFC
 if ("rep.logFC" %in% colnames(combined)) {
     combined$rep.logFC <- as.numeric(as.character(combined$rep.logFC))
 } else {
-    stop("combineTests did not return a 'logFC' column; please check names()")
+    stop("combineTests did not return 'rep.logFC'; check column names.")
 }
 
-# 'effect' is already numeric; convert defensively
-combined$effect <- as.numeric(combined$effect)
-
-# --- filtering --------------------------------------------------------------
-keep <- combined$FDR < 0.05 & abs(combined$rep.logFC) > 0.5   # |log2FC| ≥0.5
+# 4 filter by FDR and |log2FC|
+keep <- combined$FDR < 0.05 & abs(combined$rep.logFC) > 0.5
 sig.reg <- merged$region[keep]
 stats    <- combined[keep ,]
 
-# --- export -----------------------------------------------------------------
+# 5 export
 library(rtracklayer)
 export(sig.reg, "csaw_diffPeaks.bed")
 write.csv(as.data.frame(stats), "csaw_diffPeaks.csv")
