@@ -244,6 +244,48 @@ case $GENOME_SIZE_STRING in
   sc) GENOME_SIZE=12000000   ;;  *)  GENOME_SIZE=$CUSTOM_GENOME_SIZE ;;
 esac
 
+###
+# DEBUG
+###
+run_block () {
+HOMER_OUT="$OUTPUT_DIR/motifs"
+mkdir -p "$HOMER_OUT"
+
+run_homer () {                     # $1 = /full/path/peaks.narrowPeak
+  local peak="$1"
+  [[ -f $peak ]] || { log HOMER "$(basename "$peak")" "skip (no file)"; return; }
+
+  local base=${peak##*/}           # MYC-MST1_S28_peaks.narrowPeak
+  base=${base%.narrowPeak}         # MYC-MST1_S28_peaks
+  local outdir="$HOMER_OUT/$base"
+  mkdir -p "$outdir"
+
+  log HOMER "$base" start
+  findMotifsGenome.pl "$peak" "$HOMER_GENOME" "$outdir" \
+      -size given -mask -p "$NUM_THREADS" \
+      > "$outdir/homer.log" 2>&1
+  log HOMER "$base" done
+}
+
+export -f run_homer log
+export HOMER_GENOME HOMER_OUT NUM_THREADS
+
+# Collect all narrowPeak files
+mapfile -t PEAK_FILES < <(find "$PEAK_DIR" -type f -name "*.narrowPeak" | sort)
+
+if command -v parallel >/dev/null 2>&1; then
+  log HOMER ALL "running ${#PEAK_FILES[@]} peak sets with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           run_homer ::: "${PEAK_FILES[@]}"
+else
+  log HOMER ALL "GNU parallel not found – running serially"
+  for p in "${PEAK_FILES[@]}"; do run_homer "$p"; done
+fi
+
+# PIPELINE COMPLETED ##########################################################
+log DONE ALL "Outputs in $OUTPUT_DIR"
+}
+
 ###############################################################################
 # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 ###############################################################################
@@ -675,41 +717,41 @@ Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" "
 ###############################################################################
 # 17  Motif enrichment with HOMER                                             #
 ###############################################################################
-run_block () {
-HOMER_OUT="$OUTPUT_DIR/motifs"
-mkdir -p "$HOMER_OUT"
+#~ run_block () {
+#~ HOMER_OUT="$OUTPUT_DIR/motifs"
+#~ mkdir -p "$HOMER_OUT"
 
-run_homer () {                     # $1 = /full/path/peaks.narrowPeak
-  local peak="$1"
-  [[ -f $peak ]] || { log HOMER "$(basename "$peak")" "skip (no file)"; return; }
+#~ run_homer () {                     # $1 = /full/path/peaks.narrowPeak
+  #~ local peak="$1"
+  #~ [[ -f $peak ]] || { log HOMER "$(basename "$peak")" "skip (no file)"; return; }
 
-  local base=${peak##*/}           # MYC-MST1_S28_peaks.narrowPeak
-  base=${base%.narrowPeak}         # MYC-MST1_S28_peaks
-  local outdir="$HOMER_OUT/$base"
-  mkdir -p "$outdir"
+  #~ local base=${peak##*/}           # MYC-MST1_S28_peaks.narrowPeak
+  #~ base=${base%.narrowPeak}         # MYC-MST1_S28_peaks
+  #~ local outdir="$HOMER_OUT/$base"
+  #~ mkdir -p "$outdir"
 
-  log HOMER "$base" start
-  findMotifsGenome.pl "$peak" "$HOMER_GENOME" "$outdir" \
-      -size given -mask -p "$NUM_THREADS" \
-      > "$outdir/homer.log" 2>&1
-  log HOMER "$base" done
-}
+  #~ log HOMER "$base" start
+  #~ findMotifsGenome.pl "$peak" "$HOMER_GENOME" "$outdir" \
+      #~ -size given -mask -p "$NUM_THREADS" \
+      #~ > "$outdir/homer.log" 2>&1
+  #~ log HOMER "$base" done
+#~ }
 
-export -f run_homer log
-export HOMER_GENOME HOMER_OUT NUM_THREADS
+#~ export -f run_homer log
+#~ export HOMER_GENOME HOMER_OUT NUM_THREADS
 
-# Collect all narrowPeak files
-mapfile -t PEAK_FILES < <(find "$PEAK_DIR" -type f -name "*.narrowPeak" | sort)
+#~ # Collect all narrowPeak files
+#~ mapfile -t PEAK_FILES < <(find "$PEAK_DIR" -type f -name "*.narrowPeak" | sort)
 
-if command -v parallel >/dev/null 2>&1; then
-  log HOMER ALL "running ${#PEAK_FILES[@]} peak sets with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           run_homer ::: "${PEAK_FILES[@]}"
-else
-  log HOMER ALL "GNU parallel not found – running serially"
-  for p in "${PEAK_FILES[@]}"; do run_homer "$p"; done
-fi
+#~ if command -v parallel >/dev/null 2>&1; then
+  #~ log HOMER ALL "running ${#PEAK_FILES[@]} peak sets with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  #~ parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           #~ run_homer ::: "${PEAK_FILES[@]}"
+#~ else
+  #~ log HOMER ALL "GNU parallel not found – running serially"
+  #~ for p in "${PEAK_FILES[@]}"; do run_homer "$p"; done
+#~ fi
 
-# PIPELINE COMPLETED ##########################################################
-log DONE ALL "Outputs in $OUTPUT_DIR"
-}
+#~ # PIPELINE COMPLETED ##########################################################
+#~ log DONE ALL "Outputs in $OUTPUT_DIR"
+#~ }
