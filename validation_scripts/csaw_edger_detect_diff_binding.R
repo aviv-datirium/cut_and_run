@@ -40,7 +40,7 @@ combined <- combineTests(merged$id, res$table)
 print(colnames(combined))
 
 # --- ensure 'logFC' is numeric ----------------------------------------------
-if ("logFC" %in% colnames(combined)) {
+if ("rep.logFC" %in% colnames(combined)) {
     combined$rep.logFC <- as.numeric(as.character(combined$rep.logFC))
 } else {
     stop("combineTests did not return a 'logFC' column; please check names()")
