@@ -232,22 +232,33 @@ esac
 # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 ###############################################################################
 log FastQC Conditions "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
-ALL_FASTQS=("${TREAT_R1[@]}" "${TREAT_R2[@]}" "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}")
+ALL_FASTQS=( "${TREAT_R1[@]}" "${TREAT_R2[@]}"
+             "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}" )
 
+# -- helper: run one FastQC job with logging ----------------------------------
+run_fastqc () {                    # $1 = FASTQ
+  local fq="$1"
+  local base
+  base=$(basename "$fq")
+
+  log FastQC "$base" start
+  if "$FASTQC_BIN" --extract -o "$FASTQC_DIR" "$fq" \
+        >>"$LOG_DIR/fastqc_$base.log" 2>&1 ; then
+      log FastQC "$base" done
+  else
+      log FastQC "$base" FAIL
+  fi
+}
+export -f run_fastqc log            # make them visible to parallel subshells
+
+# -- GNU parallel or serial fallback -----------------------------------------
 if command -v parallel >/dev/null 2>&1; then
   log FastQC ALL "running ${#ALL_FASTQS[@]} files with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-
   parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           "$FASTQC_BIN --extract -o $FASTQC_DIR {}" \
-           ::: "${ALL_FASTQS[@]}" \
-    2>&1 | tee -a "$LOG_DIR/fastqc_parallel.log"
-
+           "run_fastqc {}" ::: "${ALL_FASTQS[@]}"
 else
   log FastQC ALL "GNU parallel not found – running serially"
-  for fq in "${ALL_FASTQS[@]}"; do
-    "$FASTQC_BIN" --extract -o "$FASTQC_DIR" "$fq" \
-       2>&1 | tee -a "$LOG_DIR/fastqc_serial.log"
-  done
+  for fq in "${ALL_FASTQS[@]}"; do run_fastqc "$fq"; done
 fi
 
 ###############################################################################
