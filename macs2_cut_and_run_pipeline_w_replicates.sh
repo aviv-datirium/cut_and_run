@@ -470,7 +470,7 @@ if (( t_rows < 2 || c_rows < 2 )); then
 fi
 
 log DiffBind ALL start
-Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" \
+Rscript /mnt/data/home/aviv/cut_and_run/diffbind.R "$SAMPLE_SHEET" "$DIFF_DIR" "$NUM_THREADS"\
        > "$DIFF_DIR/diffbind.log" 2>&1 \
   && log DiffBind ALL ok \
   || log DiffBind ALL FAIL

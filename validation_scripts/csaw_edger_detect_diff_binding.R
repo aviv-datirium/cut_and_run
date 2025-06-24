@@ -11,6 +11,11 @@
 library(csaw)
 library(edgeR)
 library(rtracklayer)
+library(BiocParallel)
+
+NTHREADS <- 8                       # choose cores (<= nproc)
+
+register(MulticoreParam(NTHREADS))
 
 # Inputs
 bam.files <- c(        # filtered BAMs
@@ -22,7 +27,10 @@ groups <- factor(c("trt","trt","ctl","ctl"))
 
 # 1 count sliding windows
 param    <- readParam(minq = 10, pe = "both")
-windows  <- windowCounts(bam.files, width = 150, ext = 200, param = param)
+windows <- windowCounts(bam.files,
+                        width = 150, ext = 200,
+                        param = readParam(minq = 10, pe = "both"),
+                        BPPARAM = bpparam())      # ← uses NTHREADS cores
 
 # 2 edgeR QL test
 y       <- asDGEList(windows)

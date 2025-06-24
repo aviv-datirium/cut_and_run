@@ -5,8 +5,7 @@
       { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST2_S29_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST2_S29_R2_001.fastq.gz"}
       ],
     "control": [
-      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC1_S26_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC1_S26_R2_001.fastq.gz" },
-      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC2_S27_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC2_S27_R2_001.fastq.gz" }
+      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/IgG-MSR2_S31_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MSC1_S26_R2_001.fastq.gz" }
     ]
   },
   "alignment_dir": "/mnt/data/home/aviv/alignment_replicates_diffbind",
