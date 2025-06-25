@@ -1,8 +1,13 @@
+requirements:
+  DockerRequirement:
+    dockerPull: ghcr.io/<org>/cutrun-core:latest   # full registry/image:tag
+
 baseCommand: [/usr/local/bin/cutrun.sh]
-arguments:
-  - --config $(inputs.config.path)
+
 inputs:
   config:
     type: File
     inputBinding: {}
-  # mount additional directories as CWL Files / Directories
+  # add other Files/Directories if needed
+
+outputs: {}

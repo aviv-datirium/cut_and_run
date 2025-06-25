@@ -7,7 +7,7 @@
 #     docker build -t cutrun-core:latest .
 #
 # Pull from registry (if image was pushed):
-#     docker pull ghcr.io/<org>/cutrun-core:latest
+#     docker pull avivdemorgan/cutrun-core:latest
 #
 # Run on your own data/config:
 #     docker run --rm -it \
@@ -20,10 +20,11 @@
 ###############################################################################
 
 FROM mambaorg/micromamba:1.5.6
-
 LABEL maintainer="aviv.de.morgan@datirium.com"
 ENV DEBIAN_FRONTEND=noninteractive \
     MAMBA_DOCKERFILE_ACTIVATE=1           # auto-activate base env
+
+WORKDIR /tmp
 
 # ---------- install core bio-tools ------------------------------------------
 RUN micromamba install -y -n cutrun -c conda-forge -c bioconda \
