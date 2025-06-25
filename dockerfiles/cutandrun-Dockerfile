@@ -42,7 +42,7 @@ RUN micromamba create -y -n cutrun -c conda-forge -c bioconda \
 
 # ---------- copy pipeline script -------------------------------------------
 WORKDIR /pipeline
-COPY macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
+COPY --chmod=0755 macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
 RUN chmod +x /usr/local/bin/cutrun.sh
 
 # ---------- default command (CWL can override) ------------------------------
