@@ -60,7 +60,7 @@ BANNER
 ###############################################################################
 # 0  CONFIG + PATHS                                                           #
 ###############################################################################
-CONFIG_FILE="/mnt/data/home/aviv/cut_and_run/config_replicates_diffbind.json"
+CONFIG_FILE=${"/mnt/data/home/aviv/cut_and_run/dockerfiles/config_for_docker.json"}
 
 ALIGNMENT_DIR=$(jq -r '.alignment_dir'  "$CONFIG_FILE")
 OUTPUT_DIR=$(   jq -r '.output_dir'     "$CONFIG_FILE")
