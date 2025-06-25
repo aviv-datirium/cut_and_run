@@ -8,7 +8,7 @@
       { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/IgG-MSR2_S31_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/IgG-MSR2_S31_R2_001.fastq.gz" }
     ]
   },
-  "alignment_dir": "/mnt/data/home/aviv/alignment_replicates_diffbind",
+  "alignment_dir": "/mnt/data/home/aviv/alignment_replicates",
   "output_dir": "/mnt/data/home/aviv/output_replicates",
   "log_dir": "/mnt/data/home/aviv/output_replicates/logs",
   "reference_genome": "/mnt/data/home/aviv/star_indices/hg38",
