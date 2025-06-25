@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+export PATH="/opt/conda/envs/cutrun/bin:$PATH"
+
 # Where your output lives; use /pipeline if that’s guaranteed to be mounted
 TARGET_DIR=/mnt/data/home/aviv
 
