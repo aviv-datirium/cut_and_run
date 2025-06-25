@@ -85,9 +85,9 @@ CTRL_R2=($( jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
 ###############################################################################
 # 1  TOOL LOCATIONS                                                           #
 ###############################################################################
-PICARD_JAR="/mnt/data/home/aviv/tools/picard.jar"
+PICARD_JAR="$(command -v picard)"
 FASTQC_BIN="$(command -v fastqc)"
-STAR_BIN="/mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR"
+STAR_BIN="$(command -v STAR)"
 MACS2="macs2"
 
 ###############################################################################
