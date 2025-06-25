@@ -61,6 +61,7 @@ BANNER
 # 0  CONFIG + PATHS                                                           #
 ###############################################################################
 CONFIG_FILE="${1:-/mnt/data/home/aviv/cut_and_run/dockerfiles/config_for_docker.json}"
+shift || true          # remove $1 so "$@" stays clean for future use
 
 ALIGNMENT_DIR=$(jq -r '.alignment_dir'  "$CONFIG_FILE")
 OUTPUT_DIR=$(   jq -r '.output_dir'     "$CONFIG_FILE")
