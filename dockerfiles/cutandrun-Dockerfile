@@ -28,16 +28,12 @@ WORKDIR /tmp
 
 # ---------- install core bio-tools ------------------------------------------
 RUN micromamba create -y -n cutrun -c conda-forge -c bioconda \
-        jq \
-        samtools=1.18 \
-        bedtools=2.31 \
-        star=2.7.11b \
-        picard=2.27 \
-        trim-galore=0.6.10 \
-        cutadapt=4.1 \
-        macs2=2.2 \
-        parallel \
-        pigz \
+        python=3.9 \
+        jq samtools=1.18 bedtools=2.31 star=2.7.11b picard=2.27 \
+        trim-galore=0.6.10 cutadapt=4.1 \
+        macs2=2.2.7.1 \
+        ucsc-bedgraphtobigwig ucsc-bedclip \
+        parallel pigz \
     && micromamba clean -a -y
 
 # ---------- copy pipeline script -------------------------------------------
