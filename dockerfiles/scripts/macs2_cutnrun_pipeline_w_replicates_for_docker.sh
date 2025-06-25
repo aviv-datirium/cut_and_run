@@ -86,10 +86,8 @@ CTRL_R2=($( jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
 # 1  TOOL LOCATIONS                                                           #
 ###############################################################################
 PICARD_JAR="/mnt/data/home/aviv/tools/picard.jar"
-#FASTQC_BIN="/mnt/data/home/aviv/tools/FastQC/fastqc"
+FASTQC_BIN="$(command -v fastqc)"
 STAR_BIN="/mnt/data/home/aviv/tools/STAR/STAR-2.7.11b/bin/Linux_x86_64/STAR"
-TRIMMOMATIC_JAR="/mnt/data/home/aviv/tools/Trimmomatic/trimmomatic-0.39.jar"
-ADAPTER_FA="/mnt/data/home/aviv/tools/Trimmomatic/adapters/TruSeq3-PE.fa"
 MACS2="macs2"
 
 ###############################################################################
