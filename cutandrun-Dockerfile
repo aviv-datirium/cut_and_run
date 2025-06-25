@@ -21,7 +21,7 @@
 
 FROM mambaorg/micromamba:1.5.6
 
-LABEL maintainer="your.name@lab.edu"
+LABEL maintainer="aviv.de.morgan@datirium.com"
 ENV DEBIAN_FRONTEND=noninteractive \
     MAMBA_DOCKERFILE_ACTIVATE=1           # auto-activate base env
 
