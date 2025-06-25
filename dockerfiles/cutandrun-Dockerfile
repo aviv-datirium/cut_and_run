@@ -34,6 +34,7 @@ RUN micromamba create -y -n cutrun -c conda-forge -c bioconda \
         macs2=2.2.7.1 \
         ucsc-bedgraphtobigwig ucsc-bedclip \
         parallel pigz \
+        fastqc=0.11.9 \
     && micromamba clean -a -y
 
 USER root
