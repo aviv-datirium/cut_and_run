@@ -35,7 +35,10 @@ RUN micromamba create -y -n cutrun -c conda-forge -c bioconda \
         ucsc-bedgraphtobigwig ucsc-bedclip \
         parallel pigz \
     && micromamba clean -a -y
-RUN apt-get update && apt-get install -y gosu && rm -rf /var/lib/apt/lists/*
+
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
+USER micromamba
 
 # ---------- copy pipeline script -------------------------------------------
 WORKDIR /pipeline
