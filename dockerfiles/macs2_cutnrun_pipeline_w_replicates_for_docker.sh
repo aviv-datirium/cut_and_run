@@ -41,11 +41,10 @@ cat <<'BANNER'
   8  Spike-in scale factors – host/spike read ratio per replicate
   9  BedGraph + BigWig generation (scaled if factors exist)
  10  Peak-to-gene annotation (bedtools intersect)
- 11  DiffBind peak comparison
 
  USAGE
  ─────
-   • Edit config_replicates_diffbind.json with absolute paths and replicate lists.
+   • Edit the config.json with absolute paths and replicate lists.
    • Run: bash macs2_cut_and_run_pipeline_w_replicates.sh (no CLI arguments)
    • Logs stream to stdout *and* to output/logs/pipeline.log
 

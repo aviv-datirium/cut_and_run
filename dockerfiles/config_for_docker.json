@@ -9,8 +9,8 @@
     ]
   },
   "alignment_dir": "/mnt/data/home/aviv/alignment_replicates_diffbind",
-  "output_dir": "/mnt/data/home/aviv/output_replicates_diffbind",
-  "log_dir": "/mnt/data/home/aviv/output_replicates_diffbind/logs",
+  "output_dir": "/mnt/data/home/aviv/output_replicates",
+  "log_dir": "/mnt/data/home/aviv/output_replicates/logs",
   "reference_genome": "/mnt/data/home/aviv/star_indices/hg38",
   "ecoli_index": "/mnt/data/home/aviv/star_indices/ecoli_canonical",
   "chrom_sizes": "/mnt/data/home/aviv/chrom/hg38.chrom.sizes",
