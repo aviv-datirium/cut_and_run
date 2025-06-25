@@ -27,7 +27,7 @@ ENV MAMBA_DOCKERFILE_ACTIVATE=1
 WORKDIR /tmp
 
 # ---------- install core bio-tools ------------------------------------------
-RUN micromamba install -y -create -n cutrun -c conda-forge -c bioconda \
+RUN micromamba install --create -y -n cutrun -c conda-forge -c bioconda \
         jq \
         samtools=1.18 \
         bedtools=2.31 \
