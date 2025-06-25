@@ -46,3 +46,5 @@ COPY --chmod=0755 macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/b
 
 # ---------- default command (CWL can override) ------------------------------
 CMD ["/bin/bash"]
+
+ENTRYPOINT ["micromamba", "run", "-n", "cutrun", "cutrun.sh"]
