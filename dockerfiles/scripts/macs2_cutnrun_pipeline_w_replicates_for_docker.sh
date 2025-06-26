@@ -85,7 +85,7 @@ CTRL_R2=($( jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
 ###############################################################################
 # 1  TOOL LOCATIONS                                                           #
 ###############################################################################
-PICARD_JAR="$(command -v picard)"
+PICARD_CMD="$(command -v picard)"
 FASTQC_BIN="$(command -v fastqc)"
 STAR_BIN="$(command -v STAR)"
 MACS2="macs2"
@@ -332,14 +332,14 @@ picard_dedup () {                    # $1 = sample basename
   local inbam="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
   [[ -s $inbam ]] || { log Picard "$n" "skip (missing BAM)"; return; }
 
-  java -jar "$PICARD_JAR" AddOrReplaceReadGroups \
+  "$PICARD_CMD" AddOrReplaceReadGroups \
        I="$inbam" \
        O="$ALIGNMENT_DIR/${n}.rg.bam" \
        RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" \
        VALIDATION_STRINGENCY=LENIENT \
        >>"$LOG_DIR/picard_${n}.log" 2>&1
 
-  java -jar "$PICARD_JAR" MarkDuplicates \
+  "$PICARD_CMD" MarkDuplicates \
        I="$ALIGNMENT_DIR/${n}.rg.bam" \
        O="$ALIGNMENT_DIR/${n}.dedup.bam" \
        M="$LOG_DIR/${n}.metrics.txt" \
