@@ -86,6 +86,7 @@ CTRL_R2=($( jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
 # 1  TOOL LOCATIONS                                                           #
 ###############################################################################
 PICARD_CMD="$(command -v picard)"
+export PICARD_CMD
 FASTQC_BIN="$(command -v fastqc)"
 STAR_BIN="$(command -v STAR)"
 MACS2="macs2"
@@ -353,7 +354,7 @@ picard_dedup () {                    # $1 = sample basename
   log Picard "$n" done
 }
 export -f picard_dedup log
-export PICARD_JAR ALIGNMENT_DIR LOG_DIR NUM_THREADS
+export PICARD_CMD ALIGNMENT_DIR LOG_DIR NUM_THREADS
 
 if command -v parallel >/dev/null 2>&1; then
   log Picard ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
