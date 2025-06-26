@@ -512,7 +512,7 @@ if command -v parallel >/dev/null 2>&1; then
     printf '%s\n' "${MACS_CMDS[@]}" | \
       parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
         --colsep '|' \
-        macs2_run {1} {2} 2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
+        macs2_run {1} "{2}" 2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
 else
     log MACS2 ALL "GNU parallel not found – running jobs serially"
     for entry in "${MACS_CMDS[@]}"; do
