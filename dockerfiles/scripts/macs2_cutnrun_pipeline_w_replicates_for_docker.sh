@@ -86,7 +86,7 @@ CTRL_R2=($( jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
 # 1  TOOL LOCATIONS                                                           #
 ###############################################################################
 PICARD_CMD="$(command -v picard)"
-export PICARD_CMD
+export PICARD_CMD ALIGNMENT_DIR LOG_DIR NUM_THREADS
 FASTQC_BIN="$(command -v fastqc)"
 STAR_BIN="$(command -v STAR)"
 MACS2="macs2"
@@ -354,7 +354,6 @@ picard_dedup () {                    # $1 = sample basename
   log Picard "$n" done
 }
 export -f picard_dedup log
-export PICARD_CMD ALIGNMENT_DIR LOG_DIR NUM_THREADS
 
 if command -v parallel >/dev/null 2>&1; then
   log Picard ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
@@ -423,56 +422,103 @@ fi
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
 
-# ── A  replicates (unchanged) ────────────────────────────────────────────────
+#~ # ── A  replicates (unchanged) ────────────────────────────────────────────────
+#~ for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
+  #~ BAM="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  #~ macs2 callpeak -t "$BAM" \
+       #~ -f BAMPE -g "$GENOME_SIZE" \
+       #~ -n "$n" \
+       #~ --outdir "$PEAK_DIR/replicate" \
+       #~ 2>&1 | tee -a "$LOG_DIR/macs2_replicate.log"
+#~ done
+
+#~ # ── B  treatment-merged vs control-merged ────────────────────────────────────
+#~ # Only if a control_merged.bam exists
+#~ if [[ -s $CTRL_MRG ]]; then
+  #~ MACS_CMDS+=(
+    #~ "macs2 callpeak \
+        #~ -t $CTRL_MRG \
+        #~ -f BAMPE -g $GENOME_SIZE \
+        #~ -n controlMerged \
+        #~ --outdir $PEAK_DIR/merged"
+  #~ )
+#~ fi
+
+#~ if [[ -s $T_MRG ]]; then
+  #~ if [[ -s $CTRL_MRG ]]; then
+    #~ MACS_CMDS+=("macs2 callpeak -t $T_MRG -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged_vs_controlMerged --outdir $PEAK_DIR/merged")
+  #~ else
+    #~ MACS_CMDS+=("macs2 callpeak -t $T_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged --outdir $PEAK_DIR/merged")
+  #~ fi
+#~ else
+  #~ log MACS2merged ALL "skip (missing merged BAM)"
+#~ fi
+
+#~ # ── C  each replicate vs pooled control ──────────────────────────────────────
+#~ if [[ -s $CTRL_MRG ]]; then
+  #~ for n in "${TREAT_NAMES[@]}"; do
+    #~ MACS_CMDS+=("macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n ${n}_vs_ctrlPooled --outdir $PEAK_DIR/pooled")
+  #~ done
+#~ fi
+
+#~ # ── run all commands with GNU parallel (or serial fallback) ──────────────────
+#~ if command -v parallel >/dev/null 2>&1; then
+  #~ log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  #~ parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 ::: "${MACS_CMDS[@]}" \
+    #~ 2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
+#~ else
+  #~ log MACS2 ALL "GNU parallel not found – running jobs serially"
+  #~ for cmd in "${MACS_CMDS[@]}"; do
+    #~ echo "[MACS2] $cmd" | tee -a "$LOG_DIR/macs2_serial.log"
+    #~ eval "$cmd" 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
+  #~ done
+#~ fi
+
+log MACS2 ALL "building command list…"      # optional
+
+# helper that runs one macs2 command + logging
+macs2_run () {
+    local sample="$1"        # first arg is the sample label
+    shift                    # the rest is the literal macs2 call
+
+    log MACS2 "$sample" start
+    "$@"                     # run the MACS2 command
+    local status=$?
+    if [[ $status -eq 0 ]]; then
+        log MACS2 "$sample" done
+    else
+        log MACS2 "$sample" "FAIL (exit $status)"
+    fi
+    return $status
+}
+export -f macs2_run log      # so GNU parallel sees them
+
+# ── Assemble commands ────────────────────────────────────────────────────────
+declare -a MACS_CMDS=()
+
+#  A) individual replicate peaks
 for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
-  BAM="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-  macs2 callpeak -t "$BAM" \
-       -f BAMPE -g "$GENOME_SIZE" \
-       -n "$n" \
-       --outdir "$PEAK_DIR/replicate" \
-       2>&1 | tee -a "$LOG_DIR/macs2_replicate.log"
+  MACS_CMDS+=("$n|macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam \
+                 -f BAMPE -g $GENOME_SIZE -n $n --outdir $PEAK_DIR/replicate")
 done
 
-# ── B  treatment-merged vs control-merged ────────────────────────────────────
-# Only if a control_merged.bam exists
-if [[ -s $CTRL_MRG ]]; then
-  MACS_CMDS+=(
-    "macs2 callpeak \
-        -t $CTRL_MRG \
-        -f BAMPE -g $GENOME_SIZE \
-        -n controlMerged \
-        --outdir $PEAK_DIR/merged"
-  )
-fi
+#  B) merged treatment vs control (and variants) … (leave your existing logic)
 
-if [[ -s $T_MRG ]]; then
-  if [[ -s $CTRL_MRG ]]; then
-    MACS_CMDS+=("macs2 callpeak -t $T_MRG -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged_vs_controlMerged --outdir $PEAK_DIR/merged")
-  else
-    MACS_CMDS+=("macs2 callpeak -t $T_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged --outdir $PEAK_DIR/merged")
-  fi
-else
-  log MACS2merged ALL "skip (missing merged BAM)"
-fi
+#  C) replicate vs pooled control … (leave your existing logic)
 
-# ── C  each replicate vs pooled control ──────────────────────────────────────
-if [[ -s $CTRL_MRG ]]; then
-  for n in "${TREAT_NAMES[@]}"; do
-    MACS_CMDS+=("macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n ${n}_vs_ctrlPooled --outdir $PEAK_DIR/pooled")
-  done
-fi
-
-# ── run all commands with GNU parallel (or serial fallback) ──────────────────
+# ── Run with GNU parallel or serial fallback ────────────────────────────────
 if command -v parallel >/dev/null 2>&1; then
-  log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 ::: "${MACS_CMDS[@]}" \
-    2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
+    log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+    printf '%s\n' "${MACS_CMDS[@]}" | \
+      parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+        --colsep '|' \
+        macs2_run {1} {2} 2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
 else
-  log MACS2 ALL "GNU parallel not found – running jobs serially"
-  for cmd in "${MACS_CMDS[@]}"; do
-    echo "[MACS2] $cmd" | tee -a "$LOG_DIR/macs2_serial.log"
-    eval "$cmd" 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
-  done
+    log MACS2 ALL "GNU parallel not found – running jobs serially"
+    for entry in "${MACS_CMDS[@]}"; do
+        IFS='|' read -r smp cmd <<<"$entry"
+        macs2_run "$smp" $cmd 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
+    done
 fi
 
 ###############################################################################
