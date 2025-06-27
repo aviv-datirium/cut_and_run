@@ -476,48 +476,52 @@ CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
 
 log MACS2 ALL "building command list…"      # optional
 
-# helper that runs one macs2 command + logging
-macs2_run () {
-    local sample="$1"        # first arg is the sample label
-    shift                    # the rest is the literal macs2 call
+# 1) helper that runs MACS2 for ONE sample
+macs2_one () {
+    local sample="$1"      # e.g. MYC-MST1_S28
+    local bam="$ALIGNMENT_DIR/${sample}.dedup.filtered.bam"
+    local outdir="$PEAK_DIR/replicate"
 
     log MACS2 "$sample" start
-    "$@"                     # run the MACS2 command
+    macs2 callpeak -t "$bam" -f BAMPE -g "$GENOME_SIZE" \
+                   -n "$sample" --outdir "$outdir"
     local status=$?
-    if [[ $status -eq 0 ]]; then
-        log MACS2 "$sample" done
-    else
-        log MACS2 "$sample" "FAIL (exit $status)"
-    fi
+    [[ $status -eq 0 ]] && log MACS2 "$sample" done \
+                        || log MACS2 "$sample" "FAIL (exit $status)"
     return $status
 }
-export -f macs2_run log      # so GNU parallel sees them
+export -f macs2_one log
 
-# ── Assemble commands ────────────────────────────────────────────────────────
-declare -a MACS_CMDS=()
+# 2) create output folders once
+mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 
-#  A) individual replicate peaks
-for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
-  MACS_CMDS+=("$n|macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam \
-                 -f BAMPE -g $GENOME_SIZE -n $n --outdir $PEAK_DIR/replicate")
-done
+# 3) run replicate peaks in parallel
+log MACS2 ALL "running ${#TREAT_NAMES[@]} + ${#CTRL_NAMES[@]} replicate jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+        macs2_one ::: "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}" \
+  2>&1 | tee -a "$LOG_DIR/macs2_replicate.log"
 
-#  B) merged treatment vs control (and variants) … (leave your existing logic)
+# 4) the merged / pooled comparisons (serial is fine, they’re few)
+log MACS2 ALL "running merged & pooled comparisons"
+if [[ -s "$T_MRG" ]]; then
+    [[ -s "$CTRL_MRG" ]] && log MACS2 treatmentMerged_vs_controlMerged start \
+        && macs2 callpeak -t "$T_MRG" -c "$CTRL_MRG" -f BAMPE -g "$GENOME_SIZE" \
+           -n treatmentMerged_vs_controlMerged --outdir "$PEAK_DIR/merged" \
+        && log MACS2 treatmentMerged_vs_controlMerged done
 
-#  C) replicate vs pooled control … (leave your existing logic)
+    [[ ! -s "$CTRL_MRG" ]] && log MACS2 treatmentMerged start \
+        && macs2 callpeak -t "$T_MRG" -f BAMPE -g "$GENOME_SIZE" \
+           -n treatmentMerged --outdir "$PEAK_DIR/merged" \
+        && log MACS2 treatmentMerged done
+fi
 
-# ── Run with GNU parallel or serial fallback ────────────────────────────────
-if command -v parallel >/dev/null 2>&1; then
-    log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-    printf '%s\n' "${MACS_CMDS[@]}" | \
-      parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-        --colsep '|' \
-        macs2_run {1} "{2}" 2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
-else
-    log MACS2 ALL "GNU parallel not found – running jobs serially"
-    for entry in "${MACS_CMDS[@]}"; do
-        IFS='|' read -r smp cmd <<<"$entry"
-        macs2_run "$smp" $cmd 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
+if [[ -s "$CTRL_MRG" ]]; then
+    for samp in "${TREAT_NAMES[@]}"; do
+        log MACS2 "${samp}_vs_ctrlPooled" start
+        macs2 callpeak -t "$ALIGNMENT_DIR/${samp}.dedup.filtered.bam" \
+                       -c "$CTRL_MRG" -f BAMPE -g "$GENOME_SIZE" \
+                       -n "${samp}_vs_ctrlPooled" --outdir "$PEAK_DIR/pooled"
+        log MACS2 "${samp}_vs_ctrlPooled" done
     done
 fi
 
