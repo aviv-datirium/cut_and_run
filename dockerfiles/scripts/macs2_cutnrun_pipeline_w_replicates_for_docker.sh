@@ -247,123 +247,123 @@ fi
 ###############################################################################
 # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 ###############################################################################
-log FastQC Conditions "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
+#~ log FastQC Conditions "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
 
-ALL_FASTQS=( "${TREAT_R1[@]}" "${TREAT_R2[@]}"
-             "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}" )
+#~ ALL_FASTQS=( "${TREAT_R1[@]}" "${TREAT_R2[@]}"
+             #~ "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}" )
 
-run_fastqc () {                       # $1 = FASTQ
-  local fq="$1" base
-  base=$(basename "$fq")
-  log FastQC "$base" start
-  if "$FASTQC_BIN" --extract -o "$FASTQC_DIR" "$fq" \
-        >>"$LOG_DIR/fastqc_${base}.log" 2>&1 ; then
-      log FastQC "$base" done
-  else
-      log FastQC "$base" FAIL
-  fi
-}
-export -f run_fastqc log
-export LOG_DIR FASTQC_DIR FASTQC_BIN
+#~ run_fastqc () {                       # $1 = FASTQ
+  #~ local fq="$1" base
+  #~ base=$(basename "$fq")
+  #~ log FastQC "$base" start
+  #~ if "$FASTQC_BIN" --extract -o "$FASTQC_DIR" "$fq" \
+        #~ >>"$LOG_DIR/fastqc_${base}.log" 2>&1 ; then
+      #~ log FastQC "$base" done
+  #~ else
+      #~ log FastQC "$base" FAIL
+  #~ fi
+#~ }
+#~ export -f run_fastqc log
+#~ export LOG_DIR FASTQC_DIR FASTQC_BIN
 
-if command -v parallel >/dev/null 2>&1; then
-  log FastQC ALL "running ${#ALL_FASTQS[@]} files with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           run_fastqc ::: "${ALL_FASTQS[@]}" \
-    2>&1 | tee -a "$LOG_DIR/fastqc_parallel.log"
-else
-  log FastQC ALL "GNU parallel not found – running serially"
-  for fq in "${ALL_FASTQS[@]}"; do run_fastqc "$fq"; done
-fi
+#~ if command -v parallel >/dev/null 2>&1; then
+  #~ log FastQC ALL "running ${#ALL_FASTQS[@]} files with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  #~ parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           #~ run_fastqc ::: "${ALL_FASTQS[@]}" \
+    #~ 2>&1 | tee -a "$LOG_DIR/fastqc_parallel.log"
+#~ else
+  #~ log FastQC ALL "GNU parallel not found – running serially"
+  #~ for fq in "${ALL_FASTQS[@]}"; do run_fastqc "$fq"; done
+#~ fi
 
-###############################################################################
-# 6  TRIMMING  – per-sample logging (start / done)                            #
-###############################################################################
-log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_PARALLEL_THREADS)"
+#~ ###############################################################################
+#~ # 6  TRIMMING  – per-sample logging (start / done)                            #
+#~ ###############################################################################
+#~ log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_PARALLEL_THREADS)"
 
-# ── treatment replicates ────────────────────────────────────────────────────
-for i in "${!TREAT_R1[@]}"; do
-  trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
-done
+#~ # ── treatment replicates ────────────────────────────────────────────────────
+#~ for i in "${!TREAT_R1[@]}"; do
+  #~ trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
+#~ done
 
-# ── control replicates (if any) ─────────────────────────────────────────────
-for i in "${!CTRL_R1[@]}"; do
-  trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
-done
+#~ # ── control replicates (if any) ─────────────────────────────────────────────
+#~ for i in "${!CTRL_R1[@]}"; do
+  #~ trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
+#~ done
 
-###############################################################################
-# 7  HOST GENOME ALIGNMENT                                                    #
-###############################################################################
-for n in "${SAMPLES[@]}"; do
-  log STARhost "$n" start
-  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
-           "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
-           "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME" \
-           --outReadsUnmapped Fastx          # ← NEW OPTION
-  log STARhost "$n" done
-done
+#~ ###############################################################################
+#~ # 7  HOST GENOME ALIGNMENT                                                    #
+#~ ###############################################################################
+#~ for n in "${SAMPLES[@]}"; do
+  #~ log STARhost "$n" start
+  #~ run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
+           #~ "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
+           #~ "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME" \
+           #~ --outReadsUnmapped Fastx          # ← NEW OPTION
+  #~ log STARhost "$n" done
+#~ done
 
-###############################################################################
-# 8  SPIKE-IN ALIGNMENT (E. coli)                                             #
-###############################################################################
-for n in "${SAMPLES[@]}"; do
-  # locate mate FASTQs produced in Step 8
-  read -r U1 U2 < <(get_unmapped_mates "$n")
+#~ ###############################################################################
+#~ # 8  SPIKE-IN ALIGNMENT (E. coli)                                             #
+#~ ###############################################################################
+#~ for n in "${SAMPLES[@]}"; do
+  #~ # locate mate FASTQs produced in Step 8
+  #~ read -r U1 U2 < <(get_unmapped_mates "$n")
 
-  if [[ -z $U1 ]]; then
-    log SPIKE "$n" "skip (no unmapped mates)"
-    continue
-  fi
+  #~ if [[ -z $U1 ]]; then
+    #~ log SPIKE "$n" "skip (no unmapped mates)"
+    #~ continue
+  #~ fi
 
-  log SPIKE "$n" start
-  run_star "$U1" "$U2" \
-           "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX"
-  mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
-     "$SPIKE_DIR/${n}.ecoli.sorted.bam"
-  samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
-  log SPIKE "$n" done
-done
+  #~ log SPIKE "$n" start
+  #~ run_star "$U1" "$U2" \
+           #~ "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX"
+  #~ mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
+     #~ "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  #~ samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  #~ log SPIKE "$n" done
+#~ done
 
-###############################################################################
-# 9  PICARD RG + DEDUP                                                        #
-###############################################################################
-picard_dedup () {                    # $1 = sample basename
-  local n="$1"
-  log Picard "$n" start
+#~ ###############################################################################
+#~ # 9  PICARD RG + DEDUP                                                        #
+#~ ###############################################################################
+#~ picard_dedup () {                    # $1 = sample basename
+  #~ local n="$1"
+  #~ log Picard "$n" start
 
-  local inbam="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
-  [[ -s $inbam ]] || { log Picard "$n" "skip (missing BAM)"; return; }
+  #~ local inbam="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
+  #~ [[ -s $inbam ]] || { log Picard "$n" "skip (missing BAM)"; return; }
 
-  "$PICARD_CMD" AddOrReplaceReadGroups \
-       I="$inbam" \
-       O="$ALIGNMENT_DIR/${n}.rg.bam" \
-       RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" \
-       VALIDATION_STRINGENCY=LENIENT \
-       >>"$LOG_DIR/picard_${n}.log" 2>&1
+  #~ "$PICARD_CMD" AddOrReplaceReadGroups \
+       #~ I="$inbam" \
+       #~ O="$ALIGNMENT_DIR/${n}.rg.bam" \
+       #~ RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" \
+       #~ VALIDATION_STRINGENCY=LENIENT \
+       #~ >>"$LOG_DIR/picard_${n}.log" 2>&1
 
-  "$PICARD_CMD" MarkDuplicates \
-       I="$ALIGNMENT_DIR/${n}.rg.bam" \
-       O="$ALIGNMENT_DIR/${n}.dedup.bam" \
-       M="$LOG_DIR/${n}.metrics.txt" \
-       REMOVE_DUPLICATES=true \
-       VALIDATION_STRINGENCY=LENIENT \
-       >>"$LOG_DIR/picard_${n}.log" 2>&1
+  #~ "$PICARD_CMD" MarkDuplicates \
+       #~ I="$ALIGNMENT_DIR/${n}.rg.bam" \
+       #~ O="$ALIGNMENT_DIR/${n}.dedup.bam" \
+       #~ M="$LOG_DIR/${n}.metrics.txt" \
+       #~ REMOVE_DUPLICATES=true \
+       #~ VALIDATION_STRINGENCY=LENIENT \
+       #~ >>"$LOG_DIR/picard_${n}.log" 2>&1
 
-  samtools index "$ALIGNMENT_DIR/${n}.dedup.bam" \
-       >>"$LOG_DIR/picard_${n}.log" 2>&1
+  #~ samtools index "$ALIGNMENT_DIR/${n}.dedup.bam" \
+       #~ >>"$LOG_DIR/picard_${n}.log" 2>&1
 
-  log Picard "$n" done
-}
-export -f picard_dedup log
+  #~ log Picard "$n" done
+#~ }
+#~ export -f picard_dedup log
 
-if command -v parallel >/dev/null 2>&1; then
-  log Picard ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           picard_dedup ::: "${SAMPLES[@]}"
-else
-  log Picard ALL "GNU parallel not found – running serially"
-  for n in "${SAMPLES[@]}"; do picard_dedup "$n"; done
-fi
+#~ if command -v parallel >/dev/null 2>&1; then
+  #~ log Picard ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  #~ parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           #~ picard_dedup ::: "${SAMPLES[@]}"
+#~ else
+  #~ log Picard ALL "GNU parallel not found – running serially"
+  #~ for n in "${SAMPLES[@]}"; do picard_dedup "$n"; done
+#~ fi
 
 ###############################################################################
 # 10  FRAGMENT FILTER                                                         #
@@ -421,111 +421,113 @@ fi
 # 12  MACS2 PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
 CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
-
-#~ # ── A  replicates (unchanged) ────────────────────────────────────────────────
-#~ for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
-  #~ BAM="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-  #~ macs2 callpeak -t "$BAM" \
-       #~ -f BAMPE -g "$GENOME_SIZE" \
-       #~ -n "$n" \
-       #~ --outdir "$PEAK_DIR/replicate" \
-       #~ 2>&1 | tee -a "$LOG_DIR/macs2_replicate.log"
-#~ done
-
-#~ # ── B  treatment-merged vs control-merged ────────────────────────────────────
-#~ # Only if a control_merged.bam exists
-#~ if [[ -s $CTRL_MRG ]]; then
-  #~ MACS_CMDS+=(
-    #~ "macs2 callpeak \
-        #~ -t $CTRL_MRG \
-        #~ -f BAMPE -g $GENOME_SIZE \
-        #~ -n controlMerged \
-        #~ --outdir $PEAK_DIR/merged"
-  #~ )
-#~ fi
-
-#~ if [[ -s $T_MRG ]]; then
-  #~ if [[ -s $CTRL_MRG ]]; then
-    #~ MACS_CMDS+=("macs2 callpeak -t $T_MRG -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged_vs_controlMerged --outdir $PEAK_DIR/merged")
-  #~ else
-    #~ MACS_CMDS+=("macs2 callpeak -t $T_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged --outdir $PEAK_DIR/merged")
-  #~ fi
-#~ else
-  #~ log MACS2merged ALL "skip (missing merged BAM)"
-#~ fi
-
-#~ # ── C  each replicate vs pooled control ──────────────────────────────────────
-#~ if [[ -s $CTRL_MRG ]]; then
-  #~ for n in "${TREAT_NAMES[@]}"; do
-    #~ MACS_CMDS+=("macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n ${n}_vs_ctrlPooled --outdir $PEAK_DIR/pooled")
-  #~ done
-#~ fi
-
-#~ # ── run all commands with GNU parallel (or serial fallback) ──────────────────
-#~ if command -v parallel >/dev/null 2>&1; then
-  #~ log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  #~ parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 ::: "${MACS_CMDS[@]}" \
-    #~ 2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
-#~ else
-  #~ log MACS2 ALL "GNU parallel not found – running jobs serially"
-  #~ for cmd in "${MACS_CMDS[@]}"; do
-    #~ echo "[MACS2] $cmd" | tee -a "$LOG_DIR/macs2_serial.log"
-    #~ eval "$cmd" 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
-  #~ done
-#~ fi
-
-# 1) helper that runs MACS2 for ONE sample
-macs2_one () {
-    local sample="$1"      # e.g. MYC-MST1_S28
-    local bam="$ALIGNMENT_DIR/${sample}.dedup.filtered.bam"
-    local outdir="$PEAK_DIR/replicate"
-
-    log MACS2 "$sample" start
-    macs2 callpeak -t "$bam" -f BAMPE -g "$GENOME_SIZE" \
-                   -n "$sample" --outdir "$outdir"
-    local status=$?
-    [[ $status -eq 0 ]] && log MACS2 "$sample" done \
-                        || log MACS2 "$sample" "FAIL (exit $status)"
-    return $status
-}
-export -f macs2_one log
-
-# 2) create output folders once
-log MACS2 ALL "creating peak folders under $PEAK_DIR"
-log MACS2 ALL "building command list…"
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 export PEAK_DIR ALIGNMENT_DIR GENOME_SIZE
-export -f macs2_one log 
 
-# 3) run replicate peaks in parallel
-log MACS2 ALL "running ${#TREAT_NAMES[@]} + ${#CTRL_NAMES[@]} replicate jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-        macs2_one ::: "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}" \
-  2>&1 | tee -a "$LOG_DIR/macs2_replicate.log"
+# ── A  replicates (unchanged) ────────────────────────────────────────────────
+for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
+  BAM="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  macs2 callpeak -t "$BAM" \
+       -f BAMPE -g "$GENOME_SIZE" \
+       -n "$n" \
+       --outdir "$PEAK_DIR/replicate" \
+       2>&1 | tee -a "$LOG_DIR/macs2_replicate.log"
+done
 
-# 4) the merged / pooled comparisons (serial is fine, they’re few)
-log MACS2 ALL "running merged & pooled comparisons"
-if [[ -s "$T_MRG" ]]; then
-    [[ -s "$CTRL_MRG" ]] && log MACS2 treatmentMerged_vs_controlMerged start \
-        && macs2 callpeak -t "$T_MRG" -c "$CTRL_MRG" -f BAMPE -g "$GENOME_SIZE" \
-           -n treatmentMerged_vs_controlMerged --outdir "$PEAK_DIR/merged" \
-        && log MACS2 treatmentMerged_vs_controlMerged done
-
-    [[ ! -s "$CTRL_MRG" ]] && log MACS2 treatmentMerged start \
-        && macs2 callpeak -t "$T_MRG" -f BAMPE -g "$GENOME_SIZE" \
-           -n treatmentMerged --outdir "$PEAK_DIR/merged" \
-        && log MACS2 treatmentMerged done
+# ── B  treatment-merged vs control-merged ────────────────────────────────────
+# Only if a control_merged.bam exists
+if [[ -s $CTRL_MRG ]]; then
+  MACS_CMDS+=(
+    "macs2 callpeak \
+        -t $CTRL_MRG \
+        -f BAMPE -g $GENOME_SIZE \
+        -n controlMerged \
+        --outdir $PEAK_DIR/merged"
+  )
 fi
 
-if [[ -s "$CTRL_MRG" ]]; then
-    for samp in "${TREAT_NAMES[@]}"; do
-        log MACS2 "${samp}_vs_ctrlPooled" start
-        macs2 callpeak -t "$ALIGNMENT_DIR/${samp}.dedup.filtered.bam" \
-                       -c "$CTRL_MRG" -f BAMPE -g "$GENOME_SIZE" \
-                       -n "${samp}_vs_ctrlPooled" --outdir "$PEAK_DIR/pooled"
-        log MACS2 "${samp}_vs_ctrlPooled" done
-    done
+if [[ -s $T_MRG ]]; then
+  if [[ -s $CTRL_MRG ]]; then
+    MACS_CMDS+=("macs2 callpeak -t $T_MRG -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged_vs_controlMerged --outdir $PEAK_DIR/merged")
+  else
+    MACS_CMDS+=("macs2 callpeak -t $T_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged --outdir $PEAK_DIR/merged")
+  fi
+else
+  log MACS2merged ALL "skip (missing merged BAM)"
 fi
+
+# ── C  each replicate vs pooled control ──────────────────────────────────────
+if [[ -s $CTRL_MRG ]]; then
+  for n in "${TREAT_NAMES[@]}"; do
+    MACS_CMDS+=("macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n ${n}_vs_ctrlPooled --outdir $PEAK_DIR/pooled")
+  done
+fi
+
+# ── run all commands with GNU parallel (or serial fallback) ──────────────────
+if command -v parallel >/dev/null 2>&1; then
+  log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 ::: "${MACS_CMDS[@]}" \
+    2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
+else
+  log MACS2 ALL "GNU parallel not found – running jobs serially"
+  for cmd in "${MACS_CMDS[@]}"; do
+    echo "[MACS2] $cmd" | tee -a "$LOG_DIR/macs2_serial.log"
+    eval "$cmd" 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
+  done
+fi
+
+#~ # 1) helper that runs MACS2 for ONE sample
+#~ macs2_one () {
+    #~ local sample="$1"      # e.g. MYC-MST1_S28
+    #~ local bam="$ALIGNMENT_DIR/${sample}.dedup.filtered.bam"
+    #~ local outdir="$PEAK_DIR/replicate"
+
+    #~ log MACS2 "$sample" start
+    #~ macs2 callpeak -t "$bam" -f BAMPE -g "$GENOME_SIZE" \
+                   #~ -n "$sample" --outdir "$outdir"
+    #~ local status=$?
+    #~ [[ $status -eq 0 ]] && log MACS2 "$sample" done \
+                        #~ || log MACS2 "$sample" "FAIL (exit $status)"
+    #~ return $status
+#~ }
+#~ export -f macs2_one log
+
+#~ # 2) create output folders once
+#~ log MACS2 ALL "creating peak folders under $PEAK_DIR"
+#~ log MACS2 ALL "building command list…"
+#~ mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
+#~ export PEAK_DIR ALIGNMENT_DIR GENOME_SIZE
+#~ export -f macs2_one log 
+
+#~ # 3) run replicate peaks in parallel
+#~ log MACS2 ALL "running ${#TREAT_NAMES[@]} + ${#CTRL_NAMES[@]} replicate jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+#~ parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+        #~ macs2_one ::: "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}" \
+  #~ 2>&1 | tee -a "$LOG_DIR/macs2_replicate.log"
+
+#~ # 4) the merged / pooled comparisons (serial is fine, they’re few)
+#~ log MACS2 ALL "running merged & pooled comparisons"
+#~ if [[ -s "$T_MRG" ]]; then
+    #~ [[ -s "$CTRL_MRG" ]] && log MACS2 treatmentMerged_vs_controlMerged start \
+        #~ && macs2 callpeak -t "$T_MRG" -c "$CTRL_MRG" -f BAMPE -g "$GENOME_SIZE" \
+           #~ -n treatmentMerged_vs_controlMerged --outdir "$PEAK_DIR/merged" \
+        #~ && log MACS2 treatmentMerged_vs_controlMerged done
+
+    #~ [[ ! -s "$CTRL_MRG" ]] && log MACS2 treatmentMerged start \
+        #~ && macs2 callpeak -t "$T_MRG" -f BAMPE -g "$GENOME_SIZE" \
+           #~ -n treatmentMerged --outdir "$PEAK_DIR/merged" \
+        #~ && log MACS2 treatmentMerged done
+#~ fi
+
+#~ if [[ -s "$CTRL_MRG" ]]; then
+    #~ for samp in "${TREAT_NAMES[@]}"; do
+        #~ log MACS2 "${samp}_vs_ctrlPooled" start
+        #~ macs2 callpeak -t "$ALIGNMENT_DIR/${samp}.dedup.filtered.bam" \
+                       #~ -c "$CTRL_MRG" -f BAMPE -g "$GENOME_SIZE" \
+                       #~ -n "${samp}_vs_ctrlPooled" --outdir "$PEAK_DIR/pooled"
+        #~ log MACS2 "${samp}_vs_ctrlPooled" done
+    #~ done
+#~ fi
 
 ###############################################################################
 # 13  SPIKE SCALE FACTORS                                                     #
