@@ -108,6 +108,7 @@ fi
 FASTQC_DIR="$OUTPUT_DIR/fastqc_reports"
 SPIKE_DIR="$ALIGNMENT_DIR/spikein"
 PEAK_DIR="$OUTPUT_DIR/macs2_peaks"
+export PEAK_DIR
 BW_DIR="$OUTPUT_DIR/bigwig_bedgraphs"
 ANN_DIR="$OUTPUT_DIR/annotated_peaks"
 for d in "$FASTQC_DIR" "$SPIKE_DIR" "$PEAK_DIR"/{replicate,merged,pooled} \
@@ -419,7 +420,6 @@ fi
 ###############################################################################
 # 12  MACS2 PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
-mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
 
 #~ # ── A  replicates (unchanged) ────────────────────────────────────────────────
@@ -474,8 +474,6 @@ CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
   #~ done
 #~ fi
 
-log MACS2 ALL "building command list…"      # optional
-
 # 1) helper that runs MACS2 for ONE sample
 macs2_one () {
     local sample="$1"      # e.g. MYC-MST1_S28
@@ -493,7 +491,11 @@ macs2_one () {
 export -f macs2_one log
 
 # 2) create output folders once
+log MACS2 ALL "creating peak folders under $PEAK_DIR"
+log MACS2 ALL "building command list…"
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
+export PEAK_DIR ALIGNMENT_DIR GENOME_SIZE
+export -f macs2_one log 
 
 # 3) run replicate peaks in parallel
 log MACS2 ALL "running ${#TREAT_NAMES[@]} + ${#CTRL_NAMES[@]} replicate jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
