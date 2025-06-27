@@ -247,123 +247,123 @@ fi
 ###############################################################################
 # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 ###############################################################################
-#~ log FastQC Conditions "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
+log FastQC Conditions "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
 
-#~ ALL_FASTQS=( "${TREAT_R1[@]}" "${TREAT_R2[@]}"
-             #~ "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}" )
+ALL_FASTQS=( "${TREAT_R1[@]}" "${TREAT_R2[@]}"
+             "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}" )
 
-#~ run_fastqc () {                       # $1 = FASTQ
-  #~ local fq="$1" base
-  #~ base=$(basename "$fq")
-  #~ log FastQC "$base" start
-  #~ if "$FASTQC_BIN" --extract -o "$FASTQC_DIR" "$fq" \
-        #~ >>"$LOG_DIR/fastqc_${base}.log" 2>&1 ; then
-      #~ log FastQC "$base" done
-  #~ else
-      #~ log FastQC "$base" FAIL
-  #~ fi
-#~ }
-#~ export -f run_fastqc log
-#~ export LOG_DIR FASTQC_DIR FASTQC_BIN
+run_fastqc () {                       # $1 = FASTQ
+  local fq="$1" base
+  base=$(basename "$fq")
+  log FastQC "$base" start
+  if "$FASTQC_BIN" --extract -o "$FASTQC_DIR" "$fq" \
+        >>"$LOG_DIR/fastqc_${base}.log" 2>&1 ; then
+      log FastQC "$base" done
+  else
+      log FastQC "$base" FAIL
+  fi
+}
+export -f run_fastqc log
+export LOG_DIR FASTQC_DIR FASTQC_BIN
 
-#~ if command -v parallel >/dev/null 2>&1; then
-  #~ log FastQC ALL "running ${#ALL_FASTQS[@]} files with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  #~ parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           #~ run_fastqc ::: "${ALL_FASTQS[@]}" \
-    #~ 2>&1 | tee -a "$LOG_DIR/fastqc_parallel.log"
-#~ else
-  #~ log FastQC ALL "GNU parallel not found – running serially"
-  #~ for fq in "${ALL_FASTQS[@]}"; do run_fastqc "$fq"; done
-#~ fi
+if command -v parallel >/dev/null 2>&1; then
+  log FastQC ALL "running ${#ALL_FASTQS[@]} files with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           run_fastqc ::: "${ALL_FASTQS[@]}" \
+    2>&1 | tee -a "$LOG_DIR/fastqc_parallel.log"
+else
+  log FastQC ALL "GNU parallel not found – running serially"
+  for fq in "${ALL_FASTQS[@]}"; do run_fastqc "$fq"; done
+fi
 
-#~ ###############################################################################
-#~ # 6  TRIMMING  – per-sample logging (start / done)                            #
-#~ ###############################################################################
-#~ log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_PARALLEL_THREADS)"
+###############################################################################
+# 6  TRIMMING  – per-sample logging (start / done)                            #
+###############################################################################
+log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_PARALLEL_THREADS)"
 
-#~ # ── treatment replicates ────────────────────────────────────────────────────
-#~ for i in "${!TREAT_R1[@]}"; do
-  #~ trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
-#~ done
+# ── treatment replicates ────────────────────────────────────────────────────
+for i in "${!TREAT_R1[@]}"; do
+  trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
+done
 
-#~ # ── control replicates (if any) ─────────────────────────────────────────────
-#~ for i in "${!CTRL_R1[@]}"; do
-  #~ trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
-#~ done
+# ── control replicates (if any) ─────────────────────────────────────────────
+for i in "${!CTRL_R1[@]}"; do
+  trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
+done
 
-#~ ###############################################################################
-#~ # 7  HOST GENOME ALIGNMENT                                                    #
-#~ ###############################################################################
-#~ for n in "${SAMPLES[@]}"; do
-  #~ log STARhost "$n" start
-  #~ run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
-           #~ "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
-           #~ "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME" \
-           #~ --outReadsUnmapped Fastx          # ← NEW OPTION
-  #~ log STARhost "$n" done
-#~ done
+###############################################################################
+# 7  HOST GENOME ALIGNMENT                                                    #
+###############################################################################
+for n in "${SAMPLES[@]}"; do
+  log STARhost "$n" start
+  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
+           "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
+           "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME" \
+           --outReadsUnmapped Fastx          # ← NEW OPTION
+  log STARhost "$n" done
+done
 
-#~ ###############################################################################
-#~ # 8  SPIKE-IN ALIGNMENT (E. coli)                                             #
-#~ ###############################################################################
-#~ for n in "${SAMPLES[@]}"; do
-  #~ # locate mate FASTQs produced in Step 8
-  #~ read -r U1 U2 < <(get_unmapped_mates "$n")
+###############################################################################
+# 8  SPIKE-IN ALIGNMENT (E. coli)                                             #
+###############################################################################
+for n in "${SAMPLES[@]}"; do
+  # locate mate FASTQs produced in Step 8
+  read -r U1 U2 < <(get_unmapped_mates "$n")
 
-  #~ if [[ -z $U1 ]]; then
-    #~ log SPIKE "$n" "skip (no unmapped mates)"
-    #~ continue
-  #~ fi
+  if [[ -z $U1 ]]; then
+    log SPIKE "$n" "skip (no unmapped mates)"
+    continue
+  fi
 
-  #~ log SPIKE "$n" start
-  #~ run_star "$U1" "$U2" \
-           #~ "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX"
-  #~ mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
-     #~ "$SPIKE_DIR/${n}.ecoli.sorted.bam"
-  #~ samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
-  #~ log SPIKE "$n" done
-#~ done
+  log SPIKE "$n" start
+  run_star "$U1" "$U2" \
+           "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX"
+  mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
+     "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  log SPIKE "$n" done
+done
 
-#~ ###############################################################################
-#~ # 9  PICARD RG + DEDUP                                                        #
-#~ ###############################################################################
-#~ picard_dedup () {                    # $1 = sample basename
-  #~ local n="$1"
-  #~ log Picard "$n" start
+###############################################################################
+# 9  PICARD RG + DEDUP                                                        #
+###############################################################################
+picard_dedup () {                    # $1 = sample basename
+  local n="$1"
+  log Picard "$n" start
 
-  #~ local inbam="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
-  #~ [[ -s $inbam ]] || { log Picard "$n" "skip (missing BAM)"; return; }
+  local inbam="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
+  [[ -s $inbam ]] || { log Picard "$n" "skip (missing BAM)"; return; }
 
-  #~ "$PICARD_CMD" AddOrReplaceReadGroups \
-       #~ I="$inbam" \
-       #~ O="$ALIGNMENT_DIR/${n}.rg.bam" \
-       #~ RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" \
-       #~ VALIDATION_STRINGENCY=LENIENT \
-       #~ >>"$LOG_DIR/picard_${n}.log" 2>&1
+  "$PICARD_CMD" AddOrReplaceReadGroups \
+       I="$inbam" \
+       O="$ALIGNMENT_DIR/${n}.rg.bam" \
+       RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" \
+       VALIDATION_STRINGENCY=LENIENT \
+       >>"$LOG_DIR/picard_${n}.log" 2>&1
 
-  #~ "$PICARD_CMD" MarkDuplicates \
-       #~ I="$ALIGNMENT_DIR/${n}.rg.bam" \
-       #~ O="$ALIGNMENT_DIR/${n}.dedup.bam" \
-       #~ M="$LOG_DIR/${n}.metrics.txt" \
-       #~ REMOVE_DUPLICATES=true \
-       #~ VALIDATION_STRINGENCY=LENIENT \
-       #~ >>"$LOG_DIR/picard_${n}.log" 2>&1
+  "$PICARD_CMD" MarkDuplicates \
+       I="$ALIGNMENT_DIR/${n}.rg.bam" \
+       O="$ALIGNMENT_DIR/${n}.dedup.bam" \
+       M="$LOG_DIR/${n}.metrics.txt" \
+       REMOVE_DUPLICATES=true \
+       VALIDATION_STRINGENCY=LENIENT \
+       >>"$LOG_DIR/picard_${n}.log" 2>&1
 
-  #~ samtools index "$ALIGNMENT_DIR/${n}.dedup.bam" \
-       #~ >>"$LOG_DIR/picard_${n}.log" 2>&1
+  samtools index "$ALIGNMENT_DIR/${n}.dedup.bam" \
+       >>"$LOG_DIR/picard_${n}.log" 2>&1
 
-  #~ log Picard "$n" done
-#~ }
-#~ export -f picard_dedup log
+  log Picard "$n" done
+}
+export -f picard_dedup log
 
-#~ if command -v parallel >/dev/null 2>&1; then
-  #~ log Picard ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  #~ parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           #~ picard_dedup ::: "${SAMPLES[@]}"
-#~ else
-  #~ log Picard ALL "GNU parallel not found – running serially"
-  #~ for n in "${SAMPLES[@]}"; do picard_dedup "$n"; done
-#~ fi
+if command -v parallel >/dev/null 2>&1; then
+  log Picard ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           picard_dedup ::: "${SAMPLES[@]}"
+else
+  log Picard ALL "GNU parallel not found – running serially"
+  for n in "${SAMPLES[@]}"; do picard_dedup "$n"; done
+fi
 
 ###############################################################################
 # 10  FRAGMENT FILTER                                                         #
