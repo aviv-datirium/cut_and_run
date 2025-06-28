@@ -418,61 +418,53 @@ if (( ${#CTRL_NAMES[@]} )); then
 fi
 
 ###############################################################################
-# 12  MACS2 PEAKS: replicate, merged, pooled                                  #
+# 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
-CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
-mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
-export PEAK_DIR ALIGNMENT_DIR GENOME_SIZE
+SEACR_BIN="$(command -v seacr)"      # requires SEACR on $PATH
+export SEACR_BIN BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
 
-# ── A  replicates (unchanged) ────────────────────────────────────────────────
+mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
+
+# ── A  replicate peaks ───────────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
-  BAM="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-  macs2 callpeak -t "$BAM" \
-       -f BAMPE -g "$GENOME_SIZE" \
-       -n "$n" \
-       --outdir "$PEAK_DIR/replicate" \
-       2>&1 | tee -a "$LOG_DIR/macs2_replicate.log"
+  IN_BG="$BW_DIR/${n}.bedgraph"                    # produced in step 14
+  OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
+
+  log SEACR "$n" start
+  "$SEACR_BIN" "$IN_BG" 0.01 non stringent "$OUT_BED" \
+      >>"$LOG_DIR/seacr_${n}.log" 2>&1
+  if [[ $? -eq 0 && -s $OUT_BED ]]; then
+      log SEACR "$n" done
+  else
+      log SEACR "$n" FAIL
+  fi
 done
 
 # ── B  treatment-merged vs control-merged ────────────────────────────────────
-# Only if a control_merged.bam exists
-if [[ -s $CTRL_MRG ]]; then
-  MACS_CMDS+=(
-    "macs2 callpeak \
-        -t $CTRL_MRG \
-        -f BAMPE -g $GENOME_SIZE \
-        -n controlMerged \
-        --outdir $PEAK_DIR/merged"
-  )
-fi
+if [[ -s $T_MRG && -s $CTRL_MRG ]]; then
+  MERGED_T_BG="$BW_DIR/treatment_merged.bedgraph"
+  MERGED_C_BG="$BW_DIR/control_merged.bedgraph"
+  OUT_BED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
 
-if [[ -s $T_MRG ]]; then
-  if [[ -s $CTRL_MRG ]]; then
-    MACS_CMDS+=("macs2 callpeak -t $T_MRG -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged_vs_controlMerged --outdir $PEAK_DIR/merged")
-  else
-    MACS_CMDS+=("macs2 callpeak -t $T_MRG -f BAMPE -g $GENOME_SIZE -n treatmentMerged --outdir $PEAK_DIR/merged")
-  fi
-else
-  log MACS2merged ALL "skip (missing merged BAM)"
+  log SEACR treatmentMerged_vs_controlMerged start
+  "$SEACR_BIN" "$MERGED_T_BG" "$MERGED_C_BG" non stringent "$OUT_BED" \
+      >>"$LOG_DIR/seacr_merged.log" 2>&1 \
+      && log SEACR treatmentMerged_vs_controlMerged done \
+      || log SEACR treatmentMerged_vs_controlMerged FAIL
 fi
 
 # ── C  each replicate vs pooled control ──────────────────────────────────────
 if [[ -s $CTRL_MRG ]]; then
+  POOLED_C_BG="$BW_DIR/control_merged.bedgraph"
   for n in "${TREAT_NAMES[@]}"; do
-    MACS_CMDS+=("macs2 callpeak -t $ALIGNMENT_DIR/${n}.dedup.filtered.bam -c $CTRL_MRG -f BAMPE -g $GENOME_SIZE -n ${n}_vs_ctrlPooled --outdir $PEAK_DIR/pooled")
-  done
-fi
+    IN_BG="$BW_DIR/${n}.bedgraph"
+    OUT_BED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
 
-# ── run all commands with GNU parallel (or serial fallback) ──────────────────
-if command -v parallel >/dev/null 2>&1; then
-  log MACS2 ALL "running ${#MACS_CMDS[@]} jobs with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  parallel -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 ::: "${MACS_CMDS[@]}" \
-    2>&1 | tee -a "$LOG_DIR/macs2_parallel.log"
-else
-  log MACS2 ALL "GNU parallel not found – running jobs serially"
-  for cmd in "${MACS_CMDS[@]}"; do
-    echo "[MACS2] $cmd" | tee -a "$LOG_DIR/macs2_serial.log"
-    eval "$cmd" 2>&1 | tee -a "$LOG_DIR/macs2_serial.log"
+    log SEACR "${n}_vs_ctrlPooled" start
+    "$SEACR_BIN" "$IN_BG" "$POOLED_C_BG" non stringent "$OUT_BED" \
+        >>"$LOG_DIR/seacr_${n}.log" 2>&1 \
+        && log SEACR "${n}_vs_ctrlPooled" done \
+        || log SEACR "${n}_vs_ctrlPooled" FAIL
   done
 fi
 
