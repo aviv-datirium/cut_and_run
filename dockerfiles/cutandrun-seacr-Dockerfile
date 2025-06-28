@@ -37,8 +37,13 @@ RUN micromamba create -y -n cutrun -c conda-forge -c bioconda \
     && micromamba clean -a -y
 
 # create a simple wrapper so `seacr` is on $PATH and make "seacr" visible on $PATH
-RUN ln -s /opt/conda/envs/cutrun/share/seacr-1.3/SEACR_1.3.sh \
-          /opt/conda/envs/cutrun/bin/seacr
+RUN printf '%s\n' \
+      '#!/usr/bin/env bash' \
+      'set -e' \
+      'SEACR=$(ls /opt/conda/envs/cutrun/share/seacr*/SEACR_*.sh | head -n1)' \
+      'exec bash "$SEACR" "$@"' \
+    > /opt/conda/envs/cutrun/bin/seacr  \
+ && chmod +x /opt/conda/envs/cutrun/bin/seacr
 
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
