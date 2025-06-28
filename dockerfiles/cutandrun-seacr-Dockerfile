@@ -28,9 +28,7 @@ WORKDIR /tmp
 
 # ---------- install core bio-tools ------------------------------------------
 RUN micromamba create -y -n cutrun -c conda-forge -c bioconda \
-RUN ln -s \
-      $(ls /opt/conda/envs/cutrun/share/seacr*/SEACR_1.3.sh) \
-      /opt/conda/envs/cutrun/bin/seacr \
+RUN ln -s $(ls /opt/conda/envs/cutrun/share/seacr*/SEACR_1.3.sh) /opt/conda/envs/cutrun/bin/seacr
         python=3.9 \
         jq samtools=1.18 bedtools=2.31 star=2.7.11b picard=2.27 \
         trim-galore=0.6.10 cutadapt=4.1 \
