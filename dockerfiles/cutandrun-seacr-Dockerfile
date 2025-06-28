@@ -36,8 +36,8 @@ RUN micromamba create -y -n cutrun -c conda-forge -c bioconda \
         parallel pigz fastqc=0.11.9 \
     && micromamba clean -a -y
 
-# create a simple wrapper so `seacr` is on $PATH
-RUN ln -s $(ls /opt/conda/envs/cutrun/share/seacr*/SEACR_1.3.sh) \
+# create a simple wrapper so `seacr` is on $PATH and make "seacr" visible on $PATH
+RUN ln -s /opt/conda/envs/cutrun/share/seacr-1.3/SEACR_1.3.sh \
           /opt/conda/envs/cutrun/bin/seacr
 
 USER root
