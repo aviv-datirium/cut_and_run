@@ -37,7 +37,7 @@ cat <<'BANNER'
   4  STAR   : E. coli (spike-in) → per-replicate BAM + index
   5  Picard : add-RG + duplicate removal
   6  Fragment-size filtering (histone/TF/≤1 kb)
-  7  MACS2  : replicate, merged, pooled peak calling (BAMPE mode)
+  7  SEACR  : replicate, merged, pooled peak calling (BAMPE mode)
   8  Spike-in scale factors – host/spike read ratio per replicate
   9  BedGraph + BigWig generation (scaled if factors exist)
  10  Peak-to-gene annotation (bedtools intersect)
@@ -51,7 +51,7 @@ cat <<'BANNER'
  REQUIREMENTS
  ────────────
    bash ≥4 · samtools ≥1.10 · bedtools ≥2.28 · STAR ≥2.7 · Java ≥17
-   Trim Galore ≥0.6.10 · Picard ≥2.18 · MACS2 ≥2.2 · cutadapt ≥4.1
+   Trim Galore ≥0.6.10 · Picard ≥2.18 · SEACR ≥1.3 · cutadapt ≥4.1
    R 4.x (for optional DiffBind) · GNU coreutils/awk · PIGZ · GNU Parallel
 
 BANNER
@@ -89,7 +89,8 @@ PICARD_CMD="$(command -v picard)"
 export PICARD_CMD ALIGNMENT_DIR LOG_DIR NUM_THREADS
 FASTQC_BIN="$(command -v fastqc)"
 STAR_BIN="$(command -v STAR)"
-MACS2="macs2"
+SEACR_BIN="$(command -v seacr)"      # requires SEACR on $PATH
+export SEACR_BIN
 
 ###############################################################################
 # 2  FOLDERS + LOGGER                                                         #
@@ -107,7 +108,7 @@ fi
                                
 FASTQC_DIR="$OUTPUT_DIR/fastqc_reports"
 SPIKE_DIR="$ALIGNMENT_DIR/spikein"
-PEAK_DIR="$OUTPUT_DIR/macs2_peaks"
+PEAK_DIR="$OUTPUT_DIR/seacr_peaks"
 export PEAK_DIR
 BW_DIR="$OUTPUT_DIR/bigwig_bedgraphs"
 ANN_DIR="$OUTPUT_DIR/annotated_peaks"
@@ -420,7 +421,6 @@ fi
 ###############################################################################
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
-SEACR_BIN="$(command -v seacr)"      # requires SEACR on $PATH
 export SEACR_BIN BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
 
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
