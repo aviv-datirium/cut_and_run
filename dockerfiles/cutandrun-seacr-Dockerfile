@@ -28,16 +28,17 @@ WORKDIR /tmp
 
 # ---------- install core bio-tools ------------------------------------------
 RUN micromamba create -y -n cutrun -c conda-forge -c bioconda \
-RUN ln -s $(ls /opt/conda/envs/cutrun/share/seacr*/SEACR_1.3.sh) /opt/conda/envs/cutrun/bin/seacr \
         python=3.9 \
         jq samtools=1.18 bedtools=2.31 star=2.7.11b picard=2.27 \
         trim-galore=0.6.10 cutadapt=4.1 \
-        macs2=2.2.7.1 \
         seacr=1.3 \
         ucsc-bedgraphtobigwig ucsc-bedclip \
-        parallel pigz \
-        fastqc=0.11.9 \
+        parallel pigz fastqc=0.11.9 \
     && micromamba clean -a -y
+
+# create a simple wrapper so `seacr` is on $PATH
+RUN ln -s $(ls /opt/conda/envs/cutrun/share/seacr*/SEACR_1.3.sh) \
+          /opt/conda/envs/cutrun/bin/seacr
 
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
