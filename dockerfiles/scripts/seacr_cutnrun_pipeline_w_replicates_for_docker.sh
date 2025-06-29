@@ -402,10 +402,10 @@ fi
   #~ for n in "${SAMPLES[@]}"; do frag_filter "$n"; done
 #~ fi
 
-#~ ###############################################################################
-#~ # 11  MERGE BAMs   (treatment & control groups)                               #
-#~ ###############################################################################
-#~ # ── make merged BAMs *once*
+###############################################################################
+# 11  MERGE BAMs   (treatment & control groups)                               #
+###############################################################################
+# ── make merged BAMs *once*
 T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
 log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
 merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
@@ -437,7 +437,7 @@ export TMPDIR
 cp "$SEACR_BIN"  "$TMPDIR/seacr_run"   # 1  copy into a dir you own
 chmod +x        "$TMPDIR/seacr_run"    # 2  make it executable
 SEACR_RUN="$TMPDIR/seacr_run"          # 3  path to use from now on
-export SEACR_RUN                       # 4  (optional) for child shells
+export SEACR_BIN                       # 4  (optional) for child shells
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
