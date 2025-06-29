@@ -449,7 +449,9 @@ export PATH="$SEACR_HOME:$PATH"
 
 # Helper: always run from SEACR_HOME so mktemp files land in a writable place
 seacr_call () (
-    cd "$SEACR_HOME"         # change cwd only inside this subshell
+    cd "$SEACR_HOME"         # change cwd only for this subshell
+    seacr "$@"               # all arguments stay absolute
+)
 
 echo "Using seacr at: $(command -v seacr)"
 ls -l "$SEACR_HOME"
