@@ -435,13 +435,13 @@ fi
 export SEACR_BIN BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 
-TMPDIR="$PEAK_DIR/.tmp_seacr"
-mkdir -p "$TMPDIR"
-cp "$SEACR_BIN" "$TMPDIR/seacr_run"
-chmod +x      "$TMPDIR/seacr_run"
-
-chmod 1777 "$TMPDIR"                 # ← line 1
-SEACR_BIN="$TMPDIR/seacr_run"; export SEACR_BIN   # ← line 2
+# writable scratch and private copy for SEACR
+TMPDIR=/tmp/seacr_tmp                  # 1  use global /tmp
+mkdir -p  "$TMPDIR"                    # 2
+chmod 1777 "$TMPDIR"                   # 3  world-writable, sticky
+cp "$SEACR_BIN" "$TMPDIR/seacr_run"    # 4  copy the script
+chmod +x   "$TMPDIR/seacr_run"         #    make it executable
+SEACR_BIN="$TMPDIR/seacr_run"; export SEACR_BIN  # 5  use this copy everywhere
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
