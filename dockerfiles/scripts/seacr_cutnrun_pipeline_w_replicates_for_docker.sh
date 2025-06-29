@@ -430,10 +430,10 @@ fi
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
 SEACR_HOME=/tmp/seacr_bin
-mkdir -p  "$SEACR_HOME" && chmod 1777 "$SEACR_HOME"
+mkdir -p "$SEACR_HOME" && chmod 1777 "$SEACR_HOME"
 
-cp  "$(command -v seacr)"                    "$SEACR_HOME/seacr"
-cp  "$(dirname "$(command -v seacr)")"/SEACR_1.3.R  "$SEACR_HOME/"
+cp  "$(command -v seacr)" "$SEACR_HOME/seacr"
+cp  "$(dirname "$(command -v seacr)")"/SEACR_1.3.R "$SEACR_HOME/"
 chmod +x "$SEACR_HOME/seacr"
 
 export PATH="$SEACR_HOME:$PATH"
@@ -520,7 +520,6 @@ for n in "${SAMPLES[@]}"; do
       SCALE["$n"]=1
       continue
   fi
-  # -------------------------------------------------------------------------
 
   h=$(read_count "$host_bam")
   s=$(read_count "$spike_bam")
