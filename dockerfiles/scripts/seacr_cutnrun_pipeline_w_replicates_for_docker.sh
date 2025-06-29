@@ -437,6 +437,7 @@ mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 
 TMPDIR="$PEAK_DIR/.tmp_seacr"
 mkdir -p "$TMPDIR"
+chmod 1777 "$TMPDIR"          # ← give everyone write permission
 export TMPDIR
 
 # ── run a copy that lives inside the writable TMPDIR ─────────────────────────
