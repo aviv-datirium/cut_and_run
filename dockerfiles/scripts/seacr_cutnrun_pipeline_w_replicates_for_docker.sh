@@ -45,7 +45,7 @@ cat <<'BANNER'
  USAGE
  ─────
    • Edit the config.json with absolute paths and replicate lists.
-   • Run: bash macs2_cut_and_run_pipeline_w_replicates.sh (no CLI arguments)
+   • Run: bash seacr_cut_and_run_pipeline_w_replicates.sh (no CLI arguments)
    • Logs stream to stdout *and* to output/logs/pipeline.log
 
  REQUIREMENTS
@@ -434,19 +434,24 @@ fi
 export SEACR_BIN BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 
-TMPDIR="$PEAK_DIR/.tmp_seacr"
-mkdir -p  "$TMPDIR"
-chmod 1777 "$TMPDIR"                     # make it world-writable
+# ── create a writable temp home for SEACR  (always writable inside the container)
+SEACR_TMP=/tmp/seacr_tmp
+mkdir -p  "$SEACR_TMP"
+chmod 1777 "$SEACR_TMP"                       # world-writable, sticky bit
 
-cp  "$SEACR_BIN"               "$TMPDIR/seacr_run"
-cp  "$(dirname "$SEACR_BIN")/SEACR_1.3.R"  "$TMPDIR/"   # ← add this
-chmod +x   "$TMPDIR/seacr_run"
-SEACR_BIN="$TMPDIR/seacr_run"; export SEACR_BIN
+# ── place BOTH files the wrapper needs there
+cp  "$SEACR_BIN"                    "$SEACR_TMP/seacr"
+cp  "$(dirname "$SEACR_BIN")/SEACR_1.3.R"  "$SEACR_TMP/"
+chmod +x "$SEACR_TMP/seacr"
 
-# ---- helper: run SEACR *from* $TMPDIR so scratch files are writable ----------
+# ── make sure every call resolves to this writable copy
+export SEACR_BIN="$SEACR_TMP/seacr"
+export PATH="$SEACR_TMP:$PATH"               # even plain “seacr” finds it
+
+# ---- helper: run SEACR *from* the temp dir so stray scratch files land there
 seacr_call () (
-    cd "$TMPDIR"               # change cwd only for this subshell
-    "$SEACR_BIN" "$@"          # all arguments stay absolute
+    cd "$SEACR_TMP"              # change cwd only for this subshell
+    "$SEACR_BIN" "$@"            # all arguments stay absolute
 )
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
