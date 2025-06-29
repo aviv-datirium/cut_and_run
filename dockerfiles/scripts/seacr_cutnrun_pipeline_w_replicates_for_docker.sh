@@ -422,8 +422,10 @@ fi
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
 export SEACR_BIN BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
-
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
+TMPDIR="$PEAK_DIR/.tmp_seacr"
+mkdir -p "$TMPDIR"
+export TMPDIR
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
