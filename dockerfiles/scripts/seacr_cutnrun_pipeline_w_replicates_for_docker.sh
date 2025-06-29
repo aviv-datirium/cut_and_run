@@ -442,7 +442,6 @@ export PATH="$SEACR_HOME:$PATH"
 unset SEACR_BIN
 hash  -r
 alias seacr="$SEACR_HOME/seacr"
-# --------------------------------
 
 # helper so scratch files land in SEACR_HOME
 seacr_call() (
@@ -461,38 +460,47 @@ for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
   log SEACR "$n" start
   seacr_call "$IN_BG" 0.01 non stringent "$OUT_BED" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
-  if [[ $? -eq 0 && -s $OUT_BED ]]; then
+  if [[ $? -eq 0 && -e $OUT_BED ]]; then
       log SEACR "$n" done
   else
       log SEACR "$n" FAIL
   fi
 done
 
-# ── B  treatment-merged vs control-merged ────────────────────────────────────
+# ── B  treatment-merged vs control-merged ───────────────────────────────────
 if [[ -s $T_MRG && -s $CTRL_MRG ]]; then
   MERGED_T_BG="$BW_DIR/treatment_merged.bedgraph"
   MERGED_C_BG="$BW_DIR/control_merged.bedgraph"
   OUT_BED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
 
   log SEACR treatmentMerged_vs_controlMerged start
-  seacr_call "$MERGED_T_BG" "$MERGED_C_BG" non stringent "$OUT_BED" \
-      >>"$LOG_DIR/seacr_merged.log" 2>&1 \
-      && log SEACR treatmentMerged_vs_controlMerged done \
-      || log SEACR treatmentMerged_vs_controlMerged FAIL
+  seacr_call "$MERGED_T_BG" "$MERGED_C_BG"  non stringent "$OUT_BED" \
+      >>"$LOG_DIR/seacr_merged.log" 2>&1
+
+  if [[ $? -eq 0 && -e $OUT_BED ]]; then
+      log SEACR treatmentMerged_vs_controlMerged done
+  else
+      log SEACR treatmentMerged_vs_controlMerged FAIL
+  fi
 fi
 
-# ── C  each replicate vs pooled control ──────────────────────────────────────
+# ── C  each replicate vs pooled control ─────────────────────────────────────
 if [[ -s $CTRL_MRG ]]; then
   POOLED_C_BG="$BW_DIR/control_merged.bedgraph"
+
   for n in "${TREAT_NAMES[@]}"; do
     IN_BG="$BW_DIR/${n}.bedgraph"
     OUT_BED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
 
     log SEACR "${n}_vs_ctrlPooled" start
-    seacr_call "$IN_BG" "$POOLED_C_BG" non stringent "$OUT_BED" \
-        >>"$LOG_DIR/seacr_${n}.log" 2>&1 \
-        && log SEACR "${n}_vs_ctrlPooled" done \
-        || log SEACR "${n}_vs_ctrlPooled" FAIL
+    seacr_call "$IN_BG" "$POOLED_C_BG"  non stringent "$OUT_BED" \
+        >>"$LOG_DIR/seacr_${n}.log" 2>&1
+
+    if [[ $? -eq 0 && -e $OUT_BED ]]; then
+        log SEACR "${n}_vs_ctrlPooled" done
+    else
+        log SEACR "${n}_vs_ctrlPooled" FAIL
+    fi
   done
 fi
 
