@@ -429,29 +429,30 @@ fi
 ###############################################################################
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
-#  Make a self-contained, writable copy of SEACR (wrapper + R helper)
-export BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR          # SEACR_BIN not required
+#  Make ONE self-contained, writable SEACR copy and shadow all others
+export BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
 
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 
-# writable home for SEACR
+# Writable home for wrapper + helper
 SEACR_HOME=/tmp/seacr_bin
 mkdir -p  "$SEACR_HOME"
-chmod 1777 "$SEACR_HOME"           # world-writable, sticky bit
+chmod 1777 "$SEACR_HOME"               # world-writable, sticky
 
-# copy BOTH files the wrapper needs
-cp  "$(command -v seacr)"               "$SEACR_HOME/seacr"
-cp  "$(dirname "$(command -v seacr)")"/SEACR_1.3.R  "$SEACR_HOME/"
+# Copy BOTH required files
+cp  "$(command -v seacr)"                 "$SEACR_HOME/seacr"
+cp  "$(dirname "$(command -v seacr)")/SEACR_1.3.R"  "$SEACR_HOME/"
 chmod +x "$SEACR_HOME/seacr"
 
-# shadow every other copy
-export PATH="$SEACR_HOME:$PATH"    # any plain “seacr” now resolves here
+# Shadow every earlier copy *for this script and all subshells*
+export PATH="$SEACR_HOME:$PATH"
 
-# helper: run SEACR *from* SEACR_HOME so stray scratch files land there
+# Helper: always run from SEACR_HOME so mktemp files land in a writable place
 seacr_call () (
-    cd "$SEACR_HOME"               # change cwd only for this subshell
-    seacr "$@"                     # all arguments stay absolute
-)
+    cd "$SEACR_HOME"         # change cwd only inside this subshell
+
+echo "Using seacr at: $(command -v seacr)"
+ls -l "$SEACR_HOME"
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do

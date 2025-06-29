@@ -18,8 +18,6 @@
   "genome_size": "hs",
   "custom_genome_size": null,
   "fragment_size_filter": "below_1000",
-  "broad_peak_extsize": 147,
-  "narrow_peak_extsize": 200,
   "num_threads": 8,
   "num_parallel_threads": 4
 }
