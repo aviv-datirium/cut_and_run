@@ -421,6 +421,12 @@ fi
 ###############################################################################
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
+# --- make a private writable copy of the SEACR script ------------------------
+mkdir -p ~/bin
+cp "$SEACR_BIN" ~/bin/seacr_local      # one-time copy
+chmod +x ~/bin/seacr_local
+SEACR_BIN=~/bin/seacr_local            # ← point to the local copy
+
 export SEACR_BIN BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 TMPDIR="$PEAK_DIR/.tmp_seacr"
