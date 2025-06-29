@@ -431,23 +431,22 @@ fi
 ###############################################################################
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
-# --- make a private writable copy of the SEACR script ------------------------
 export SEACR_BIN BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 
-# writable scratch and private copy for SEACR
-# Writable temp dir for SEACR
 TMPDIR="$PEAK_DIR/.tmp_seacr"
-mkdir -p "$TMPDIR"
+mkdir -p  "$TMPDIR"
 chmod 1777 "$TMPDIR"                     # make it world-writable
-cp "$SEACR_BIN" "$TMPDIR/seacr_run"
+
+cp  "$SEACR_BIN"               "$TMPDIR/seacr_run"
+cp  "$(dirname "$SEACR_BIN")/SEACR_1.3.R"  "$TMPDIR/"   # ← add this
 chmod +x   "$TMPDIR/seacr_run"
 SEACR_BIN="$TMPDIR/seacr_run"; export SEACR_BIN
 
-# ---- NEW helper: run SEACR *from* $TMPDIR so scratch files are writable -----
+# ---- helper: run SEACR *from* $TMPDIR so scratch files are writable ----------
 seacr_call () (
-    cd "$TMPDIR"        # change cwd only for this subshell
-    "$SEACR_BIN" "$@"   # all arguments stay absolute
+    cd "$TMPDIR"               # change cwd only for this subshell
+    "$SEACR_BIN" "$@"          # all arguments stay absolute
 )
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
