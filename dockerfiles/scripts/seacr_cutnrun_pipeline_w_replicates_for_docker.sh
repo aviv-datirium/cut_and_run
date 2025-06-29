@@ -437,13 +437,11 @@ mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 
 TMPDIR="$PEAK_DIR/.tmp_seacr"
 mkdir -p "$TMPDIR"
-chmod 1777 "$TMPDIR"          # ← give everyone write permission
-export TMPDIR
+cp "$SEACR_BIN" "$TMPDIR/seacr_run"
+chmod +x      "$TMPDIR/seacr_run"
 
-# ── run a copy that lives inside the writable TMPDIR ─────────────────────────
-cp "$SEACR_BIN"  "$TMPDIR/seacr_run"     # 1  copy into a dir you own
-chmod +x        "$TMPDIR/seacr_run"      # 2  make it executable
-SEACR_BIN="$TMPDIR/seacr_run"; export SEACR_BIN   # 3  use this copy everywhere
+chmod 1777 "$TMPDIR"                 # ← line 1
+SEACR_BIN="$TMPDIR/seacr_run"; export SEACR_BIN   # ← line 2
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
