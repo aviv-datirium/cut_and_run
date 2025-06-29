@@ -446,6 +446,9 @@ chmod +x "$SEACR_HOME/seacr"
 
 # Shadow every earlier copy *for this script and all subshells*
 export PATH="$SEACR_HOME:$PATH"
+hash -r                   # 1  flush bash's command lookup cache
+unset SEACR_BIN           # 2  kill any old variable scripts may reuse
+alias seacr="$SEACR_HOME/seacr"   # 3  pin 'seacr' to the writable copy
 
 # Helper: always run from SEACR_HOME so mktemp files land in a writable place
 seacr_call () (
