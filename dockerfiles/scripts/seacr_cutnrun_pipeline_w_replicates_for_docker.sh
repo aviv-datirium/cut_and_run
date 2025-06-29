@@ -21,7 +21,7 @@ cat <<'BANNER'
    output/
      fastqc_reports/           ⇠   FastQC HTML per FASTQ
      bigwig_bedgraphs/         ⇠   *.bw + (optionally) *.bedgraph
-     macs2_peaks/
+     seacr_peaks/
         replicate//*.narrowPeak
         pooled//*.narrowPeak
         merged/…/*.narrowPeak
@@ -436,12 +436,19 @@ export SEACR_BIN BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 
 # writable scratch and private copy for SEACR
-TMPDIR=/tmp/seacr_tmp                  # 1  use global /tmp
-mkdir -p  "$TMPDIR"                    # 2
-chmod 1777 "$TMPDIR"                   # 3  world-writable, sticky
-cp "$SEACR_BIN" "$TMPDIR/seacr_run"    # 4  copy the script
-chmod +x   "$TMPDIR/seacr_run"         #    make it executable
-SEACR_BIN="$TMPDIR/seacr_run"; export SEACR_BIN  # 5  use this copy everywhere
+# Writable temp dir for SEACR
+TMPDIR="$PEAK_DIR/.tmp_seacr"
+mkdir -p "$TMPDIR"
+chmod 1777 "$TMPDIR"                     # make it world-writable
+cp "$SEACR_BIN" "$TMPDIR/seacr_run"
+chmod +x   "$TMPDIR/seacr_run"
+SEACR_BIN="$TMPDIR/seacr_run"; export SEACR_BIN
+
+# ---- NEW helper: run SEACR *from* $TMPDIR so scratch files are writable -----
+seacr_call () (
+    cd "$TMPDIR"        # change cwd only for this subshell
+    "$SEACR_BIN" "$@"   # all arguments stay absolute
+)
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
@@ -449,7 +456,7 @@ for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
   OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
 
   log SEACR "$n" start
-  "$SEACR_BIN" "$IN_BG" 0.01 non stringent "$OUT_BED" \
+  seacr_call "$IN_BG" 0.01 non stringent "$OUT_BED" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
   if [[ $? -eq 0 && -s $OUT_BED ]]; then
       log SEACR "$n" done
@@ -465,7 +472,7 @@ if [[ -s $T_MRG && -s $CTRL_MRG ]]; then
   OUT_BED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
 
   log SEACR treatmentMerged_vs_controlMerged start
-  "$SEACR_BIN" "$MERGED_T_BG" "$MERGED_C_BG" non stringent "$OUT_BED" \
+  seacr_call "$MERGED_T_BG" "$MERGED_C_BG" non stringent "$OUT_BED" \
       >>"$LOG_DIR/seacr_merged.log" 2>&1 \
       && log SEACR treatmentMerged_vs_controlMerged done \
       || log SEACR treatmentMerged_vs_controlMerged FAIL
@@ -479,7 +486,7 @@ if [[ -s $CTRL_MRG ]]; then
     OUT_BED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
 
     log SEACR "${n}_vs_ctrlPooled" start
-    "$SEACR_BIN" "$IN_BG" "$POOLED_C_BG" non stringent "$OUT_BED" \
+    seacr_call "$IN_BG" "$POOLED_C_BG" non stringent "$OUT_BED" \
         >>"$LOG_DIR/seacr_${n}.log" 2>&1 \
         && log SEACR "${n}_vs_ctrlPooled" done \
         || log SEACR "${n}_vs_ctrlPooled" FAIL
