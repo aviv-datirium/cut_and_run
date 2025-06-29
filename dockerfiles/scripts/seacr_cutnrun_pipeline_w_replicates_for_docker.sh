@@ -429,31 +429,25 @@ fi
 ###############################################################################
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
-#  Make ONE self-contained, writable SEACR copy and shadow all others
-export BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
-
-mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
-
-# Writable home for wrapper + helper
 SEACR_HOME=/tmp/seacr_bin
-mkdir -p  "$SEACR_HOME"
-chmod 1777 "$SEACR_HOME"               # world-writable, sticky
+mkdir -p  "$SEACR_HOME" && chmod 1777 "$SEACR_HOME"
 
-# Copy BOTH required files
-cp  "$(command -v seacr)"                 "$SEACR_HOME/seacr"
-cp  "$(dirname "$(command -v seacr)")/SEACR_1.3.R"  "$SEACR_HOME/"
+cp  "$(command -v seacr)"                    "$SEACR_HOME/seacr"
+cp  "$(dirname "$(command -v seacr)")"/SEACR_1.3.R  "$SEACR_HOME/"
 chmod +x "$SEACR_HOME/seacr"
 
-# Shadow every earlier copy *for this script and all subshells*
 export PATH="$SEACR_HOME:$PATH"
-hash -r                   # 1  flush bash's command lookup cache
-unset SEACR_BIN           # 2  kill any old variable scripts may reuse
-alias seacr="$SEACR_HOME/seacr"   # 3  pin 'seacr' to the writable copy
 
-# Helper: always run from SEACR_HOME so mktemp files land in a writable place
-seacr_call () (
-    cd "$SEACR_HOME"         # change cwd only for this subshell
-    seacr "$@"               # all arguments stay absolute
+# --- hard stop on stale copies ---
+unset SEACR_BIN
+hash  -r
+alias seacr="$SEACR_HOME/seacr"
+# --------------------------------
+
+# helper so scratch files land in SEACR_HOME
+seacr_call() (
+    cd "$SEACR_HOME" || exit 1
+    seacr "$@"
 )
 
 echo "Using seacr at: $(command -v seacr)"
