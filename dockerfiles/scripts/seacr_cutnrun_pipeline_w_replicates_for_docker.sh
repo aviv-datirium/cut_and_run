@@ -402,21 +402,25 @@ fi
   #~ for n in "${SAMPLES[@]}"; do frag_filter "$n"; done
 #~ fi
 
-###############################################################################
-# 11  MERGE BAMs   (treatment & control groups)                               #
-###############################################################################
-# ── make merged BAMs *once*
-#~ T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
-#~ log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
-#~ merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
-#~ log MERGE Treatment Done
+#~ ###############################################################################
+#~ # 11  MERGE BAMs   (treatment & control groups)                               #
+#~ ###############################################################################
+#~ # ── make merged BAMs *once*
+T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
+log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
+merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
+log MERGE Treatment Done
 
-#~ if (( ${#CTRL_NAMES[@]} )); then
-  #~ CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
-  #~ log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
-  #~ merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
-  #~ log MERGE Control Done
-#~ fi
+if (( ${#CTRL_NAMES[@]} )); then
+  CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
+  log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
+  merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
+  log MERGE Control Done
+  # ── NEW: make the bedGraph SEACR expects ────────────────────────────────
+  mkdir -p "$BW_DIR"
+  bedtools genomecov -bg -ibam "$CTRL_MRG" \
+         > "$BW_DIR/control_merged.bedgraph"
+fi
 
 ###############################################################################
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
