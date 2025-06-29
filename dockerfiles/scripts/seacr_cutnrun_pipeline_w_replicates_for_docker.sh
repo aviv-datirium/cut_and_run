@@ -89,8 +89,6 @@ PICARD_CMD="$(command -v picard)"
 export PICARD_CMD ALIGNMENT_DIR LOG_DIR NUM_THREADS
 FASTQC_BIN="$(command -v fastqc)"
 STAR_BIN="$(command -v STAR)"
-SEACR_BIN="$(command -v seacr)"      # requires SEACR on $PATH
-export SEACR_BIN
 
 ###############################################################################
 # 2  FOLDERS + LOGGER                                                         #
@@ -431,27 +429,28 @@ fi
 ###############################################################################
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
-export SEACR_BIN BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR
+#  Make a self-contained, writable copy of SEACR (wrapper + R helper)
+export BW_DIR PEAK_DIR GENOME_SIZE LOG_DIR          # SEACR_BIN not required
+
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
 
-# ── create a writable temp home for SEACR  (always writable inside the container)
-SEACR_TMP=/tmp/seacr_tmp
-mkdir -p  "$SEACR_TMP"
-chmod 1777 "$SEACR_TMP"                       # world-writable, sticky bit
+# writable home for SEACR
+SEACR_HOME=/tmp/seacr_bin
+mkdir -p  "$SEACR_HOME"
+chmod 1777 "$SEACR_HOME"           # world-writable, sticky bit
 
-# ── place BOTH files the wrapper needs there
-cp  "$SEACR_BIN"                    "$SEACR_TMP/seacr"
-cp  "$(dirname "$SEACR_BIN")/SEACR_1.3.R"  "$SEACR_TMP/"
-chmod +x "$SEACR_TMP/seacr"
+# copy BOTH files the wrapper needs
+cp  "$(command -v seacr)"               "$SEACR_HOME/seacr"
+cp  "$(dirname "$(command -v seacr)")"/SEACR_1.3.R  "$SEACR_HOME/"
+chmod +x "$SEACR_HOME/seacr"
 
-# ── make sure every call resolves to this writable copy
-export SEACR_BIN="$SEACR_TMP/seacr"
-export PATH="$SEACR_TMP:$PATH"               # even plain “seacr” finds it
+# shadow every other copy
+export PATH="$SEACR_HOME:$PATH"    # any plain “seacr” now resolves here
 
-# ---- helper: run SEACR *from* the temp dir so stray scratch files land there
+# helper: run SEACR *from* SEACR_HOME so stray scratch files land there
 seacr_call () (
-    cd "$SEACR_TMP"              # change cwd only for this subshell
-    "$SEACR_BIN" "$@"            # all arguments stay absolute
+    cd "$SEACR_HOME"               # change cwd only for this subshell
+    seacr "$@"                     # all arguments stay absolute
 )
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
