@@ -430,9 +430,10 @@ mkdir -p "$TMPDIR"
 export TMPDIR
 
 # ── NEW: run a copy that lives inside the writable TMPDIR ────────────────────
-cp "$SEACR_BIN"   "$TMPDIR/seacr_run"
-chmod +x          "$TMPDIR/seacr_run"
-SEACR_BIN_TEMP="$TMPDIR/seacr_run"
+cp "$SEACR_BIN"  "$TMPDIR/seacr_run"   # 1  copy into a dir you own
+chmod +x        "$TMPDIR/seacr_run"    # 2  make it executable
+SEACR_RUN="$TMPDIR/seacr_run"          # 3  path to use from now on
+export SEACR_RUN                       # 4  (optional) for child shells
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
