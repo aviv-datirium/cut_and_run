@@ -43,7 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf 
 # ---------- copy pipeline script -------------------------------------------
 WORKDIR /pipeline
 COPY --chmod=0755 scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
-COPY config_for_docker.json ./
+COPY config_for_macs2_docker.json ./
 COPY scripts/docker_entrypoint.sh /usr/local/bin/docker_entrypoint
 RUN chmod +x /usr/local/bin/docker_entrypoint
 
