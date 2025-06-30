@@ -61,27 +61,26 @@ hints:
 requirements:
   InlineJavascriptRequirement: {}
   InitialWorkDirRequirement:
-	  listing:
-	    - entry: $(inputs.config_json)
-	      entryname: config_for_docker.json
-	
-	    - entry: $(inputs.fastq_dir)
-	      entryname: data/fastq/min_msto211h
-	      writable: false
-	
-	    - entry: $(inputs.reference_genome_dir)
-	      entryname: data/star_indices/hg38
-	      writable: false
-	
-	    - entry: $(inputs.ecoli_index_dir)
-	      entryname: data/star_indices/ecoli_canonical
-	      writable: false
-	
-	    - entry: $(inputs.chrom_sizes)
-	      entryname: data/chrom/hg38.chrom.sizes
-	      writable: false
-	
-	    - entry: $(inputs.annotation_genes)
-	      entryname: data/annotation/hg38.refGene.gtf
-	      writable: false
-	
+  listing:
+    - entry: $(inputs.config_json)
+      entryname: config_for_docker.json
+
+    - entry: $(inputs.fastq_dir)
+      entryname: data/fastq/min_msto211h
+      writable: false
+
+    - entry: $(inputs.reference_genome_dir)
+      entryname: data/star_indices/hg38
+      writable: false
+
+    - entry: $(inputs.ecoli_index_dir)
+      entryname: data/star_indices/ecoli_canonical
+      writable: false
+
+    - entry: $(inputs.chrom_sizes)
+      entryname: data/chrom/hg38.chrom.sizes
+      writable: false
+
+    - entry: $(inputs.annotation_genes)
+      entryname: data/annotation/hg38.refGene.gtf
+      writable: false
