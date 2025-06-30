@@ -16,7 +16,7 @@ outputs:
   output_dir:
     type: Directory
     outputBinding:
-      glob: $(inputs.config_json.basename.split("config_for_docker.json")[0]) + "output_replicates"
+      glob: output_replicates
     doc: The main output directory produced by the pipeline
 
 hints:
