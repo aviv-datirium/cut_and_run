@@ -4,17 +4,18 @@ config_json:
 
 reference_genome_dir:
   class: Directory
-  path: star_indices/hg38
+  path: inputs/star_indices/hg38
 
 ecoli_index_dir:
   class: Directory
-  path: star_indices/ecoli_canonical
+  path: inputs/star_indices/ecoli_canonical
 
 chrom_sizes:
   class: File
-  path: chrom/hg38.chrom.sizes
+  path: inputs/chrom/hg38.chrom.sizes
 
 annotation_genes:
   class: File
-  path: annotation/hg38.refGene.gtf
+  path: inputs/annotation/hg38.refGene.gtf
+
 
