@@ -11,6 +11,16 @@ inputs:
     inputBinding:
       position: 1
     doc: Path to the JSON config file with all parameters
+  reference_genome_dir:
+    type: Directory
+    doc: "STAR genome index"
+  ecoli_index_dir:
+    type: Directory
+    doc: "E. coli genome index"
+  chrom_sizes:
+    type: File
+  annotation_genes:
+    type: File
 
 outputs:
   output_dir:
