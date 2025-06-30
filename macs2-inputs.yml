@@ -1,23 +1,23 @@
 config_json:
   class: File
-  path: dockerfiles/config_for_macs2_docker.json
+  path: /mnt/data/home/aviv/cut_and_run/dockerfiles/config_for_macs2_docker.json
 
 fastq_dir:
   class: Directory
-  path: fastq/min_msto211h
+  path: /mnt/data/home/aviv/fastq/min_msto211h
 
 reference_genome_dir:
   class: Directory
-  path: star_indices/hg38
+  path: /mnt/data/home/aviv/star_indices/hg38
 
 ecoli_index_dir:
   class: Directory
-  path: star_indices/ecoli_canonical
+  path: /mnt/data/home/aviv/star_indices/ecoli_canonical
 
 chrom_sizes:
   class: File
-  path: chrom/hg38.chrom.sizes
+  path: /mnt/data/home/aviv/chrom/hg38.chrom.sizes
 
 annotation_genes:
   class: File
-  path: annotation/hg38.refGene.gtf
+  path: /mnt/data/home/aviv/annotation/hg38.refGene.gtf
