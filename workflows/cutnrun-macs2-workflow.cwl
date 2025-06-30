@@ -13,7 +13,7 @@ outputs:
 
 steps:
   run_cutrun:
-    run: cutrun.cwl
+    run: /mnt/data/home/aviv/cut_and_run/CommandLineTools/cutandrun-macs2.cwl
     in:
       config_json: config_json
     out: [output_dir]
