@@ -4,20 +4,20 @@ config_json:
 
 fastq_dir:
   class: Directory
-  path: inputs/fastq/min_msto211h
+  path: fastq/min_msto211h
 
 reference_genome_dir:
   class: Directory
-  path: inputs/star_indices/hg38
+  path: star_indices/hg38
 
 ecoli_index_dir:
   class: Directory
-  path: inputs/star_indices/ecoli_canonical
+  path: star_indices/ecoli_canonical
 
 chrom_sizes:
   class: File
-  path: inputs/chrom/hg38.chrom.sizes
+  path: chrom/hg38.chrom.sizes
 
 annotation_genes:
   class: File
-  path: inputs/annotation/hg38.refGene.gtf
+  path: annotation/hg38.refGene.gtf
