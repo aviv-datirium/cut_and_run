@@ -429,6 +429,20 @@ fi
 ###############################################################################
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
+# ── A. create bedGraphs *on-demand* so SEACR always has its inputs ──────────
+make_bg () {                       # $1 = out.bedgraph   $2 = input.bam
+    [[ -s $1 ]] || bedtools genomecov -bg -ibam "$2" -pc \
+                    | sort -k1,1 -k2,2n > "$1"
+}
+
+# replicate bedGraphs
+for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
+    make_bg "$BW_DIR/${n}.bedgraph"  "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+done
+# merged bedGraphs
+make_bg "$BW_DIR/treatment_merged.bedgraph"  "$T_MRG"
+make_bg "$BW_DIR/control_merged.bedgraph"    "$CTRL_MRG"
+
 SEACR_HOME=/tmp/seacr_bin
 mkdir -p "$SEACR_HOME" && chmod 1777 "$SEACR_HOME"
 
