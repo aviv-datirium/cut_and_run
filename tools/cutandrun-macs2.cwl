@@ -10,7 +10,27 @@ inputs:
     type: File
     inputBinding:
       position: 1
-    doc: Path to the JSON config file with all parameters
+    doc: Path to the JSON config file
+
+  fastq_dir:
+    type: Directory
+    doc: Directory containing FASTQ files
+
+  reference_genome_dir:
+    type: Directory
+    doc: STAR genome index directory
+
+  ecoli_index_dir:
+    type: Directory
+    doc: E. coli STAR index directory
+
+  chrom_sizes:
+    type: File
+    doc: Chromosome sizes file
+
+  annotation_genes:
+    type: File
+    doc: Gene annotation GTF file
 
 outputs:
   output_dir:
@@ -36,35 +56,32 @@ stderr: cutrun_stderr.log
 
 hints:
   DockerRequirement:
-    dockerPull: biowardrobe2/cutrun-macs2-core:v1.0.6  # <-- update tag if rebuilt
+    dockerPull: biowardrobe2/cutrun-macs2-core:v1.0.7  # <-- update tag if rebuilt
 
 requirements:
   InlineJavascriptRequirement: {}
   InitialWorkDirRequirement:
     listing:
-      # Mount entire directory with all relevant input files
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
 
-      # FASTQ files (relative to config file)
-      - entry: $(inputs.config_json.path.replace(/[^\/]+$/, 'fastq/min_msto211h'))
-        entryname: fastq/min_msto211h
+      - entry: $(inputs.fastq_dir)
+        entryname: inputs/fastq/min_msto211h
         writable: false
 
-      # STAR indices
-      - entry: $(inputs.config_json.path.replace(/[^\/]+$/, 'star_indices/hg38'))
-        entryname: star_indices/hg38
-        writable: false
-      - entry: $(inputs.config_json.path.replace(/[^\/]+$/, 'star_indices/ecoli_canonical'))
-        entryname: star_indices/ecoli_canonical
+      - entry: $(inputs.reference_genome_dir)
+        entryname: inputs/star_indices/hg38
         writable: false
 
-      # Chrom sizes file
-      - entry: $(inputs.config_json.path.replace(/[^\/]+$/, 'chrom/hg38.chrom.sizes'))
-        entryname: chrom/hg38.chrom.sizes
+      - entry: $(inputs.ecoli_index_dir)
+        entryname: inputs/star_indices/ecoli_canonical
         writable: false
 
-      # Annotation GTF
-      - entry: $(inputs.config_json.path.replace(/[^\/]+$/, 'annotation/hg38.refGene.gtf'))
-        entryname: annotation/hg38.refGene.gtf
+      - entry: $(inputs.chrom_sizes)
+        entryname: inputs/chrom/hg38.chrom.sizes
         writable: false
+
+      - entry: $(inputs.annotation_genes)
+        entryname: inputs/annotation/hg38.refGene.gtf
+        writable: false
+
