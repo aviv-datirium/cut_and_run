@@ -86,6 +86,11 @@ SEACR_THRESH=$(   jq -r '.seacr.threshold'   "$CONFIG_FILE")
 SEACR_NORM=$(     jq -r '.seacr.norm'        "$CONFIG_FILE")
 SEACR_STRICT=$(   jq -r '.seacr.stringency'  "$CONFIG_FILE")
 
+# provide sane defaults when the key is absent or null
+: ${SEACR_THRESH:=0.01}            # numeric threshold
+: ${SEACR_NORM:=non}               # "norm" | "non"
+: ${SEACR_STRICT:=stringent}       # "stringent" | "relaxed"
+
 ###############################################################################
 # 1  TOOL LOCATIONS                                                           #
 ###############################################################################
