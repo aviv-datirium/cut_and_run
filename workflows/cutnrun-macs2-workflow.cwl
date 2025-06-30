@@ -28,8 +28,4 @@ steps:
     run: ../tools/cutandrun-macs2.cwl
     in:
       config_json: config_json
-      reference_genome_dir: reference_genome_dir
-      ecoli_index_dir: ecoli_index_dir
-      chrom_sizes: chrom_sizes
-      annotation_genes: annotation_genes
     out: [output_dir, log_stdout, log_stderr]
