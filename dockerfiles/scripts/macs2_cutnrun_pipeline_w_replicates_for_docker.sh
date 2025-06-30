@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -o pipefail
+set -x
 
 cat <<'BANNER'
 
