@@ -420,12 +420,6 @@ if (( ${#CTRL_NAMES[@]} )); then
          > "$BW_DIR/control_merged.bedgraph"
 fi
 
-CTRL_BG="$BW_DIR/control_merged.bedgraph"
-if [[ ! -s $CTRL_BG ]]; then
-    mkdir -p "$BW_DIR"
-    bedtools genomecov -bg -ibam "$CTRL_MRG" > "$CTRL_BG"
-fi
-
 ###############################################################################
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
@@ -468,7 +462,7 @@ ls -l "$SEACR_HOME"
 
 # ── A  replicate peaks ───────────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
-  IN_BG="$BW_DIR/${n}.bedgraph"                    # produced in step 14
+  IN_BG="$BW_DIR/${n}.bedgraph"         # created above if missing
   OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
 
   log SEACR "$n" start
