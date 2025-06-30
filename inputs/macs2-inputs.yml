@@ -2,10 +2,6 @@ config_json:
   class: File
   path: /mnt/data/home/aviv/cut_and_run/dockerfiles/config_for_macs2_docker.json
 
-config_json:
-  class: File
-  path: dockerfiles/config_for_macs2_docker.json
-
 reference_genome_dir:
   class: Directory
   path: /mnt/data/home/aviv/star_indices/hg38
