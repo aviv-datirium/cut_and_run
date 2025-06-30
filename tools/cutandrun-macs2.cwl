@@ -44,3 +44,27 @@ requirements:
     listing:
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
+
+      # FASTQ files
+      - entry: /mnt/data/home/aviv/fastq/min_msto211h
+        entryname: fastq/min_msto211h
+        writable: false
+
+      # STAR indices
+      - entry: /mnt/data/home/aviv/star_indices/hg38
+        entryname: star_indices/hg38
+        writable: false
+
+      - entry: /mnt/data/home/aviv/star_indices/ecoli_canonical
+        entryname: star_indices/ecoli_canonical
+        writable: false
+
+      # Chrom sizes file
+      - entry: /mnt/data/home/aviv/chrom/hg38.chrom.sizes
+        entryname: chrom/hg38.chrom.sizes
+        writable: false
+
+      # Annotation GTF
+      - entry: /mnt/data/home/aviv/annotation/hg38.refGene.gtf
+        entryname: annotation/hg38.refGene.gtf
+        writable: false
