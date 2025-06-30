@@ -15,27 +15,22 @@ inputs:
   fastq_dir:
     type: Directory
     doc: Directory containing FASTQ files
-    writable: false
     
   reference_genome_dir:
     type: Directory
     doc: STAR genome index directory
-    writable: false
     
   ecoli_index_dir:
     type: Directory
     doc: E. coli STAR index directory
-    writable: false
     
   chrom_sizes:
     type: File
     doc: Chromosome sizes file
-    writable: false
     
   annotation_genes:
     type: File
     doc: Gene annotation GTF file
-    writable: false
     
 outputs:
   output_dir:
@@ -69,7 +64,8 @@ requirements:
     listing:
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
-
+        writable: false
+        
       - entry: $(inputs.fastq_dir)
         entryname: inputs/fastq/min_msto211h
         writable: false
