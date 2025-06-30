@@ -36,35 +36,35 @@ stderr: cutrun_stderr.log
 
 hints:
   DockerRequirement:
-    dockerPull: biowardrobe2/cutrun-macs2-core:v1.0.1
+    dockerPull: biowardrobe2/cutrun-macs2-core:v1.0.2  # <-- update tag if rebuilt
 
 requirements:
   InlineJavascriptRequirement: {}
   InitialWorkDirRequirement:
     listing:
+      # Mount entire directory with all relevant input files
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
 
-      # FASTQ files
-      - entry: /mnt/data/home/aviv/fastq/min_msto211h
+      # FASTQ files (relative to config file)
+      - entry: $(inputs.config_json.path.replace(/[^\/]+$/, 'fastq/min_msto211h'))
         entryname: fastq/min_msto211h
         writable: false
 
       # STAR indices
-      - entry: /mnt/data/home/aviv/star_indices/hg38
+      - entry: $(inputs.config_json.path.replace(/[^\/]+$/, 'star_indices/hg38'))
         entryname: star_indices/hg38
         writable: false
-
-      - entry: /mnt/data/home/aviv/star_indices/ecoli_canonical
+      - entry: $(inputs.config_json.path.replace(/[^\/]+$/, 'star_indices/ecoli_canonical'))
         entryname: star_indices/ecoli_canonical
         writable: false
 
       # Chrom sizes file
-      - entry: /mnt/data/home/aviv/chrom/hg38.chrom.sizes
+      - entry: $(inputs.config_json.path.replace(/[^\/]+$/, 'chrom/hg38.chrom.sizes'))
         entryname: chrom/hg38.chrom.sizes
         writable: false
 
       # Annotation GTF
-      - entry: /mnt/data/home/aviv/annotation/hg38.refGene.gtf
+      - entry: $(inputs.config_json.path.replace(/[^\/]+$/, 'annotation/hg38.refGene.gtf'))
         entryname: annotation/hg38.refGene.gtf
         writable: false

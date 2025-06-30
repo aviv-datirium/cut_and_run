@@ -62,6 +62,12 @@ BANNER
 CONFIG_FILE="${1:-config_for_docker.json}"
 shift || true
 
+# Move to the directory containing the config file
+cd "$(dirname "$CONFIG_FILE")" || exit 1
+
+# Use the basename so jq works with the local file
+CONFIG_FILE="$(basename "$CONFIG_FILE")"
+
 # Directory containing the config file — assumed to be project root
 CONFIG_DIR=$(dirname "$(realpath "$CONFIG_FILE")")
 
