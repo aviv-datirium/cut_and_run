@@ -56,7 +56,7 @@ stderr: cutrun_stderr.log
 
 hints:
   DockerRequirement:
-    dockerPull: biowardrobe2/cutrun-macs2-core:v1.0.7  # <-- update tag if rebuilt
+    dockerPull: biowardrobe2/cutrun-macs2-core:v1.0.8  # <-- update tag if rebuilt
 
 requirements:
   InlineJavascriptRequirement: {}
