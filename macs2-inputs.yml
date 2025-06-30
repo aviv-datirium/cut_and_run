@@ -1,6 +1,6 @@
 config_json:
   class: File
-  path: /mnt/data/home/aviv/cut_and_run/dockerfiles/config_for_macs2_docker.json
+  path: dockerfiles/config_for_macs2_cwl.json
 
 fastq_dir:
   class: Directory
