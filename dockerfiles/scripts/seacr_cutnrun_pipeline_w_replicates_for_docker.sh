@@ -416,8 +416,6 @@ if (( ${#CTRL_NAMES[@]} )); then
   log MERGE Control Done
   # ── NEW: make the bedGraph SEACR expects ────────────────────────────────
   mkdir -p "$BW_DIR"
-  bedtools genomecov -bg -ibam "$CTRL_MRG" \
-         > "$BW_DIR/control_merged.bedgraph"
 fi
 
 ###############################################################################
