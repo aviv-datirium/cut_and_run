@@ -3,7 +3,7 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-baseCommand: [bash, /usr/local/bin/cutrun.sh]
+baseCommand: ["bash", "/usr/local/bin/cutrun.sh"]
 
 inputs:
   config_json:
@@ -11,16 +11,6 @@ inputs:
     inputBinding:
       position: 1
     doc: Path to the JSON config file with all parameters
-  reference_genome_dir:
-    type: Directory
-    doc: "STAR genome index"
-  ecoli_index_dir:
-    type: Directory
-    doc: "E. coli genome index"
-  chrom_sizes:
-    type: File
-  annotation_genes:
-    type: File
 
 outputs:
   output_dir:
@@ -28,16 +18,9 @@ outputs:
     outputBinding:
       glob: output_replicates
     doc: The main output directory produced by the pipeline
-  
-  log_stdout:
-    type: File
-    outputBinding:
-      glob: cutrun_stdout.log
 
-  log_stderr:
-    type: File
-    outputBinding:
-      glob: cutrun_stderr.log
+stdout: cutrun_stdout.log
+stderr: cutrun_stderr.log
 
 hints:
   DockerRequirement:
@@ -49,11 +32,3 @@ requirements:
     listing:
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
-
-stdout: cutrun_stdout.log
-stderr: cutrun_stderr.log
-
-arguments:
-  - valueFrom: |
-      mkdir -p $(inputs.config_json.basename.split("config_for_docker.json")[0])output_replicates
-    shellQuote: false
