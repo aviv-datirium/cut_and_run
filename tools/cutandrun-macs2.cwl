@@ -28,6 +28,16 @@ outputs:
     outputBinding:
       glob: output_replicates
     doc: The main output directory produced by the pipeline
+  
+  log_stdout:
+    type: File
+    outputBinding:
+      glob: cutrun_stdout.log
+
+  log_stderr:
+    type: File
+    outputBinding:
+      glob: cutrun_stderr.log
 
 hints:
   DockerRequirement:
