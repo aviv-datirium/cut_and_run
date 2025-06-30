@@ -2,6 +2,10 @@
 
 set -o pipefail
 set -x
+echo "Running in container, current working directory: $(pwd)"
+echo "Contents:"
+find . | head -n 50
+echo "CONFIG: $1"
 
 cat <<'BANNER'
 
