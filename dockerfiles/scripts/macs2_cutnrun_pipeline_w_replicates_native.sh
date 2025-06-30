@@ -59,20 +59,17 @@ BANNER
 ###############################################################################
 # 0  CONFIG + PATHS                                                           #
 ###############################################################################
-CONFIG_FILE="${1:-config_for_docker.json}"
-shift || true
+CONFIG_FILE="${1:-/mnt/data/home/aviv/cut_and_run/dockerfiles/config_for_docker.json}"
+shift || true          # remove $1 so "$@" stays clean for future use
 
-# Directory containing the config file — assumed to be project root
-CONFIG_DIR=$(dirname "$(realpath "$CONFIG_FILE")")
+ALIGNMENT_DIR=$(jq -r '.alignment_dir'  "$CONFIG_FILE")
+OUTPUT_DIR=$(   jq -r '.output_dir'     "$CONFIG_FILE")
+LOG_DIR=$(      jq -r '.log_dir'        "$CONFIG_FILE")
 
-# Use it to construct all other relative paths
-ALIGNMENT_DIR="$CONFIG_DIR/$(jq -r '.alignment_dir' "$CONFIG_FILE")"
-OUTPUT_DIR="$CONFIG_DIR/$(jq -r '.output_dir' "$CONFIG_FILE")"
-LOG_DIR="$CONFIG_DIR/$(jq -r '.log_dir' "$CONFIG_FILE")"
-REFERENCE_GENOME="$CONFIG_DIR/$(jq -r '.reference_genome' "$CONFIG_FILE")"
-ECOLI_INDEX="$CONFIG_DIR/$(jq -r '.ecoli_index' "$CONFIG_FILE")"
-ANNOTATION_GENES="$CONFIG_DIR/$(jq -r '.annotation_genes' "$CONFIG_FILE")"
-CHROM_SIZE="$CONFIG_DIR/$(jq -r '.chrom_sizes' "$CONFIG_FILE")"
+REFERENCE_GENOME=$(jq -r '.reference_genome'   "$CONFIG_FILE")
+ECOLI_INDEX=$(     jq -r '.ecoli_index'        "$CONFIG_FILE")
+ANNOTATION_GENES=$(jq -r '.annotation_genes'   "$CONFIG_FILE")
+CHROM_SIZE=$(      jq -r '.chrom_sizes'        "$CONFIG_FILE")
 
 GENOME_SIZE_STRING=$(jq -r '.genome_size'      "$CONFIG_FILE")
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' "$CONFIG_FILE")
@@ -80,10 +77,10 @@ FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
 NUM_THREADS=$(jq    -r '.num_threads'          "$CONFIG_FILE")
 NUM_PARALLEL_THREADS=$(jq    -r '.num_parallel_threads'          "$CONFIG_FILE")
 
-TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE" | sed "s|^|$CONFIG_DIR/|"))
-TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE" | sed "s|^|$CONFIG_DIR/|"))
-CTRL_R1=($(jq -r '.samples.control[]?.r1 // empty' "$CONFIG_FILE" | sed "s|^|$CONFIG_DIR/|"))
-CTRL_R2=($(jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE" | sed "s|^|$CONFIG_DIR/|"))
+TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE"))
+TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE"))
+CTRL_R1=($( jq -r '.samples.control[]?.r1 // empty' "$CONFIG_FILE"))
+CTRL_R2=($( jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
 
 ###############################################################################
 # 1  TOOL LOCATIONS                                                           #
