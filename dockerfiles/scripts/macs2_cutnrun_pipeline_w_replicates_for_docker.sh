@@ -69,7 +69,7 @@ cd "$(dirname "$CONFIG_FILE")" || exit 1
 CONFIG_FILE="$(basename "$CONFIG_FILE")"
 
 # Directory containing the config file — assumed to be project root
-CONFIG_DIR=$(dirname "$(realpath "$CONFIG_FILE")")
+CONFIG_DIR=$(pwd)
 
 # Use it to construct all other relative paths
 ALIGNMENT_DIR="$CONFIG_DIR/$(jq -r '.alignment_dir' "$CONFIG_FILE")"
