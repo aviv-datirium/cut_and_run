@@ -1,6 +1,24 @@
 #########################################################################################################################
 # Modified Dockerfile for CUT&RUN Pipeline
 # Based on: biowardrobe2/bulk-tools:v0.0.1
+
+BUILD:
+docker build --platform linux/amd64 --no-cache --rm -f /path/to/cutandrun-macs2-Dockerfile -t cutrun-macs2-core:latest .
+
+TEST RUN IN INTERACTIVE MODE:
+docker run --rm -it \
+  -v "$PWD/macs2_cutnrun_pipeline_w_replicates_for_docker.sh":/tmp/real_pipeline.sh:ro \
+  -v "$PWD":/project \
+  -v /path/to/fastq:/project/fastq:ro \
+  --workdir /project \
+  --entrypoint /bin/bash \
+  cutrun-macs2-core:latest
+
+and run:
+fastqc \
+  /project/path/to/read1.fastq.gz \
+  --outdir /tmp/ \
+  --threads 2
 #########################################################################################################################
 
 FROM condaforge/miniforge3:25.3.0-3
