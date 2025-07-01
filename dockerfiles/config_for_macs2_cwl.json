@@ -2,28 +2,28 @@
   "samples": {
     "treatment": [
       {
-        "r1": "inputs/fastq/min_msto211h/MYC-MST1_S28_R1_001.fastq.gz",
-        "r2": "inputs/fastq/min_msto211h/MYC-MST1_S28_R2_001.fastq.gz"
+        "r1": "/project/fastq/min_msto211h/MYC-MST1_S28_R1_001.fastq.gz",
+        "r2": "/project/fastq/min_msto211h/MYC-MST1_S28_R2_001.fastq.gz"
       },
       {
-        "r1": "inputs/fastq/min_msto211h/MYC-MST2_S29_R1_001.fastq.gz",
-        "r2": "inputs/fastq/min_msto211h/MYC-MST2_S29_R2_001.fastq.gz"
+        "r1": "/project/fastq/min_msto211h/MYC-MST2_S29_R1_001.fastq.gz",
+        "r2": "/project/fastq/min_msto211h/MYC-MST2_S29_R2_001.fastq.gz"
       }
     ],
     "control": [
       {
-        "r1": "inputs/fastq/min_msto211h/IgG-MSR2_S31_R1_001.fastq.gz",
-        "r2": "inputs/fastq/min_msto211h/IgG-MSR2_S31_R2_001.fastq.gz"
+        "r1": "/project/fastq/min_msto211h/IgG-MSR2_S31_R1_001.fastq.gz",
+        "r2": "/project/fastq/min_msto211h/IgG-MSR2_S31_R2_001.fastq.gz"
       }
     ]
   },
   "alignment_dir": "alignment_replicates",
   "output_dir": "output_replicates",
   "log_dir": "output_replicates/logs",
-  "reference_genome": "dockerfiles/inputs/star_indices/hg38",
-  "ecoli_index": "dockerfiles/inputs/star_indices/ecoli_canonical",
-  "chrom_sizes": "dockerfiles/inputs/chrom/hg38.chrom.sizes",
-  "annotation_genes": "dockerfiles/inputs/annotation/hg38.refGene.gtf",
+  "reference_genome": "/project/star_indices/hg38",
+  "ecoli_index": "/project/star_indices/ecoli_canonical",
+  "chrom_sizes": "/project/chrom/hg38.chrom.sizes",
+  "annotation_genes": "/project/annotation/hg38.refGene.gtf",
   "genome_size": "hs",
   "custom_genome_size": null,
   "fragment_size_filter": "below_1000",
