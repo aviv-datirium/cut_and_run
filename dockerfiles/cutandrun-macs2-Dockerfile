@@ -1,52 +1,62 @@
-###############################################################################
-# CUT&RUN Core Pipeline — Dockerfile
-#
-# QUICK COMMANDS
-# ─────────────────────────────────────────────────────────────────────────────
-# Build locally (from folder containing this Dockerfile):
-#     docker build -t cutrun-core:latest .
-#
-# Pull from registry (if image was pushed):
-#     docker pull avivdemorgan/cutrun-core:latest
-#
-# Run on your own data/config:
-#     docker run --rm -it \
-#       -v /abs/path/to/config.json:/pipeline/config.json \
-#       -v /abs/path/to/data:/data \
-#       cutrun-core:latest /usr/local/bin/cutrun.sh
-#
-# Smoke-test (shows help):
-#     docker run --rm cutrun-core:latest /usr/local/bin/cutrun.sh -h
-###############################################################################
+#########################################################################################################################
+# Modified Dockerfile for CUT&RUN Pipeline
+# Based on: biowardrobe2/bulk-tools:v0.0.1
+#########################################################################################################################
 
-FROM mambaorg/micromamba:1.5.6
+FROM condaforge/miniforge3:25.3.0-3
 LABEL maintainer="aviv.de.morgan@datirium.com"
+
 ENV DEBIAN_FRONTEND=noninteractive
-ENV MAMBA_DOCKERFILE_ACTIVATE=1
+ENV HOME=/tmp
+ENV USER=nobody
 
 WORKDIR /tmp
 
-# ---------- install core bio-tools ------------------------------------------
-RUN micromamba create -y -n cutrun -c conda-forge -c bioconda \
-        python=3.9 \
-        jq samtools=1.18 bedtools=2.31 star=2.7.11b picard=2.27 \
-        trim-galore=0.6.10 cutadapt=4.1 \
-        macs2=2.2.7.1 \
-        ucsc-bedgraphtobigwig ucsc-bedclip \
-        parallel pigz \
-        fastqc=0.11.9 \
-    && micromamba clean -a -y
+# Set tool versions
+ENV TRIMGALORE_VERSION=0.6.10
+ENV SAMTOOLS_VERSION=1.22
+ENV MACS2_VERSION=2.2.9.1
+ENV BEDTOOLS_VERSION=2.31.1
+ENV UCSC_APPS_VERSION=481
+ENV R_BASE_VERSION=4.4.3
+ENV FILE_VERSION=5.46
+ENV UNZIP_VERSION=6.0
+ENV CUTADAPT_VERSION=4.1
+ENV STAR_VERSION=2.7.11b
+ENV PICARD_VERSION=2.27
+ENV FASTQC_VERSION=0.12.1
+ENV JQ_VERSION=1.7
 
-USER root
-RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
+# Install all tools into one conda environment
+RUN mamba create -y -n cutrun -c conda-forge -c bioconda \
+    trim-galore=${TRIMGALORE_VERSION} \
+    samtools=${SAMTOOLS_VERSION} \
+    macs2=${MACS2_VERSION} \
+    bedtools=${BEDTOOLS_VERSION} \
+    ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
+    ucsc-bedclip=${UCSC_APPS_VERSION} \
+    r-base=${R_BASE_VERSION} \
+    file=${FILE_VERSION} \
+    unzip=${UNZIP_VERSION} \
+    cutadapt=${CUTADAPT_VERSION} \
+    star=${STAR_VERSION} \
+    picard=${PICARD_VERSION} \
+    fastqc=${FASTQC_VERSION} \
+    jq=${JQ_VERSION} && \
+    mamba clean -a -y && \
+    apt-get clean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* && \
+    find /usr/local/bin -type f -executable -exec strip --strip-unneeded {} + || true
 
-# ---------- copy pipeline script -------------------------------------------
-WORKDIR /pipeline
-COPY --chmod=0755 scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
-COPY config_for_macs2_docker.json ./
-COPY scripts/docker_entrypoint.sh /usr/local/bin/docker_entrypoint
-RUN chmod +x /usr/local/bin/docker_entrypoint
+ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
 
-# ---------- default command (CWL can override) ------------------------------
-ENTRYPOINT ["/usr/local/bin/docker_entrypoint"]
-CMD ["/pipeline/config_for_docker.json"]
+# Copy pipeline script
+COPY ./scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
+RUN chmod +x /usr/local/bin/cutrun.sh
+
+# Optional: Copy default config if needed
+COPY ./config_for_macs2_docker.json ./
+
+# Set entrypoint
+ENTRYPOINT ["/usr/local/bin/cutrun.sh"]
