@@ -1,20 +1,20 @@
 #!/bin/bash
 
 set -o pipefail
-set -x
+#~ set -x
 
 
-echo ">> Running in container"
-echo ">> Current working directory: $(pwd)"
-echo ">> Listing current directory:"
-ls -lh
-echo ">> CONFIG path: $1"
+#~ echo ">> Running in container"
+#~ echo ">> Current working directory: $(pwd)"
+#~ echo ">> Listing current directory:"
+#~ ls -lh
+#~ echo ">> CONFIG path: $1"
 
-echo ">> CONFIG contents:"
-cat "$1" || echo "!! Could not read config file"
+#~ echo ">> CONFIG contents:"
+#~ cat "$1" || echo "!! Could not read config file"
 
-echo ">> Searching for hardcoded '/mnt/data/home/aviv' references:"
-grep -r '/mnt/data/home/aviv' . || echo "✓ No such paths found"
+#~ echo ">> Searching for hardcoded '/mnt/data/home/aviv' references:"
+#~ grep -r '/mnt/data/home/aviv' . || echo "✓ No such paths found"
 
 cat <<'BANNER'
 
