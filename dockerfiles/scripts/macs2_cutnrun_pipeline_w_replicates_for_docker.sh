@@ -73,6 +73,10 @@ BANNER
 ###############################################################################
 # 0  CONFIG + PATHS                                                           #
 ###############################################################################
+# Make script directory discoverable (portable execution from any location)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR" || exit 1
+
 CONFIG_FILE="${1:-config_for_docker.json}"
 shift || true
 
@@ -109,6 +113,10 @@ CTRL_R2=($(jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE" | sed "s|^|$CO
 # 1  TOOL LOCATIONS                                                           #
 ###############################################################################
 PICARD_CMD="$(command -v picard)"
+if [[ -z $PICARD_CMD ]]; then #Fallback in case command -v picard fails
+  echo "Error: Picard not found in PATH." >&2
+  exit 1
+fi
 export PICARD_CMD ALIGNMENT_DIR LOG_DIR NUM_THREADS
 FASTQC_BIN="$(command -v fastqc)"
 STAR_BIN="$(command -v STAR)"
@@ -119,8 +127,8 @@ MACS2="macs2"
 ###############################################################################
 mkdir -p "$OUTPUT_DIR" "$LOG_DIR" "$ALIGNMENT_DIR"
 
-# timestamp the old log (if any) before we start the new one
-RUN_TS=$(date +'%Y%m%d_%H%M%S')                 # e.g. 20250624_104832
+# timestamp the old log (if any) before we start the new one (macOS/Linux)
+RUN_TS=$(date -u +'%Y%m%d_%H%M%S')   # e.g. 20250624_104832 
 if [[ -f $LOG_DIR/pipeline.log ]]; then
     mv "$LOG_DIR/pipeline.log" \
        "$LOG_DIR/pipeline_${RUN_TS}.log"
@@ -145,6 +153,18 @@ log START Paramaters "Config=$CONFIG_FILE"
 ###############################################################################
 # 3  HELPER FUNCTIONS                                                         #
 ###############################################################################
+# check for essential binaries, and fail fast if missing
+check_tool() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "Error: $1 not found in PATH." >&2
+    exit 1
+  }
+}
+
+for tool in fastqc trim_galore STAR samtools bedtools bedGraphToBigWig macs2 picard; do
+  check_tool "$tool"
+done
+
 get_sample_basename() {
   # keep EVERYTHING up to the trailing _R1/_R2/_R1_001/_R2_001 token
   local b=${1##*/}               # strip directory
