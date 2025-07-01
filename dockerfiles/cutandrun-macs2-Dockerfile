@@ -51,6 +51,15 @@ RUN mamba create -y -n cutrun \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        pigz \
+        parallel \
+        ...any other packages... && \
+    apt-get clean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
 
 # Copy pipeline script
