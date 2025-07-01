@@ -2,18 +2,18 @@
   "samples": {
     "treatment": [
       {
-        "r1": "dockerfiles/inputs/fastq/min_msto211h/MYC-MST1_S28_R1_001.fastq.gz",
-        "r2": "dockerfiles/inputs/fastq/min_msto211h/MYC-MST1_S28_R2_001.fastq.gz"
+        "r1": "inputs/fastq/min_msto211h/MYC-MST1_S28_R1_001.fastq.gz",
+        "r2": "inputs/fastq/min_msto211h/MYC-MST1_S28_R2_001.fastq.gz"
       },
       {
-        "r1": "dockerfiles/inputs/fastq/min_msto211h/MYC-MST2_S29_R1_001.fastq.gz",
-        "r2": "dockerfiles/inputs/fastq/min_msto211h/MYC-MST2_S29_R2_001.fastq.gz"
+        "r1": "inputs/fastq/min_msto211h/MYC-MST2_S29_R1_001.fastq.gz",
+        "r2": "inputs/fastq/min_msto211h/MYC-MST2_S29_R2_001.fastq.gz"
       }
     ],
     "control": [
       {
-        "r1": "dockerfiles/inputs/fastq/min_msto211h/IgG-MSR2_S31_R1_001.fastq.gz",
-        "r2": "dockerfiles/inputs/fastq/min_msto211h/IgG-MSR2_S31_R2_001.fastq.gz"
+        "r1": "inputs/fastq/min_msto211h/IgG-MSR2_S31_R1_001.fastq.gz",
+        "r2": "inputs/fastq/min_msto211h/IgG-MSR2_S31_R2_001.fastq.gz"
       }
     ]
   },
