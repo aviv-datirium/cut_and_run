@@ -104,10 +104,11 @@ FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
 NUM_THREADS=$(jq    -r '.num_threads'          "$CONFIG_FILE")
 NUM_PARALLEL_THREADS=$(jq    -r '.num_parallel_threads'          "$CONFIG_FILE")
 
-TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE" | sed "s|^|$CONFIG_DIR/|"))
-TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE" | sed "s|^|$CONFIG_DIR/|"))
-CTRL_R1=($(jq -r '.samples.control[]?.r1 // empty' "$CONFIG_FILE" | sed "s|^|$CONFIG_DIR/|"))
-CTRL_R2=($(jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE" | sed "s|^|$CONFIG_DIR/|"))
+TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE" | sed -E "s|^(/)|\1|; t; s|^|$CONFIG_DIR/|"))
+TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE" | sed -E "s|^(/)|\1|; t; s|^|$CONFIG_DIR/|"))
+CTRL_R1=($(jq -r '.samples.control[]?.r1 // empty' "$CONFIG_FILE" | sed -E "s|^(/)|\1|; t; s|^|$CONFIG_DIR/|"))
+CTRL_R2=($(jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE" | sed -E "s|^(/)|\1|; t; s|^|$CONFIG_DIR/|"))
+
 
 ###############################################################################
 # 1  TOOL LOCATIONS                                                           #
