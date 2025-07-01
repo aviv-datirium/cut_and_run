@@ -27,10 +27,13 @@ ENV PICARD_VERSION=2.27
 ENV FASTQC_VERSION=0.12.1
 ENV JQ_VERSION=1.7
 
+SHELL ["/bin/bash", "-c"]
+
 # Install all tools into one conda environment
+
 RUN mamba create -y -n cutrun -c conda-forge -c bioconda \
     trim-galore=${TRIMGALORE_VERSION} \
-    jq=${JQ_VERSION} && \
+    jq=${JQ_VERSION} \
     samtools=${SAMTOOLS_VERSION} \
     macs2=${MACS2_VERSION} \
     bedtools=${BEDTOOLS_VERSION} \
