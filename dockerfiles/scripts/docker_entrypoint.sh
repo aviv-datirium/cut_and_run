@@ -3,8 +3,8 @@ set -e
 
 export PATH="/opt/conda/envs/cutrun/bin:$PATH"
 
-# Where your output lives; use /pipeline if that’s guaranteed to be mounted
-TARGET_DIR=/mnt/data/home/aviv
+# Dynamically determine the current working directory inside the container
+TARGET_DIR=${TARGET_DIR:-$(pwd)}
 
 uid=$(stat -c %u "$TARGET_DIR")
 gid=$(stat -c %g "$TARGET_DIR")
