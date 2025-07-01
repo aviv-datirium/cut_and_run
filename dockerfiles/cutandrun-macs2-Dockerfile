@@ -77,7 +77,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install MACS2 from source via pip to avoid binary incompatibility
-RUN conda activate cutrun && pip install --no-binary :all: macs2
+RUN /opt/conda/envs/cutrun/bin/python -m pip install --no-binary :all: macs2
 
 ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
 
