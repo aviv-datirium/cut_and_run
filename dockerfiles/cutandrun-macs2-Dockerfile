@@ -60,7 +60,7 @@ RUN apt-get update && \
 
 RUN pip uninstall -y MACS2 && \
     pip install cython numpy && \
-    pip install https://github.com/macs2-dev/MACS/archive/refs/tags/v2.2.7.1.tar.gz
+    pip install https://github.com/taoliu/MACS/archive/refs/tags/v2.2.7.1.tar.gz
 
 ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
 
