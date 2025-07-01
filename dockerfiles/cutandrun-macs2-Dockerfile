@@ -49,9 +49,7 @@ RUN mamba create -y -n cutrun \
     mamba clean -a -y && \
     apt-get clean && \
     apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*# && \
-    #find /opt/conda/envs/cutrun/bin -type f -exec file {} \; | \
-    #    grep ELF | cut -d: -f1 | xargs --no-run-if-empty strip
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
 
