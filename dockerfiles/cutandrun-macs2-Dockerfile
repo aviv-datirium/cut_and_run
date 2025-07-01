@@ -52,7 +52,6 @@ SHELL ["/bin/bash", "-c"]
 RUN mamba create -y -n cutrun \
     bioconda::trim-galore=${TRIMGALORE_VERSION} \
     bioconda::samtools=${SAMTOOLS_VERSION} \
-    bioconda::macs2 \
     bioconda::bedtools=${BEDTOOLS_VERSION} \
     bioconda::ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
     bioconda::ucsc-bedclip \
@@ -76,6 +75,9 @@ RUN apt-get update && \
     apt-get clean && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Install MACS2 from source via pip to avoid binary incompatibility
+RUN conda activate cutrun && pip install --no-binary :all: macs2
 
 ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
 
