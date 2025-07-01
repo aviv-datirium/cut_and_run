@@ -55,6 +55,7 @@ RUN mamba create -y -n cutrun \
     bioconda::bedtools=${BEDTOOLS_VERSION} \
     bioconda::ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
     bioconda::ucsc-bedclip \
+    bioconda::macs2=${MACS2_VERSION} \
     conda-forge::r-base=${R_BASE_VERSION} \
     conda-forge::file=${FILE_VERSION} \
     conda-forge::unzip=${UNZIP_VERSION} \
@@ -71,36 +72,11 @@ RUN mamba create -y -n cutrun \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         pigz \
-        build-essential \
-        make \
-        gcc \
-        g++ \
-        python3-dev \
-        libatlas-base-dev \
-        libopenblas-dev \
-        liblapack-dev \
         parallel && \
     apt-get clean && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install MACS2 from source via pip to avoid binary incompatibility
-RUN /opt/conda/envs/cutrun/bin/python -m pip install --no-binary :all: macs2
-
-# Remove the build dependencies after installing MACS2
-RUN apt-get purge -y \
-        build-essential \
-        make \
-        gcc \
-        g++ \
-        python3-dev \
-        libatlas-base-dev \
-        libopenblas-dev \
-        liblapack-dev && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-    
 ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
 
 # Copy pipeline script
