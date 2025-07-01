@@ -37,7 +37,7 @@ RUN mamba create -y -n cutrun \
     bioconda::macs2=${MACS2_VERSION} \
     bioconda::bedtools=${BEDTOOLS_VERSION} \
     bioconda::ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
-    bioconda::ucsc-bedclip=${UCSC_APPS_VERSION} \
+    bioconda::ucsc-bedclip \
     conda-forge::r-base=${R_BASE_VERSION} \
     conda-forge::file=${FILE_VERSION} \
     conda-forge::unzip=${UNZIP_VERSION} \
