@@ -31,26 +31,27 @@ SHELL ["/bin/bash", "-c"]
 
 # Install all tools into one conda environment
 
-RUN mamba create -y -n cutrun -c conda-forge -c bioconda \
-    trim-galore=${TRIMGALORE_VERSION} \
-    jq=${JQ_VERSION} \
-    samtools=${SAMTOOLS_VERSION} \
-    macs2=${MACS2_VERSION} \
-    bedtools=${BEDTOOLS_VERSION} \
-    ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
-    ucsc-bedclip=${UCSC_APPS_VERSION} \
-    r-base=${R_BASE_VERSION} \
-    file=${FILE_VERSION} \
-    unzip=${UNZIP_VERSION} \
-    cutadapt=${CUTADAPT_VERSION} \
-    star=${STAR_VERSION} \
-    picard=${PICARD_VERSION} \
-    fastqc=${FASTQC_VERSION} \
+RUN mamba create -y -n cutrun \
+    bioconda::trim-galore=${TRIMGALORE_VERSION} \
+    bioconda::samtools=${SAMTOOLS_VERSION} \
+    bioconda::macs2=${MACS2_VERSION} \
+    bioconda::bedtools=${BEDTOOLS_VERSION} \
+    bioconda::ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
+    bioconda::ucsc-bedclip=${UCSC_APPS_VERSION} \
+    conda-forge::r-base=${R_BASE_VERSION} \
+    conda-forge::file=${FILE_VERSION} \
+    conda-forge::unzip=${UNZIP_VERSION} \
+    bioconda::cutadapt=${CUTADAPT_VERSION} \
+    bioconda::star=${STAR_VERSION} \
+    bioconda::picard=${PICARD_VERSION} \
+    bioconda::fastqc=${FASTQC_VERSION} \
+    conda-forge::jq=${JQ_VERSION} && \
     mamba clean -a -y && \
     apt-get clean && \
     apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* && \
-    find /usr/local/bin -type f -executable -exec strip --strip-unneeded {} + || true
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    find /opt/conda/envs/cutrun/bin -type f -exec file {} \; | \
+        grep ELF | cut -d: -f1 | xargs --no-run-if-empty strip
 
 ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
 
