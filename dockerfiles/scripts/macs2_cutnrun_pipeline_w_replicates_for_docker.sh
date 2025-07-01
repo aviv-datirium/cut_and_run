@@ -233,6 +233,7 @@ run_fastqc () {                     # $1=R1  $2=R2  $3=SAMPLE
       log FastQC "$SAMPLE" FAIL  "see fastqc_${SAMPLE}.err"
   fi
 }
+export -f run_fastqc
 
 ###############################################################################
 # merge_bams  <out.bam>  <sampleName> ...                                     #
