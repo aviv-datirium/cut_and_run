@@ -660,6 +660,7 @@ plot_preseq_curves () {
   log Preseq Plotting "start"
 
 # Generate R script
+export OUTPUT_DIR="$OUTPUT_DIR" # So the R script can access Sys.getenv("OUTPUT_DIR")
 cat > "$r_script" <<'EOF'
 library(ggplot2)
 library(data.table)
@@ -684,8 +685,33 @@ p <- ggplot(all_data, aes(x = total_reads, y = expected_unique, color = sample))
        y = "Expected Unique Reads") +
   theme(legend.title = element_blank())
 
-ggsave("preseq/preseq_complexity_curves.pdf", plot = p, width = 8, height = 6)
-ggsave("preseq/preseq_complexity_curves.png", plot = p, width = 8, height = 6, dpi = 300)
+library(ggplot2)
+library(data.table)
+
+plot_file <- function(file) {
+  df <- fread(file, skip=1)
+  df[, sample := gsub("_complexity\\.txt$", "", basename(file))]
+  setnames(df, c("total_reads", "expected_unique", "sample"))
+  return(df)
+}
+
+files <- list.files(file.path(Sys.getenv("OUTPUT_DIR"), "preseq"),
+                    pattern = "_complexity\\.txt$", full.names = TRUE)
+all_data <- rbindlist(lapply(files, plot_file))
+
+p <- ggplot(all_data, aes(x = total_reads, y = expected_unique, color = sample)) +
+  geom_line(linewidth = 1) +
+  theme_minimal() +
+  labs(title = "Preseq Library Complexity Projection",
+       x = "Total Reads Sequenced",
+       y = "Expected Unique Reads") +
+  theme(legend.title = element_blank())
+
+ggsave(filename = file.path(Sys.getenv("OUTPUT_DIR"), "preseq", "preseq_complexity_curves.pdf"),
+       plot = p, width = 8, height = 6)
+
+ggsave(filename = file.path(Sys.getenv("OUTPUT_DIR"), "preseq", "preseq_complexity_curves.png"),
+       plot = p, width = 8, height = 6, dpi = 300)
 EOF
 
   # Run the R script
