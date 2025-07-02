@@ -55,7 +55,6 @@ RUN mamba create -y -n cutrun \
     bioconda::bedtools=${BEDTOOLS_VERSION} \
     bioconda::ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
     bioconda::ucsc-bedclip \
-    bioconda::macs2=${MACS2_VERSION} \
     conda-forge::r-base=${R_BASE_VERSION} \
     conda-forge::file=${FILE_VERSION} \
     conda-forge::unzip=${UNZIP_VERSION} \
@@ -78,6 +77,39 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    cython3 \
+    git \
+    libatlas-base-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    gfortran && \
+    rm -rf /var/lib/apt/lists/*
+
+# Clone and install MACS2 v2.2.9.1 from source
+RUN git clone --branch v2.2.9.1 --depth 1 https://github.com/macs3-project/MACS.git /tmp/macs2 && \
+    /opt/conda/envs/cutrun/bin/python /tmp/macs2/setup.py install && \
+    rm -rf /tmp/macs2
+
+RUN git clone --branch v2.2.9.1 --depth 1 https://github.com/macs3-project/MACS.git /tmp/macs2 && \
+    /opt/conda/envs/cutrun/bin/python /tmp/macs2/setup.py install && \
+    rm -rf /tmp/macs2 && \
+    apt-get remove -y \
+        build-essential \
+        python3-dev \
+        cython3 \
+        git \
+        libatlas-base-dev \
+        libopenblas-dev \
+        liblapack-dev \
+        gfortran && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy pipeline script
 COPY ./scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
