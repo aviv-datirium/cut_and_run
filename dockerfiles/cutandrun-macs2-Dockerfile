@@ -63,7 +63,6 @@ RUN mamba create -y -n cutrun \
     bioconda::picard=${PICARD_VERSION} \
     bioconda::fastqc=${FASTQC_VERSION} \
     conda-forge::jq=${JQ_VERSION} \
-    conda-forge::cython && \
     mamba clean -a -y && \
     apt-get clean && \
     apt-get autoremove -y && \
