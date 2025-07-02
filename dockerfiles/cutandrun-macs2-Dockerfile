@@ -62,8 +62,8 @@ RUN mamba create -y -n cutrun \
     bioconda::star=${STAR_VERSION} \
     bioconda::picard=${PICARD_VERSION} \
     bioconda::fastqc=${FASTQC_VERSION} \
-    conda-forge::jq=${JQ_VERSION} \
-    mamba clean -a -y && \
+    conda-forge::jq=${JQ_VERSION} && \
+    mamba clean -all -y && \
     apt-get clean && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
