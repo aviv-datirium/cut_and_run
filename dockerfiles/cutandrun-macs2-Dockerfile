@@ -21,15 +21,15 @@
 #  --threads 2
 #########################################################################################################################
 
-FROM mambaorg/micromamba:1.5.10
+FROM condaforge/miniforge3:25.3.0-3
 
 LABEL maintainer="aviv.de.morgan@datirium.com"
 
-# ENV setup
-ENV MAMBA_ROOT_PREFIX=/opt/conda \
-    PATH=/opt/conda/bin:$PATH \
-    HOME=/tmp \
-    USER=nobody
+# Environment setup
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH=/opt/conda/bin:$PATH
+ENV HOME=/tmp
+ENV USER=nobody
 
 WORKDIR /tmp
 
@@ -39,7 +39,6 @@ ENV TRIMGALORE_VERSION=0.6.10 \
     BEDTOOLS_VERSION=2.31.1 \
     UCSC_APPS_VERSION=481 \
     R_BASE_VERSION=4.4.3 \
-    FILE_VERSION=5.46 \
     UNZIP_VERSION=6.0 \
     CUTADAPT_VERSION=4.1 \
     STAR_VERSION=2.7.11b \
@@ -49,46 +48,37 @@ ENV TRIMGALORE_VERSION=0.6.10 \
     PRESEQ_VERSION=3.2.0 \
     MACS2_VERSION=2.2.9.1
 
-# Create 'cutrun' env
-RUN micromamba create -y -n cutrun -c bioconda -c conda-forge \
+# Create main env
+RUN mamba create -y -n cutrun -c bioconda -c conda-forge \
     trim-galore=${TRIMGALORE_VERSION} \
     samtools=${SAMTOOLS_VERSION} \
     bedtools=${BEDTOOLS_VERSION} \
+    ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
     cutadapt=${CUTADAPT_VERSION} \
     star=${STAR_VERSION} \
     picard=${PICARD_VERSION} \
     fastqc=${FASTQC_VERSION} \
     r-base=${R_BASE_VERSION} \
-    file \
     unzip=${UNZIP_VERSION} \
-    jq=${JQ_VERSION} && \
-    micromamba clean --yes --index-cache --tarballs --packages
-
-# Create 'macs2' env
-RUN micromamba create -y -n macs2 -c bioconda -c conda-forge \
-    macs2=${MACS2_VERSION} && \
-    micromamba clean --yes --index-cache --tarballs --packages
-
-RUN micromamba create -y -n preseq -c bioconda -c conda-forge \
+    jq=${JQ_VERSION} \
     preseq=${PRESEQ_VERSION} && \
-    micromamba clean --yes --index-cache --tarballs --packages
+    conda clean -afy
 
-RUN micromamba create -y -n ucsc -c bioconda -c conda-forge \
-    ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} && \
-    micromamba clean --yes --index-cache --tarballs --packages
+# Create MACS2-only env
+RUN mamba create -y -n macs2 -c bioconda macs2=${MACS2_VERSION} && \
+    conda clean -afy
 
-# Add all environments to PATH
-ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/macs2/bin:/opt/conda/envs/preseq/bin:/opt/conda/envs/ucsc/bin:$PATH
+# Add all envs to PATH
+ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/macs2/bin:$PATH
 
-# Auto-activate 'cutrun'
-USER root
-RUN echo "source /opt/conda/etc/profile.d/micromamba.sh && micromamba activate cutrun" >> /etc/bash.bashrc
+# Auto-activate cutrun at container startup
+RUN echo "conda activate cutrun" >> /root/.bashrc
 
-# Copy scripts
+# Copy pipeline + entrypoint
 COPY ./scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
 COPY docker_entrypoint.sh /usr/local/bin/docker_entrypoint.sh
 RUN chmod +x /usr/local/bin/cutrun.sh /usr/local/bin/docker_entrypoint.sh
 
-USER nobody
-
 ENTRYPOINT ["/usr/local/bin/docker_entrypoint.sh"]
+
+
