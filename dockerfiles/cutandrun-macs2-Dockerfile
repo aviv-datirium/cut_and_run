@@ -70,7 +70,7 @@ RUN mamba create -y -n cutrun \
 
 RUN echo 'Acquire::AllowInsecureRepositories "true";\nAcquire::AllowDowngradeToInsecureRepositories "true";' > /etc/apt/apt.conf.d/99insecure && \
     apt-get update && \
-    apt-get install -y --no-install-recommends && \
+    apt-get install -y --no-install-recommends \
         pigz \
         parallel && \
     apt-get clean && \
