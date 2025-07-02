@@ -60,7 +60,7 @@ RUN micromamba create -y -n cutrun -c bioconda -c conda-forge \
     picard=${PICARD_VERSION} \
     fastqc=${FASTQC_VERSION} \
     r-base=${R_BASE_VERSION} \
-    file=${FILE_VERSION} \
+    file \
     unzip=${UNZIP_VERSION} \
     jq=${JQ_VERSION} \
     preseq=${PRESEQ_VERSION} && \
