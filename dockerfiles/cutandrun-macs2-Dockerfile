@@ -46,11 +46,13 @@ ENV TRIMGALORE_VERSION=0.6.10 \
     FASTQC_VERSION=0.12.1 \
     JQ_VERSION=1.7 \
     PRESEQ_VERSION=3.2.0 \
-    MACS2_VERSION=2.2.9.1
+    MACS2_VERSION=2.2.9.1 \
+    FILE_VERSION=5.46
 
 # Create main env
 RUN mamba create -y -n cutrun -c bioconda -c conda-forge \
     trim-galore=${TRIMGALORE_VERSION} \
+    file \
     samtools=${SAMTOOLS_VERSION} \
     bedtools=${BEDTOOLS_VERSION} \
     ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
