@@ -21,76 +21,88 @@
 #  --threads 2
 #########################################################################################################################
 
-FROM condaforge/miniforge3:25.3.0-3
+FROM ubuntu:jammy
 LABEL maintainer="aviv.de.morgan@datirium.com"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV HOME=/tmp
 ENV USER=nobody
-
 WORKDIR /tmp
 
 # Set tool versions
-ENV TRIMGALORE_VERSION=0.6.10
-ENV SAMTOOLS_VERSION=1.22
-ENV MACS2_VERSION=2.2.9.1
-ENV BEDTOOLS_VERSION=2.31.1
-ENV UCSC_APPS_VERSION=481
-ENV R_BASE_VERSION=4.4.3
-ENV FILE_VERSION=5.46
-ENV UNZIP_VERSION=6.0
-ENV CUTADAPT_VERSION=4.1
-ENV STAR_VERSION=2.7.11b
-ENV PICARD_VERSION=2.27
-ENV FASTQC_VERSION=0.12.1
-ENV JQ_VERSION=1.7
+ENV TRIMGALORE_VERSION=0.6.10 \
+    SAMTOOLS_VERSION=1.22 \
+    MACS2_VERSION=2.2.9.1 \
+    BEDTOOLS_VERSION=2.31.1 \
+    UCSC_APPS_VERSION=481 \
+    R_BASE_VERSION=4.4.3 \
+    FILE_VERSION=5.46 \
+    UNZIP_VERSION=6.0 \
+    CUTADAPT_VERSION=4.1 \
+    STAR_VERSION=2.7.11b \
+    PICARD_VERSION=2.27 \
+    FASTQC_VERSION=0.12.1 \
+    JQ_VERSION=1.7 \
+    PRESEQ_VERSION=3.2.0
 
 SHELL ["/bin/bash", "-c"]
 
-# Install all tools into one conda environment using mamba
-RUN mamba create -y -n cutrun \
-    bioconda::trim-galore=${TRIMGALORE_VERSION} \
-    bioconda::samtools=${SAMTOOLS_VERSION} \
-    bioconda::bedtools=${BEDTOOLS_VERSION} \
-    bioconda::ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
-    bioconda::cutadapt=${CUTADAPT_VERSION} \
-    bioconda::star=${STAR_VERSION} \
-    bioconda::picard=${PICARD_VERSION} \
-    bioconda::fastqc=${FASTQC_VERSION} \
-    conda-forge::r-base=${R_BASE_VERSION} \
-    conda-forge::file=${FILE_VERSION} \
-    conda-forge::unzip=${UNZIP_VERSION} \
-    conda-forge::jq=${JQ_VERSION} && \
-    mamba clean -a -y && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        pigz \
-        parallel && \
-    apt-get clean && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Install OS dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    curl \
+    bzip2 \
+    ca-certificates \
+    git \
+    gnupg \
+    libglib2.0-0 \
+    libxext6 \
+    libsm6 \
+    libxrender1 \
+    libssl-dev \
+    build-essential \
+    pigz \
+    parallel \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install MACS2 in a separate environment using mamba
-RUN mamba create -y -n macs2 bioconda::macs2=${MACS2_VERSION} && \
-    mamba clean -a && \
-    apt-get clean && \
-    apt-get purge && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* && \
-    strip /usr/local/bin/*; true
+# Install Miniforge
+RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O /tmp/miniforge.sh && \
+    bash /tmp/miniforge.sh -b -p /opt/conda && \
+    rm /tmp/miniforge.sh && \
+    /opt/conda/bin/conda clean -afy
 
-# Set the path to the newly installed conda environment
-ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/mac2/bin:$PATH
+ENV PATH=/opt/conda/bin:$PATH
+
+# Create and populate conda env with all tools
+RUN conda create -y -n cutrun python=3.10 && \
+    /opt/conda/bin/conda run -n cutrun mamba install -y -c bioconda -c conda-forge \
+        trim-galore=${TRIMGALORE_VERSION} \
+        samtools=${SAMTOOLS_VERSION} \
+        bedtools=${BEDTOOLS_VERSION} \
+        ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
+        cutadapt=${CUTADAPT_VERSION} \
+        star=${STAR_VERSION} \
+        picard=${PICARD_VERSION} \
+        fastqc=${FASTQC_VERSION} \
+        macs2=${MACS2_VERSION} \
+        r-base=${R_BASE_VERSION} \
+        file=${FILE_VERSION} \
+        unzip=${UNZIP_VERSION} \
+        jq=${JQ_VERSION} \
+        preseq=${PRESEQ_VERSION} \
+    && conda clean -afy
+
+# Auto-activate the conda env at startup
+RUN echo ". /opt/conda/etc/profile.d/conda.sh && conda activate cutrun" >> /root/.bashrc
+ENV CONDA_DEFAULT_ENV=cutrun
+ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
 
 # Copy pipeline script
 COPY ./scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
 RUN chmod +x /usr/local/bin/cutrun.sh
 
-# Copy the custom entrypoint script into the image
+# Copy entrypoint script
 COPY docker_entrypoint.sh /usr/local/bin/docker_entrypoint.sh
 RUN chmod +x /usr/local/bin/docker_entrypoint.sh
 
-# Set the entrypoint
 ENTRYPOINT ["/usr/local/bin/docker_entrypoint.sh"]
-
-# Optional: Copy default config if needed
-#COPY ./config_for_macs2_docker.json ./
