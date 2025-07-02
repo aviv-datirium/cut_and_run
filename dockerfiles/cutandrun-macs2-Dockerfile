@@ -61,7 +61,8 @@ RUN mamba create -y -n cutrun -c bioconda -c conda-forge \
     fastqc=${FASTQC_VERSION} \
     r-base=${R_BASE_VERSION} \
     unzip=${UNZIP_VERSION} \
-    jq=${JQ_VERSION} && \
+    jq=${JQ_VERSION} \
+    parallel && \
     conda clean -afy
 
 # Create macs2 env
