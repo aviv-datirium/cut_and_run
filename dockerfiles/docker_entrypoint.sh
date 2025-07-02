@@ -1,6 +1,8 @@
 #!/bin/bash
-set -e
 
-export PATH="/opt/conda/envs/cutrun/bin:$PATH"
+# Automatically activate both environments
+source /opt/conda/bin/activate
+conda activate cutrun
+conda activate macs2
 
-/usr/local/bin/cutrun.sh "$@"
+exec "$@"
