@@ -47,50 +47,39 @@ ENV JQ_VERSION=1.7
 
 SHELL ["/bin/bash", "-c"]
 
-# Install all tools into one conda environment
-
+# Install all tools into one conda environment using mamba
 RUN mamba create -y -n cutrun \
     bioconda::trim-galore=${TRIMGALORE_VERSION} \
     bioconda::samtools=${SAMTOOLS_VERSION} \
     bioconda::bedtools=${BEDTOOLS_VERSION} \
     bioconda::ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
-    bioconda::ucsc-bedclip \
-    conda-forge::r-base=${R_BASE_VERSION} \
-    conda-forge::file=${FILE_VERSION} \
-    conda-forge::unzip=${UNZIP_VERSION} \
     bioconda::cutadapt=${CUTADAPT_VERSION} \
     bioconda::star=${STAR_VERSION} \
     bioconda::picard=${PICARD_VERSION} \
     bioconda::fastqc=${FASTQC_VERSION} \
+    conda-forge::r-base=${R_BASE_VERSION} \
+    conda-forge::file=${FILE_VERSION} \
+    conda-forge::unzip=${UNZIP_VERSION} \
     conda-forge::jq=${JQ_VERSION} && \
-    mamba clean -all -y && \
-    apt-get clean && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-RUN rm -rf /var/lib/apt/lists/* && \
-    apt-get update --allow-unauthenticated && \
+    mamba clean -a -y && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         pigz \
         parallel && \
-    rm -rf /var/cache/apt/archives/* && \
     apt-get clean && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN mamba create -y -n macs2env python=3.10 \
-    cython numpy wheel setuptools \
-    && mamba clean -a -y
+# Install MACS2 in a separate environment using mamba
+RUN mamba create -y -n macs2 bioconda::macs2=${MACS2_VERSION} && \
+    mamba clean -a && \
+    apt-get clean && \
+    apt-get purge && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* && \
+    strip /usr/local/bin/*; true
 
-# Clone and install MACS2 from source inside the new env
-RUN git clone --branch v${MACS2_VERSION} --depth 1 https://github.com/macs3-project/MACS.git /tmp/macs2 && \
-    /opt/conda/envs/macs2env/bin/python /tmp/macs2/setup.py install && \
-    rm -rf /tmp/macs2
-
-# Add MACS2 env binaries to PATH (place this after cutrun path so it’s available globally)
-
-ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
-ENV PATH=/opt/conda/envs/macs2env/bin:$PATH
+# Set the path to the newly installed conda environment
+ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/mac2/bin:$PATH
 
 # Copy pipeline script
 COPY ./scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
