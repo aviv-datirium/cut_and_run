@@ -67,15 +67,15 @@ RUN micromamba create -y -n cutrun -c bioconda -c conda-forge \
 # Create 'macs2' env
 RUN micromamba create -y -n macs2 -c bioconda -c conda-forge \
     macs2=${MACS2_VERSION} && \
-    micromamba clean --all --yes
+    micromamba clean --yes --index-cache --tarballs --packages
 
 RUN micromamba create -y -n preseq -c bioconda -c conda-forge \
     preseq=${PRESEQ_VERSION} && \
-    micromamba clean --all --yes
+    micromamba clean --yes --index-cache --tarballs --packages
 
 RUN micromamba create -y -n ucsc -c bioconda -c conda-forge \
     ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} && \
-    micromamba clean --all --yes
+    micromamba clean --yes --index-cache --tarballs --packages
 
 # Add all environments to PATH
 ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/macs2/bin:/opt/conda/envs/preseq/bin:/opt/conda/envs/ucsc/bin:$PATH
