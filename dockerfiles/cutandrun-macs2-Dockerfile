@@ -29,7 +29,10 @@ ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV PATH=$MAMBA_ROOT_PREFIX/bin:$PATH
 
 # System dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN echo 'Acquire::AllowInsecureRepositories "true";' > /etc/apt/apt.conf.d/99insecure && \
+    sed -i 's|http://|https://|g' /etc/apt/sources.list && \
+    apt-get update -o Acquire::AllowInsecureRepositories=true && \
+    apt-get install -y --no-install-recommends \
     wget curl bzip2 ca-certificates libglib2.0-0 \
     libxext6 libsm6 libxrender1 libssl-dev \
     build-essential pigz parallel git gnupg && \
