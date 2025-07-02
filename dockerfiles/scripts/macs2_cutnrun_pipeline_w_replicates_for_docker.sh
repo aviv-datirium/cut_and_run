@@ -68,6 +68,11 @@ cat <<'BANNER'
    Trim Galore ≥0.6.10 · Picard ≥2.18 · MACS2 ≥2.2 · cutadapt ≥4.1
    R 4.x (for optional DiffBind) · GNU coreutils/awk · PIGZ · GNU Parallel
 
+ CITATIONS
+ ────────────
+   O. Tange (2011): GNU Parallel - The Command-Line Power Tool,
+     ;login: The USENIX Magazine, February 2011:42-47.
+  
 BANNER
 
 ###############################################################################
@@ -447,7 +452,42 @@ else
 fi
 
 ###############################################################################
-# 11  MERGE BAMs   (treatment & control groups)                               #
+# 11  PRESEQ COMPLEXITY ESTIMATION                                            #
+###############################################################################
+preseq_one () {                      # $1 = sample name
+  local n="$1"
+  local bam="$ALIGNMENT_DIR/${n}.dedup.bam"
+  local out="$OUTPUT_DIR/preseq/${n}_complexity.txt"
+
+  log Preseq "$n" start
+
+  if [[ ! -s $bam ]]; then
+    log Preseq "$n" skip "missing BAM"
+    return
+  fi
+
+  preseq lc_extrap -B -o "$out" -s 1000000 "$bam" \
+    >>"$LOG_DIR/preseq_${n}.log" 2>&1 \
+    && log Preseq "$n" done \
+    || log Preseq "$n" FAIL
+}
+
+mkdir -p "$OUTPUT_DIR/preseq"
+
+export -f preseq_one log
+export ALIGNMENT_DIR OUTPUT_DIR LOG_DIR
+
+if command -v parallel >/dev/null 2>&1; then
+  log Preseq ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           preseq_one ::: "${SAMPLES[@]}"
+else
+  log Preseq ALL "GNU parallel not found – running serially"
+  for n in "${SAMPLES[@]}"; do preseq_one "$n"; done
+fi
+
+###############################################################################
+# 12  MERGE BAMs   (treatment & control groups)                               #
 ###############################################################################
 # ── make merged BAMs *once*
 T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
@@ -463,7 +503,7 @@ if (( ${#CTRL_NAMES[@]} )); then
 fi
 
 ###############################################################################
-# 12  MACS2 PEAKS: replicate, merged, pooled                                  #
+# 13  MACS2 PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
 CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
 mkdir -p "$PEAK_DIR"/{replicate,merged,pooled}
@@ -522,7 +562,7 @@ else
 fi
 
 ###############################################################################
-# 13  SPIKE SCALE FACTORS                                                     #
+# 14  SPIKE SCALE FACTORS                                                     #
 ###############################################################################
 declare -A SCALE                    # sample → host/spike factor
 read_count () { samtools view -c -F 2304 "$1"; }
@@ -552,7 +592,7 @@ for n in "${SAMPLES[@]}"; do
 done
 
 ###############################################################################
-# 14  BIGWIG GENERATION                                                       #
+# 15  BIGWIG GENERATION                                                       #
 ###############################################################################
 bigwig_one () {                       # $1 = sample basename
   local n="$1"
@@ -588,7 +628,7 @@ else
 fi
 
 ###############################################################################
-# 15  PEAK ANNOTATION                                                         #
+# 16  PEAK ANNOTATION                                                         #
 ###############################################################################
 annotate_one () {                     # $1 = full path to narrowPeak
   local np="$1"
@@ -617,6 +657,55 @@ else
   log Annotate ALL "GNU parallel not found – running serially"
   for np in "${NP_FILES[@]}"; do annotate_one "$np"; done
 fi
+
+###############################################################################
+# 17  PRESEQ PLOTTING                                                         #
+###############################################################################
+plot_preseq_curves () {
+  local preseq_dir="$OUTPUT_DIR/preseq"
+  local plot_pdf="$OUTPUT_DIR/preseq/preseq_complexity_curves.pdf"
+  local r_script="$OUTPUT_DIR/preseq/plot_preseq.R"
+
+  log Preseq Plotting "start"
+
+  # Generate R script
+  cat > "$r_script" <<'EOF'
+library(ggplot2)
+library(data.table)
+
+plot_file <- function(file) {
+  df <- fread(file, skip=1)
+  df[, sample := gsub("_complexity\\.txt$", "", basename(file))]
+  setnames(df, c("total_reads", "expected_unique", "sample"))
+  return(df)
+}
+
+# Read all preseq outputs
+files <- list.files("preseq", pattern = "_complexity\\.txt$", full.names = TRUE)
+all_data <- rbindlist(lapply(files, plot_file))
+
+# Plot
+p <- ggplot(all_data, aes(x = total_reads, y = expected_unique, color = sample)) +
+  geom_line(size = 1) +
+  theme_minimal() +
+  labs(title = "Preseq Library Complexity Projection",
+       x = "Total Reads Sequenced",
+       y = "Expected Unique Reads") +
+  theme(legend.title = element_blank())
+
+ggsave("preseq/preseq_complexity_curves.pdf", plot = p, width = 8, height = 6)
+EOF
+
+  # Run the R script
+  Rscript "$r_script" >> "$LOG_DIR/preseq_plot.log" 2>&1 \
+  && log Preseq Plotting "done: $plot_pdf" \
+  || {
+    log Preseq Plotting "FAIL – see preseq_plot.log"
+    cat "$LOG_DIR/preseq_plot.log"
+  }
+}
+
+plot_preseq_curves
 
 # PIPELINE COMPLETED ##########################################################
 log DONE ALL "Outputs in $OUTPUT_DIR"

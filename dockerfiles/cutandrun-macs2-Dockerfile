@@ -60,13 +60,17 @@ RUN mamba create -y -n cutrun -c bioconda -c conda-forge \
     picard=${PICARD_VERSION} \
     fastqc=${FASTQC_VERSION} \
     r-base=${R_BASE_VERSION} \
+    r-ggplot2 \
     unzip=${UNZIP_VERSION} \
     jq=${JQ_VERSION} \
     parallel && \
     conda clean -afy
 
-# Create macs2 env
-RUN mamba create -y -n macs2 -c bioconda macs2=2.2.9.1 && conda clean -afy
+# Create MACS2 environment (without bioconda version)
+RUN mamba create -y -n macs2 -c conda-forge python=3.9 pip \
+ && /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+     conda activate macs2 && \
+     pip install 'macs2==2.2.9.1'" && conda clean -afy
 
 # Create preseq env
 RUN mamba create -y -n preseq -c bioconda preseq=3.2.0 && conda clean -afy
