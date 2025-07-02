@@ -52,10 +52,9 @@ ENV TRIMGALORE_VERSION=0.6.10 \
 # Create main env
 RUN mamba create -y -n cutrun -c bioconda -c conda-forge \
     trim-galore=${TRIMGALORE_VERSION} \
-    file \
+    file=${FILE_VERSION} \
     samtools=${SAMTOOLS_VERSION} \
     bedtools=${BEDTOOLS_VERSION} \
-    ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
     cutadapt=${CUTADAPT_VERSION} \
     star=${STAR_VERSION} \
     picard=${PICARD_VERSION} \
@@ -63,15 +62,19 @@ RUN mamba create -y -n cutrun -c bioconda -c conda-forge \
     r-base=${R_BASE_VERSION} \
     unzip=${UNZIP_VERSION} \
     jq=${JQ_VERSION} \
-    preseq=${PRESEQ_VERSION} && \
     conda clean -afy
 
-# Create MACS2-only env
-RUN mamba create -y -n macs2 -c bioconda macs2=${MACS2_VERSION} && \
-    conda clean -afy
+# Create macs2 env
+RUN mamba create -y -n macs2 -c bioconda macs2=2.2.9.1 && conda clean -afy
+
+# Create preseq env
+RUN mamba create -y -n preseq -c bioconda preseq=3.2.0 && conda clean -afy
+
+# Create ucsc env
+RUN mamba create -y -n ucsc -c bioconda ucsc-bedgraphtobigwig=481 && conda clean -afy
 
 # Add all envs to PATH
-ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/macs2/bin:$PATH
+ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/macs2/bin:/opt/conda/envs/preseq/bin:/opt/conda/envs/ucsc/bin:$PATH
 
 # Auto-activate cutrun at container startup
 RUN echo "conda activate cutrun" >> /root/.bashrc
