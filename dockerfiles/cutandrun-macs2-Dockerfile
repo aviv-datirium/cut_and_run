@@ -21,26 +21,17 @@
 #  --threads 2
 #########################################################################################################################
 
-FROM debian:bullseye-slim
+FROM mambaorg/micromamba:1.5.7
+
 LABEL maintainer="aviv.de.morgan@datirium.com"
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV MAMBA_ROOT_PREFIX=/opt/conda
-ENV PATH=$MAMBA_ROOT_PREFIX/bin:$PATH
+# ENV setup
+ENV MAMBA_ROOT_PREFIX=/opt/conda \
+    PATH=/opt/conda/bin:$PATH \
+    HOME=/tmp \
+    USER=nobody
 
-# System dependencies
-RUN echo 'Acquire::AllowInsecureRepositories "true";' > /etc/apt/apt.conf.d/99insecure && \
-    sed -i 's|http://|https://|g' /etc/apt/sources.list && \
-    apt-get update -o Acquire::AllowInsecureRepositories=true && \
-    apt-get install -y --no-install-recommends \
-    wget curl bzip2 ca-certificates libglib2.0-0 \
-    libxext6 libsm6 libxrender1 libssl-dev \
-    build-essential pigz parallel git gnupg && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Micromamba (static binary)
-RUN mkdir -p $MAMBA_ROOT_PREFIX && \
-    curl -Ls https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj -C $MAMBA_ROOT_PREFIX bin/micromamba
+WORKDIR /tmp
 
 # Tool versions
 ENV TRIMGALORE_VERSION=0.6.10 \
@@ -58,31 +49,33 @@ ENV TRIMGALORE_VERSION=0.6.10 \
     PRESEQ_VERSION=3.2.0 \
     MACS2_VERSION=2.2.9.1
 
-# Create base environment directory
-RUN micromamba shell init -s bash -p $MAMBA_ROOT_PREFIX && \
-    micromamba create -y -n cutrun -c bioconda -c conda-forge \
-        trim-galore=${TRIMGALORE_VERSION} \
-        samtools=${SAMTOOLS_VERSION} \
-        bedtools=${BEDTOOLS_VERSION} \
-        ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
-        cutadapt=${CUTADAPT_VERSION} \
-        star=${STAR_VERSION} \
-        picard=${PICARD_VERSION} \
-        fastqc=${FASTQC_VERSION} \
-        r-base=${R_BASE_VERSION} \
-        file=${FILE_VERSION} \
-        unzip=${UNZIP_VERSION} \
-        jq=${JQ_VERSION} \
-        preseq=${PRESEQ_VERSION} && \
-    micromamba create -y -n macs2 -c bioconda -c conda-forge \
-        macs2=${MACS2_VERSION} && \
+# Create 'cutrun' env
+RUN micromamba create -y -n cutrun -c bioconda -c conda-forge \
+    trim-galore=${TRIMGALORE_VERSION} \
+    samtools=${SAMTOOLS_VERSION} \
+    bedtools=${BEDTOOLS_VERSION} \
+    ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
+    cutadapt=${CUTADAPT_VERSION} \
+    star=${STAR_VERSION} \
+    picard=${PICARD_VERSION} \
+    fastqc=${FASTQC_VERSION} \
+    r-base=${R_BASE_VERSION} \
+    file=${FILE_VERSION} \
+    unzip=${UNZIP_VERSION} \
+    jq=${JQ_VERSION} \
+    preseq=${PRESEQ_VERSION} && \
+    micromamba clean --all --yes
+
+# Create 'macs2' env
+RUN micromamba create -y -n macs2 -c bioconda -c conda-forge \
+    macs2=${MACS2_VERSION} && \
     micromamba clean --all --yes
 
 # Add both environments to PATH
-ENV PATH=$MAMBA_ROOT_PREFIX/envs/cutrun/bin:$MAMBA_ROOT_PREFIX/envs/macs2/bin:$PATH
+ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/macs2/bin:$PATH
 
-# Auto-activate cutrun
-RUN echo "source $MAMBA_ROOT_PREFIX/etc/profile.d/micromamba.sh && micromamba activate cutrun" >> /root/.bashrc
+# Auto-activate 'cutrun'
+RUN echo "source /opt/conda/etc/profile.d/micromamba.sh && micromamba activate cutrun" >> /root/.bashrc
 
 # Copy scripts
 COPY ./scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
@@ -90,4 +83,3 @@ COPY docker_entrypoint.sh /usr/local/bin/docker_entrypoint.sh
 RUN chmod +x /usr/local/bin/cutrun.sh /usr/local/bin/docker_entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/docker_entrypoint.sh"]
-
