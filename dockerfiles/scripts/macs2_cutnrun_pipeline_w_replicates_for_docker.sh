@@ -1,20 +1,6 @@
 #!/bin/bash
 
 set -o pipefail
-#~ set -x
-
-
-#~ echo ">> Running in container"
-#~ echo ">> Current working directory: $(pwd)"
-#~ echo ">> Listing current directory:"
-#~ ls -lh
-#~ echo ">> CONFIG path: $1"
-
-#~ echo ">> CONFIG contents:"
-#~ cat "$1" || echo "!! Could not read config file"
-
-#~ echo ">> Searching for hardcoded '/mnt/data/home/aviv' references:"
-#~ grep -r '/mnt/data/home/aviv' . || echo "✓ No such paths found"
 
 cat <<'BANNER'
 
@@ -50,11 +36,12 @@ cat <<'BANNER'
   3  STAR   : host genome (hg38/mm10/…) → per-replicate BAM + index
   4  STAR   : E. coli (spike-in) → per-replicate BAM + index
   5  Picard : add-RG + duplicate removal
-  6  Fragment-size filtering (histone/TF/≤1 kb)
+  6  Fragment-size filtering (histone/TF/≤1 kb; user selection)
   7  MACS2  : replicate, merged, pooled peak calling (BAMPE mode)
   8  Spike-in scale factors – host/spike read ratio per replicate
-  9  BedGraph + BigWig generation (scaled if factors exist)
+  9  BedGraph + BigWig generation for viewing (scaled if factors exist)
  10  Peak-to-gene annotation (bedtools intersect)
+ 11  Preseq complexity estimation and plotting
 
  USAGE
  ─────
@@ -66,7 +53,7 @@ cat <<'BANNER'
  ────────────
    bash ≥4 · samtools ≥1.10 · bedtools ≥2.28 · STAR ≥2.7 · Java ≥17
    Trim Galore ≥0.6.10 · Picard ≥2.18 · MACS2 ≥2.2 · cutadapt ≥4.1
-   R 4.x (for optional DiffBind) · GNU coreutils/awk · PIGZ · GNU Parallel
+   R 4.x (for plotting) · GNU coreutils/awk · PIGZ · GNU Parallel
 
  CITATIONS
  ────────────
@@ -241,12 +228,12 @@ run_fastqc () {                     # $1=R1  $2=R2  $3=SAMPLE
 }
 export -f run_fastqc
 
-###############################################################################
-# merge_bams  <out.bam>  <sampleName> ...                                     #
-#   • 0 inputs  → skip with log                                               #
-#   • 1 input   → ln -f (fast)                                                #
-#   • ≥2 inputs → samtools merge + index                                      #
-###############################################################################
+# -----------------------------------------------------------------------------
+# merge_bams  <out.bam>  <sampleName> ...                                     -
+#   • 0 inputs  → skip with log                                               -
+#   • 1 input   → ln -f (fast)                                                -
+#   • ≥2 inputs → samtools merge + index                                      -
+# -----------------------------------------------------------------------------
 merge_bams () {
   local out=$1; shift
   local inputs=()
@@ -276,7 +263,7 @@ bam_to_bedgraph(){ bedtools genomecov -ibam "$1" -bg -pc | sort -k1,1 -k2,2n > "
 read_count(){ samtools view -c -F 2304 "$1"; }
 
 ###############################################################################
-# 4  BASENAMES + GENOME SIZE                                                  #
+# 4  GET BASENAMES + GENOME SIZE                                              #
 ###############################################################################
 TREAT_NAMES=(); for r1 in "${TREAT_R1[@]}"; do TREAT_NAMES+=( "$(get_sample_basename "$r1")" ); done
 CTRL_NAMES=();  for r1 in "${CTRL_R1[@]}";  do CTRL_NAMES+=( "$(get_sample_basename "$r1")" ); done
