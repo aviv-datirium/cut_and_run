@@ -68,7 +68,7 @@ RUN mamba create -y -n cutrun \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN echo 'Acquire::AllowInsecureRepositories "true";\nAcquire::AllowDowngradeToInsecureRepositories "true";' > /etc/apt/apt.conf.d/99insecure && \
+RUN sed -i 's/http:\/\/archive.ubuntu.com/http:\/\/mirror.math.princeton.edu\/pub\/ubuntu/g' /etc/apt/sources.list && \
     apt-get update --allow-unauthenticated && \
     apt-get install -y --no-install-recommends \
         pigz \
