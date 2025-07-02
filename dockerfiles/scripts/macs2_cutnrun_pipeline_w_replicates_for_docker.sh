@@ -649,13 +649,17 @@ export ANNOTATION_GENES ANN_DIR
 # Collect all narrowPeak paths into an array
 mapfile -t NP_FILES < <(find "$PEAK_DIR" -type f -name "*.narrowPeak" | sort)
 
-if command -v parallel >/dev/null 2>&1; then
-  log Annotate ALL "running ${#NP_FILES[@]} peaks with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           annotate_one ::: "${NP_FILES[@]}"
+if [[ ${#NP_FILES[@]} -eq 0 ]]; then
+  log Annotate ALL "No peaks found – skipping annotation step"
 else
-  log Annotate ALL "GNU parallel not found – running serially"
-  for np in "${NP_FILES[@]}"; do annotate_one "$np"; done
+  if command -v parallel >/dev/null 2>&1; then
+    log Annotate ALL "running ${#NP_FILES[@]} peaks with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+    parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+             annotate_one ::: "${NP_FILES[@]}"
+  else
+    log Annotate ALL "GNU parallel not found – running serially"
+    for np in "${NP_FILES[@]}"; do annotate_one "$np"; done
+  fi
 fi
 
 ###############################################################################
