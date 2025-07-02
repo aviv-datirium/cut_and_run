@@ -61,8 +61,8 @@ RUN micromamba create -y -n cutrun -c bioconda -c conda-forge \
     r-base=${R_BASE_VERSION} \
     file \
     unzip=${UNZIP_VERSION} \
-    jq=${JQ_VERSION} \
-    micromamba clean --all --yes
+    jq=${JQ_VERSION} && \
+    micromamba clean --yes --index-cache --tarballs --packages
 
 # Create 'macs2' env
 RUN micromamba create -y -n macs2 -c bioconda -c conda-forge \
