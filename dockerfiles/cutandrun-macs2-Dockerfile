@@ -81,7 +81,9 @@ RUN micromamba create -y -n ucsc -c bioconda -c conda-forge \
 ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/macs2/bin:/opt/conda/envs/preseq/bin:/opt/conda/envs/ucsc/bin:$PATH
 
 # Auto-activate 'cutrun'
+USER root
 RUN echo "source /opt/conda/etc/profile.d/micromamba.sh && micromamba activate cutrun" >> /etc/bash.bashrc
+USER nobody
 
 # Copy scripts
 COPY ./scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
