@@ -83,11 +83,12 @@ ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/macs2/bin:/opt/conda/envs/pr
 # Auto-activate 'cutrun'
 USER root
 RUN echo "source /opt/conda/etc/profile.d/micromamba.sh && micromamba activate cutrun" >> /etc/bash.bashrc
-USER nobody
 
 # Copy scripts
 COPY ./scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
 COPY docker_entrypoint.sh /usr/local/bin/docker_entrypoint.sh
 RUN chmod +x /usr/local/bin/cutrun.sh /usr/local/bin/docker_entrypoint.sh
+
+USER nobody
 
 ENTRYPOINT ["/usr/local/bin/docker_entrypoint.sh"]
