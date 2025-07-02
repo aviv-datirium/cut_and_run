@@ -77,39 +77,19 @@ RUN apt-get update && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
+RUN mamba create -y -n macs2env python=3.10 \
+    cython numpy wheel setuptools \
+    && mamba clean -a -y
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    python3-dev \
-    git \
-    libatlas-base-dev \
-    libopenblas-dev \
-    liblapack-dev \
-    gfortran && \
-    rm -rf /var/lib/apt/lists/*
-
-# Clone and install MACS2 v2.2.9.1 from source
-RUN git clone --branch v2.2.9.1 --depth 1 https://github.com/macs3-project/MACS.git /tmp/macs2 && \
-    /opt/conda/envs/cutrun/bin/python /tmp/macs2/setup.py install && \
+# Clone and install MACS2 from source inside the new env
+RUN git clone --branch v${MACS2_VERSION} --depth 1 https://github.com/macs3-project/MACS.git /tmp/macs2 && \
+    /opt/conda/envs/macs2env/bin/python /tmp/macs2/setup.py install && \
     rm -rf /tmp/macs2
 
-RUN git clone --branch v2.2.9.1 --depth 1 https://github.com/macs3-project/MACS.git /tmp/macs2 && \
-    /opt/conda/envs/cutrun/bin/python /tmp/macs2/setup.py install && \
-    rm -rf /tmp/macs2 && \
-    apt-get remove -y \
-        build-essential \
-        python3-dev \
-        cython3 \
-        git \
-        libatlas-base-dev \
-        libopenblas-dev \
-        liblapack-dev \
-        gfortran && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Add MACS2 env binaries to PATH (place this after cutrun path so it’s available globally)
+
+ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
+ENV PATH=/opt/conda/envs/macs2env/bin:$PATH
 
 # Copy pipeline script
 COPY ./scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
