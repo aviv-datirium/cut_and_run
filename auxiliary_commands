@@ -65,8 +65,6 @@ docker run --rm -it \
   -v /mnt/data/home/aviv/star_indices:/project/star_indices:ro \
   -v /mnt/data/home/aviv/chrom:/project/chrom:ro \
   -v /mnt/data/home/aviv/annotation:/project/annotation:ro \
-  -v /etc/timezone:/etc/timezone:ro \
-  -v /etc/localtime:/etc/localtime:ro \
   --workdir /project \
   --entrypoint /bin/bash \
   cutrun-macs2-core:latest

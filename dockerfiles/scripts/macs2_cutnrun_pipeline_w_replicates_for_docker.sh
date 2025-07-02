@@ -659,8 +659,8 @@ plot_preseq_curves () {
 
   log Preseq Plotting "start"
 
-  # Generate R script
-  cat > "$r_script" <<'EOF'
+# Generate R script
+cat > "$r_script" <<'EOF'
 library(ggplot2)
 library(data.table)
 
@@ -685,6 +685,7 @@ p <- ggplot(all_data, aes(x = total_reads, y = expected_unique, color = sample))
   theme(legend.title = element_blank())
 
 ggsave("preseq/preseq_complexity_curves.pdf", plot = p, width = 8, height = 6)
+ggsave("preseq/preseq_complexity_curves.png", plot = p, width = 8, height = 6, dpi = 300)
 EOF
 
   # Run the R script
