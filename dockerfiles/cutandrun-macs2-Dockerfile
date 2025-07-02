@@ -60,7 +60,8 @@ RUN mamba create -y -n cutrun -c bioconda -c conda-forge \
     picard=${PICARD_VERSION} \
     fastqc=${FASTQC_VERSION} \
     r-base=${R_BASE_VERSION} \
-    r-ggplot2 \
+    r-data.table \
+    r-tidyverse \
     unzip=${UNZIP_VERSION} \
     jq=${JQ_VERSION} \
     parallel && \
