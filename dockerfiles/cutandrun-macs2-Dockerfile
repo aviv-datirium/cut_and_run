@@ -21,7 +21,7 @@
 #  --threads 2
 #########################################################################################################################
 
-FROM mambaorg/micromamba:1.5.7
+FROM mambaorg/micromamba:1.5.10
 
 LABEL maintainer="aviv.de.morgan@datirium.com"
 
