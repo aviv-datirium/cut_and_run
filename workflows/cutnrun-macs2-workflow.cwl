@@ -11,7 +11,7 @@ inputs:
 
 steps:
   run_cutrun:
-    run: tools/cutandrun-macs2.cwl
+    run: ../tools/cutandrun-macs2.cwl      # ← this line changed
     in:
       config_json:         config_json
       fastq_dir:           fastq_dir
