@@ -22,10 +22,11 @@ cat <<'BANNER'
      fastqc_reports/           ⇠   FastQC HTML per FASTQ
      bigwig_bedgraphs/         ⇠   *.bw + (optionally) *.bedgraph
      macs2_peaks/
-        replicate//*.narrowPeak
-        pooled//*.narrowPeak
-        merged/…/*.narrowPeak
+        replicate/*.narrowPeak *.xls *.bed
+        pooled/*.narrowPeak *.xls *.bed
+        merged/*.narrowPeak *.xls *.bed
      annotated_peaks/          ⇠   *.annotated.{bed,tsv}
+     preseq/
      logs/                     ⇠   STAR, Picard, Trim, etc.
 
  MAJOR STEPS
