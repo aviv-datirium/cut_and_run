@@ -6,7 +6,8 @@ class: CommandLineTool
 baseCommand: ["bash", "-c"]
 arguments:
   - |
-    cd /project && bash /usr/local/bin/cutrun.sh /iuFmNh/config_for_docker.json
+    bash /usr/local/bin/cutrun.sh $(inputs.config_json.path)
+
 
 inputs:
   config_json:
