@@ -2,9 +2,11 @@ cwlVersion: v1.2
 class: Workflow
 
 inputs:
-  project_dir: Directory
+  project_dir:
+    type: Directory
     doc: "Your project root (where fastq/, star_indices/, dockerfiles/, etc live)"
-  config_json: File
+  config_json:
+    type: File
     doc: "The JSON config file under dockerfiles/"
 
 steps:
