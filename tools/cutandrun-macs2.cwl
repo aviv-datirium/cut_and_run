@@ -1,55 +1,64 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-doc: |
-  Runs CUT&RUN pipeline inside Docker, staging the entire project directory under `/project`.
-
-baseCommand:
-  - bash
-  - -c
+baseCommand: ["bash", "-c"]
 
 requirements:
-  - class: DockerRequirement
+  DockerRequirement:
+    class: DockerRequirement
     dockerPull: biowardrobe2/cutrun-macs2-core:latest
 
-  - class: InitialWorkDirRequirement
+  InitialWorkDirRequirement:
+    class: InitialWorkDirRequirement
     listing:
-      # Mount entire project tree
-      - entry: $(inputs.project_dir)
-        entryname: project
-      # Stage the JSON inside project
       - entry: $(inputs.config_json)
-        entryname: project/config_for_docker.json
+        entryname: config_for_docker.json
+      - entry: $(inputs.fastq_dir)
+        entryname: fastq
+      - entry: $(inputs.reference_genome_dir)
+        entryname: star_indices/hg38
+      - entry: $(inputs.ecoli_index_dir)
+        entryname: star_indices/ecoli_canonical
+      - entry: $(inputs.chrom_sizes)
+        entryname: chrom/hg38.chrom.sizes
+      - entry: $(inputs.annotation_genes)
+        entryname: annotation/hg38.refGene.gtf
 
 inputs:
-  project_dir:
-    type: Directory
-    doc: |
-      Your project root containing directories:
-      fastq/, star_indices/, chrom/, annotation/, etc.
-
   config_json:
     type: File
-    doc: |
-      JSON config with relative paths (e.g. "annotation/hg38.refGene.gtf").
+    doc: "Your JSON, with only relative paths (e.g. annotation/hg38.refGene.gtf)"
+  fastq_dir:
+    type: Directory
+  reference_genome_dir:
+    type: Directory
+  ecoli_index_dir:
+    type: Directory
+  chrom_sizes:
+    type: File
+  annotation_genes:
+    type: File
 
 arguments:
   - |
-    # Change into the staged project and invoke the pipeline
-    cd project && bash /usr/local/bin/cutrun.sh config_for_docker.json
+    # run from the CWL‑staged workspace
+    bash /usr/local/bin/cutrun.sh config_for_docker.json
 
 outputs:
   output_dir:
     type: Directory
     outputBinding:
-      glob: project/output_replicates
+      glob: output_replicates
 
   log_stdout:
     type: File
     outputBinding:
-      glob: project/cutrun_stdout.log
+      glob: cutrun_stdout.log
 
   log_stderr:
     type: File
     outputBinding:
-      glob: project/cutrun_stderr.log
+      glob: cutrun_stderr.log
+
+stdout: cutrun_stdout.log
+stderr: cutrun_stderr.log
