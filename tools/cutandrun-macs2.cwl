@@ -3,56 +3,41 @@ class: CommandLineTool
 
 baseCommand: [ bash, -c ]
 
-arguments:
-  - |
-    # run from the CWL‐staged workspace
-    bash /usr/local/bin/cutrun.sh config_for_docker.json
-
 requirements:
-  # pull your image
   DockerRequirement:
     dockerPull: biowardrobe2/cutrun-macs2-core:latest
 
-  # stage *exactly* the layout your JSON expects
   InitialWorkDirRequirement:
     listing:
+      # copy in your JSON (we still need this as a declared File)
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
-      - entry: $(inputs.fastq_dir)
+
+      # copy in the entire fastq tree
+      - entry: fastq/min_msto211h
         entryname: fastq
-      - entry: $(inputs.reference_genome_dir)
+
+      # copy in your STAR indices
+      - entry: star_indices/hg38
         entryname: star_indices/hg38
-      - entry: $(inputs.ecoli_index_dir)
+      - entry: star_indices/ecoli_canonical
         entryname: star_indices/ecoli_canonical
-      - entry: $(inputs.chrom_sizes)
+
+      # copy in chrom sizes & GTF
+      - entry: chrom/hg38.chrom.sizes
         entryname: chrom/hg38.chrom.sizes
-      - entry: $(inputs.annotation_genes)
+      - entry: annotation/hg38.refGene.gtf
         entryname: annotation/hg38.refGene.gtf
+
+arguments:
+  - |
+    # now everything lives under the workdir exactly as your JSON expects:
+    bash /usr/local/bin/cutrun.sh config_for_docker.json
 
 inputs:
   config_json:
     type: File
-    doc: JSON config (now with _relative_ paths)
-
-  fastq_dir:
-    type: Directory
-    doc: FASTQ input tree
-    
-  reference_genome_dir:
-    type: Directory
-    doc: STAR index for hg38
-
-  ecoli_index_dir:
-    type: Directory
-    doc: STAR index for E. coli
-    
-  chrom_sizes:
-    type: File
-    doc: hg38.chrom.sizes
-    
-  annotation_genes:
-    type: File
-    doc: hg38 GTF
+    doc: your JSON (with _relative_ paths: e.g. "annotation/hg38.refGene.gtf")
 
 outputs:
   output_dir:
