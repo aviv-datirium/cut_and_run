@@ -662,38 +662,61 @@ plot_preseq_curves () {
 # Generate R script
 export OUTPUT_DIR="$OUTPUT_DIR" # So the R script can access Sys.getenv("OUTPUT_DIR")
 cat > "$r_script" <<'EOF'
+# Load required libraries
 library(ggplot2)
 library(data.table)
 
+# Function to read and validate a single preseq complexity file
 plot_file <- function(file) {
-  df <- fread(file, skip = 1)
+  # Attempt to read the file, skipping the header line
+  df <- tryCatch({
+    fread(file, skip = 1)
+  }, error = function(e) {
+    stop(paste("ERROR reading", file, ":", e$message))
+  })
+
+  # Ensure the file has exactly 4 columns
+  if (ncol(df) != 4) {
+    stop(paste("ERROR:", file, "does not have exactly 4 columns (has", ncol(df), ")"))
+  }
+
+  # Assign standard column names
+  setnames(df, c("total_reads", "expected_unique", "ci_lower", "ci_upper"))
+
+  # Extract sample name from file name
   df[, sample := gsub("_complexity\\.txt$", "", basename(file))]
-  setnames(df, c("total_reads", "expected_unique", "ci_lower", "ci_upper", "sample"))
+
   return(df)
 }
 
-# Use OUTPUT_DIR from env or default to "."
-output_dir <- Sys.getenv("OUTPUT_DIR", unset = ".")
-preseq_dir <- file.path(output_dir, "preseq")
+# Define the directory containing the preseq output files
+preseq_dir <- file.path(Sys.getenv("OUTPUT_DIR", unset = "."), "preseq")
 
+# Find all complexity output files
 files <- list.files(preseq_dir, pattern = "_complexity\\.txt$", full.names = TRUE)
-all_data <- rbindlist(lapply(files, plot_file))
 
-# Plot
+# Stop if no files found
+if (length(files) == 0) {
+  stop("No _complexity.txt files found in 'preseq' directory: ", preseq_dir)
+}
+
+# Read and combine all complexity files into one data table
+all_data <- rbindlist(lapply(files, plot_file), use.names = TRUE, fill = TRUE)
+
+# Generate the plot
 p <- ggplot(all_data, aes(x = total_reads, y = expected_unique, color = sample)) +
   geom_line(linewidth = 1) +
   theme_minimal() +
-  labs(title = "Preseq Library Complexity Projection",
-       x = "Total Reads Sequenced",
-       y = "Expected Unique Reads") +
+  labs(
+    title = "Preseq Library Complexity Projection",
+    x = "Total Reads Sequenced",
+    y = "Expected Unique Reads"
+  ) +
   theme(legend.title = element_blank())
 
-# Save both PDF and PNG
-ggsave(filename = file.path(preseq_dir, "preseq_complexity_curves.pdf"),
-       plot = p, width = 8, height = 6)
-
-ggsave(filename = file.path(preseq_dir, "preseq_complexity_curves.png"),
-       plot = p, width = 8, height = 6, dpi = 300)
+# Save the plot as PDF and PNG
+ggsave(filename = file.path(preseq_dir, "preseq_complexity_curves.pdf"), plot = p, width = 8, height = 6)
+ggsave(filename = file.path(preseq_dir, "preseq_complexity_curves.png"), plot = p, width = 8, height = 6, dpi = 300)
 EOF
 
   # Run the R script
