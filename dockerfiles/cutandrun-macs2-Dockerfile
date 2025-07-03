@@ -89,7 +89,7 @@ ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/macs2/bin:/opt/conda/envs/pr
 RUN echo "conda activate cutrun" >> /root/.bashrc
 
 # Copy pipeline + entrypoint
-COPY ./scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
+COPY scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
 COPY docker_entrypoint.sh /usr/local/bin/docker_entrypoint.sh
 RUN chmod +x /usr/local/bin/cutrun.sh /usr/local/bin/docker_entrypoint.sh
 
