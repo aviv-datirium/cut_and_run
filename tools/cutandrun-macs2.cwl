@@ -1,78 +1,48 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-# we will shell out to bash -c "...", so use bash -c as our base
-baseCommand: [ bash, -c ]
+# We shell out via bash -c, pointing at the already‐inside‐container cutrun.sh.
+baseCommand:
+  - bash
+  - -c
+  - bash /usr/local/bin/cutrun.sh config_for_docker.json
 
 requirements:
-  # 1) Docker image
+  # Use your Docker image
   - class: DockerRequirement
     dockerPull: biowardrobe2/cutrun-macs2-core:latest
 
-  # 2) we copy the config.json into the container as config_for_docker.json
+  # Copy in the entire project_dir *and* the JSON as config_for_docker.json
   - class: InitialWorkDirRequirement
     listing:
+      # this will replicate your cut_and_run/ tree as the CWL working dir
+      - entry: $(inputs.project_dir)
+        entryname: .
+      # and slap your config into the same place
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
 
-  # 3) allow JS expressions in `$(...)`
-  - class: InlineJavascriptRequirement
-
 inputs:
-  # 1) mount your whole project (so that relative paths in the JSON work)
   project_dir:
     type: Directory
-    inputBinding:
-      position: 1
-    doc: Root of your repository (contains fastq/, star_indices/, etc.)
-
-  # 2) the config JSON itself
+    doc: |
+      The root of your repository (contains fastq/, star_indices/, annotation/, etc.)
   config_json:
     type: File
-    inputBinding:
-      position: 2
-    doc: Your CWL‐fed config file
-
-  # these are “dummy” inputs—just so CWL knows to mount them—but note we do
-  # *not* pass them on the command line, we rely on the JSON paths instead
-  fastq_dir:
-    type: Directory
-    doc: Mounted so cutrun.sh can read FASTQs
-  reference_genome_dir:
-    type: Directory
-    doc: Mounted so cutrun.sh can read STAR index
-  ecoli_index_dir:
-    type: Directory
-    doc: Mounted so cutrun.sh can read spike‐in index
-  chrom_sizes:
-    type: File
-    doc: Mounted so cutrun.sh can read chrom sizes
-  annotation_genes:
-    type: File
-    doc: Mounted so cutrun.sh can read GTF
-
-arguments:
-  # cd into your project root, then call cutrun.sh on the staged
-  # config (always named config_for_docker.json)
-  - |
-    cd "$(inputs.project_dir.path)" && \
-    bash /usr/local/bin/cutrun.sh config_for_docker.json
+    doc: |
+      Your JSON‐pipeline config; will be staged as `config_for_docker.json`
 
 outputs:
   output_dir:
     type: Directory
     outputBinding:
       glob: output_replicates
-
+    doc: The directory tree your pipeline writes (fastqc_reports/, macs2_peaks/, …)
   log_stdout:
     type: File
     outputBinding:
       glob: cutrun_stdout.log
-
   log_stderr:
     type: File
     outputBinding:
       glob: cutrun_stderr.log
-
-stdout: cutrun_stdout.log
-stderr: cutrun_stderr.log

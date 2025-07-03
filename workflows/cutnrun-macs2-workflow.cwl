@@ -4,18 +4,7 @@ class: Workflow
 inputs:
   project_dir:
     type: Directory
-    doc: Root of your repo (so that paths in the JSON resolve)
   config_json:
-    type: File
-  fastq_dir:
-    type: Directory
-  reference_genome_dir:
-    type: Directory
-  ecoli_index_dir:
-    type: Directory
-  chrom_sizes:
-    type: File
-  annotation_genes:
     type: File
 
 steps:
@@ -24,11 +13,6 @@ steps:
     in:
       project_dir: project_dir
       config_json: config_json
-      fastq_dir: fastq_dir
-      reference_genome_dir: reference_genome_dir
-      ecoli_index_dir: ecoli_index_dir
-      chrom_sizes: chrom_sizes
-      annotation_genes: annotation_genes
     out: [ output_dir, log_stdout, log_stderr ]
 
 outputs:
