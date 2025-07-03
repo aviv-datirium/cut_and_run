@@ -1,13 +1,21 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
+baseCommand: [ bash, -c ]
+
+arguments:
+  - |
+    # run from the CWL‐staged workspace
+    bash /usr/local/bin/cutrun.sh config_for_docker.json
+
 requirements:
-  - class: DockerRequirement
+  # pull your image
+  DockerRequirement:
     dockerPull: biowardrobe2/cutrun-macs2-core:latest
 
-  - class: InitialWorkDirRequirement
+  # stage *exactly* the layout your JSON expects
+  InitialWorkDirRequirement:
     listing:
-      # copy only the files and dirs you actually need
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
       - entry: $(inputs.fastq_dir)
@@ -21,31 +29,30 @@ requirements:
       - entry: $(inputs.annotation_genes)
         entryname: annotation/hg38.refGene.gtf
 
-baseCommand: ["bash", "-c"]
-arguments:
-  - |
-    bash /usr/local/bin/cutrun.sh config_for_docker.json \
-      > cutrun_stdout.log 2> cutrun_stderr.log
-
 inputs:
   config_json:
     type: File
-    doc: your docker-ready JSON
+    doc: JSON config (now with _relative_ paths)
 
   fastq_dir:
     type: Directory
-
+    doc: FASTQ input tree
+    
   reference_genome_dir:
     type: Directory
+    doc: STAR index for hg38
 
   ecoli_index_dir:
     type: Directory
-
+    doc: STAR index for E. coli
+    
   chrom_sizes:
     type: File
-
+    doc: hg38.chrom.sizes
+    
   annotation_genes:
     type: File
+    doc: hg38 GTF
 
 outputs:
   output_dir:
@@ -62,3 +69,6 @@ outputs:
     type: File
     outputBinding:
       glob: cutrun_stderr.log
+
+stdout: cutrun_stdout.log
+stderr: cutrun_stderr.log
