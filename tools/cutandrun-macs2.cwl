@@ -1,33 +1,16 @@
-# cutandrun-macs2.cwl — wraps the Dockerized bash CUT&RUN pipeline as a CWL CommandLineTool
-
 cwlVersion: v1.2
 class: CommandLineTool
 
-dockerRequirement:
-  dockerPull: biowardrobe2/cutrun-macs2-core:latest
-
-requirements:
-  InlineJavascriptRequirement: {}
-  InitialWorkDirRequirement:
-    listing:
-      - entry: $(inputs.config_json)
-        entryname: config_for_docker.json
-
 baseCommand: ["bash", "-c"]
 arguments:
-  - position: 0
-    valueFrom: |
-      cd "$(inputs.project_dir.path)" && \
-      bash /usr/local/bin/cutrun.sh "$(inputs.config_json.path)"
+  - bash /usr/local/bin/cutrun.sh $(inputs.config_json.path)
 
 inputs:
-  project_dir:
-    type: Directory
-    doc: Root of the CUT&RUN project (contains fastq/, star_indices/, etc.)
-
   config_json:
     type: File
-    doc: Path to the JSON config file (mounted in project_dir)
+    inputBinding:
+      position: 1
+    doc: Path to the JSON config file
 
   fastq_dir:
     type: Directory
@@ -70,3 +53,17 @@ outputs:
 
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
+
+requirements:
+  # Pull and run inside your image
+  - class: DockerRequirement
+    dockerPull: biowardrobe2/cutrun-macs2-core:latest
+
+  # Let us write out the JSON under the right name
+  - class: InitialWorkDirRequirement
+    listing:
+      - entry: $(inputs.config_json)
+        entryname: config_for_docker.json
+
+  # Enable JS expressions in valueFrom
+  - class: InlineJavascriptRequirement
