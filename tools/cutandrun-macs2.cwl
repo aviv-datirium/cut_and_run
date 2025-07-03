@@ -1,41 +1,54 @@
-# cutrun.cwl — wraps the Dockerized bash CUT&RUN pipeline as a CWL CommandLineTool
+# cutandrun-macs2.cwl — wraps the Dockerized bash CUT&RUN pipeline as a CWL CommandLineTool
 
 cwlVersion: v1.2
 class: CommandLineTool
 
+dockerRequirement:
+  dockerPull: biowardrobe2/cutrun-macs2-core:latest
+
+requirements:
+  InlineJavascriptRequirement: {}
+  InitialWorkDirRequirement:
+    listing:
+      - entry: $(inputs.config_json)
+        entryname: config_for_docker.json
+
 baseCommand: ["bash", "-c"]
 arguments:
-  - |
-    bash /usr/local/bin/cutrun.sh $(inputs.config_json.path)
-
+  - position: 0
+    valueFrom: |
+      cd "$(inputs.project_dir.path)" && \
+      bash /usr/local/bin/cutrun.sh "$(inputs.config_json.path)"
 
 inputs:
+  project_dir:
+    type: Directory
+    doc: Root of the CUT&RUN project (contains fastq/, star_indices/, etc.)
+
   config_json:
     type: File
-    inputBinding:
-      position: 1
-    doc: Path to the JSON config file
+    doc: Path to the JSON config file (mounted in project_dir)
 
   fastq_dir:
     type: Directory
     doc: Directory containing FASTQ files
-    
+
   reference_genome_dir:
     type: Directory
     doc: STAR genome index directory
-    
+
   ecoli_index_dir:
     type: Directory
     doc: E. coli STAR index directory
-    
+
   chrom_sizes:
     type: File
     doc: Chromosome sizes file
-    
+
   annotation_genes:
     type: File
     doc: Gene annotation GTF file
-    
+
 outputs:
   output_dir:
     type: Directory
@@ -57,14 +70,3 @@ outputs:
 
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
-
-hints:
-  DockerRequirement:
-    dockerPull: biowardrobe2/cutrun-macs2-core:latest  # <-- update tag if rebuilt
-
-requirements:
-  InlineJavascriptRequirement: {}
-  InitialWorkDirRequirement:
-    listing:
-      - entry: $(inputs.config_json)
-        entryname: config_for_docker.json

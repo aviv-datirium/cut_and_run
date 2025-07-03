@@ -33,4 +33,3 @@ steps:
       reference_genome_dir: reference_genome_dir
       fastq_dir: fastq_dir
     out: [output_dir, log_stdout, log_stderr]
-
