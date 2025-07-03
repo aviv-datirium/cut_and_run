@@ -1,61 +1,73 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-baseCommand: ["/bin/bash","-c"]
+baseCommand: ["bash", "-c"]
 arguments:
   - |
-    cd $(inputs.project_dir.path) && bash /usr/local/bin/cutrun.sh $(inputs.config_json.path)
-
-requirements:
-  DockerRequirement:
-    dockerPull: biowardrobe2/cutrun-macs2-core:latest
-  InlineJavascriptRequirement: {}
-  InitialWorkDirRequirement:
-    listing:
-      - entry: $(inputs.config_json)
-        entryname: config_for_docker.json
+    # change into the project root and then run the pipeline
+    cd "$(inputs.project_dir.path)" && bash /usr/local/bin/cutrun.sh "$(inputs.config_json.path)"
 
 inputs:
   project_dir:
     type: Directory
-    doc: "Path to project root containing fastq/, star_indices/, dockerfiles/, etc."
+    inputBinding:
+      position: 1
+    doc: Path to the root of your project (where config and data live)
+
   config_json:
     type: File
     inputBinding:
-      position: 1
-    doc: "JSON config file for pipeline (dockerfiles/config_for_macs2_cwl.json)"
+      position: 2
+    doc: Path to the JSON config file for the pipeline
+
   fastq_dir:
     type: Directory
-    doc: "Staged FASTQ directory"
+    doc: Directory containing FASTQ files
+
   reference_genome_dir:
     type: Directory
-    doc: "STAR host genome index directory"
+    doc: STAR genome index directory
+
   ecoli_index_dir:
     type: Directory
-    doc: "STAR E. coli index directory"
+    doc: E. coli STAR index directory
+
   chrom_sizes:
     type: File
-    doc: "Chromosome sizes file"
+    doc: Chromosome sizes file
+
   annotation_genes:
     type: File
-    doc: "Gene annotation GTF file"
+    doc: Gene annotation GTF file
+
+requirements:
+  - DockerRequirement:
+      dockerPull: biowardrobe2/cutrun-macs2-core:latest
+  - InitialWorkDirRequirement:
+      listing:
+        - entry: $(inputs.config_json)
+          entryname: config_for_docker.json
+
+hints: []
 
 outputs:
   output_dir:
     type: Directory
     outputBinding:
       glob: output_replicates
-    doc: "Main output directory (output_replicates/)"
+    doc: The main output directory produced by the pipeline
+
   log_stdout:
     type: File
     outputBinding:
       glob: cutrun_stdout.log
-    doc: "Standard output log"
+    doc: Standard output log from the pipeline
+
   log_stderr:
     type: File
     outputBinding:
       glob: cutrun_stderr.log
-    doc: "Standard error log"
+    doc: Standard error log from the pipeline
 
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log

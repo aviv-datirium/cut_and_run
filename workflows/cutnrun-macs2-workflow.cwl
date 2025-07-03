@@ -2,20 +2,26 @@ cwlVersion: v1.2
 class: Workflow
 
 inputs:
-  project_dir:
+  project_dir: Directory
+  config_json: File
+  fastq_dir: Directory
+  reference_genome_dir: Directory
+  ecoli_index_dir: Directory
+  chrom_sizes: File
+  annotation_genes: File
+
+outputs:
+  cutrun_outputs:
     type: Directory
-  config_json:
+    outputSource: run_cutrun/output_dir
+
+  log_stdout:
     type: File
-  fastq_dir:
-    type: Directory
-  reference_genome_dir:
-    type: Directory
-  ecoli_index_dir:
-    type: Directory
-  chrom_sizes:
+    outputSource: run_cutrun/log_stdout
+
+  log_stderr:
     type: File
-  annotation_genes:
-    type: File
+    outputSource: run_cutrun/log_stderr
 
 steps:
   run_cutrun:
@@ -29,14 +35,3 @@ steps:
       chrom_sizes: chrom_sizes
       annotation_genes: annotation_genes
     out: [output_dir, log_stdout, log_stderr]
-
-outputs:
-  cutrun_outputs:
-    type: Directory
-    outputSource: run_cutrun/output_dir
-  log_stdout:
-    type: File
-    outputSource: run_cutrun/log_stdout
-  log_stderr:
-    type: File
-    outputSource: run_cutrun/log_stderr
