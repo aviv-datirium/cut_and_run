@@ -19,9 +19,11 @@ outputs:
   cutrun_outputs:
     type: Directory
     outputSource: run_cutrun/output_dir
+
   log_stdout:
     type: File
     outputSource: run_cutrun/log_stdout
+
   log_stderr:
     type: File
     outputSource: run_cutrun/log_stderr
