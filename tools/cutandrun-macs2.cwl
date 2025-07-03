@@ -3,7 +3,10 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-baseCommand: ["bash", "/usr/local/bin/cutrun.sh"]
+baseCommand: ["bash", "-c"]
+arguments:
+  - |
+    cd /project && bash /usr/local/bin/cutrun.sh /iuFmNh/config_for_docker.json
 
 inputs:
   config_json:

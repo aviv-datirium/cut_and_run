@@ -92,3 +92,18 @@ docker run --rm -it \
   cutrun-macs2-core:latest
 
 bash /pipeline/real_pipeline.sh /project/dockerfiles/config_for_macs2_cwl.json
+
+
+docker run --rm -it \
+  -v /mnt/data/home/aviv/cut_and_run/dockerfiles/scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh:/tmp/real_pipeline.sh:ro \
+  -v /mnt/data/home/aviv/cut_and_run:/project \
+  -v /mnt/data/home/aviv/fastq:/project/fastq:ro \
+  -v /mnt/data/home/aviv/star_indices:/project/star_indices:ro \
+  -v /mnt/data/home/aviv/chrom:/project/chrom:ro \
+  -v /mnt/data/home/aviv/annotation:/project/annotation:ro \
+  --workdir /project \
+  --entrypoint /bin/bash \
+  cutrun-macs2-core:latest
+
+bash /tmp/real_pipeline.sh /project/dockerfiles/config_for_macs2_cwl.json
+
