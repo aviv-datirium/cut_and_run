@@ -1,56 +1,55 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
+doc: |
+  Runs CUT&RUN pipeline inside Docker, staging the entire project directory under `/project`.
+
 baseCommand:
   - bash
   - -c
 
 requirements:
-  DockerRequirement:
-    class: DockerRequirement
+  - class: DockerRequirement
     dockerPull: biowardrobe2/cutrun-macs2-core:latest
 
-  InitialWorkDirRequirement:
-    class: InitialWorkDirRequirement
+  - class: InitialWorkDirRequirement
     listing:
+      # Mount entire project tree
+      - entry: $(inputs.project_dir)
+        entryname: project
+      # Stage the JSON inside project
       - entry: $(inputs.config_json)
-        entryname: config_for_docker.json
-      - entry: fastq/min_msto211h
-        entryname: fastq
-      - entry: star_indices/hg38
-        entryname: star_indices/hg38
-      - entry: star_indices/ecoli_canonical
-        entryname: star_indices/ecoli_canonical
-      - entry: chrom/hg38.chrom.sizes
-        entryname: chrom/hg38.chrom.sizes
-      - entry: annotation/hg38.refGene.gtf
-        entryname: annotation/hg38.refGene.gtf
-
-arguments:
-  # after staging everything exactly where your JSON expects it...
-  - |
-    bash /usr/local/bin/cutrun.sh config_for_docker.json
+        entryname: project/config_for_docker.json
 
 inputs:
+  project_dir:
+    type: Directory
+    doc: |
+      Your project root containing directories:
+      fastq/, star_indices/, chrom/, annotation/, etc.
+
   config_json:
     type: File
-    doc: "Your JSON, with only relative paths (e.g. annotation/hg38.refGene.gtf)"
+    doc: |
+      JSON config with relative paths (e.g. "annotation/hg38.refGene.gtf").
+
+arguments:
+  - |
+    # Change into the staged project and invoke the pipeline
+    cd project && bash /usr/local/bin/cutrun.sh config_for_docker.json
 
 outputs:
   output_dir:
     type: Directory
     outputBinding:
-      glob: output_replicates
+      glob: project/output_replicates
 
   log_stdout:
     type: File
     outputBinding:
-      glob: cutrun_stdout.log
+      glob: project/cutrun_stdout.log
 
   log_stderr:
     type: File
     outputBinding:
-      glob: cutrun_stderr.log
-
-stdout: cutrun_stdout.log
-stderr: cutrun_stderr.log
+      glob: project/cutrun_stderr.log
