@@ -7,6 +7,7 @@ requirements:
 
   - class: InitialWorkDirRequirement
     listing:
+      # copy only the files and dirs you actually need
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
       - entry: $(inputs.fastq_dir)
@@ -29,6 +30,7 @@ arguments:
 inputs:
   config_json:
     type: File
+    doc: your docker-ready JSON
 
   fastq_dir:
     type: Directory
