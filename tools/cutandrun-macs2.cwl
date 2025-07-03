@@ -1,73 +1,78 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-baseCommand: ["bash", "-c"]
-arguments:
-  - |
-    # change into the project root and then run the pipeline
-    cd "$(inputs.project_dir.path)" && bash /usr/local/bin/cutrun.sh "$(inputs.config_json.path)"
+# we will shell out to bash -c "...", so use bash -c as our base
+baseCommand: [ bash, -c ]
+
+requirements:
+  # 1) Docker image
+  - class: DockerRequirement
+    dockerPull: biowardrobe2/cutrun-macs2-core:latest
+
+  # 2) we copy the config.json into the container as config_for_docker.json
+  - class: InitialWorkDirRequirement
+    listing:
+      - entry: $(inputs.config_json)
+        entryname: config_for_docker.json
+
+  # 3) allow JS expressions in `$(...)`
+  - class: InlineJavascriptRequirement
 
 inputs:
+  # 1) mount your whole project (so that relative paths in the JSON work)
   project_dir:
     type: Directory
     inputBinding:
       position: 1
-    doc: Path to the root of your project (where config and data live)
+    doc: Root of your repository (contains fastq/, star_indices/, etc.)
 
+  # 2) the config JSON itself
   config_json:
     type: File
     inputBinding:
       position: 2
-    doc: Path to the JSON config file for the pipeline
+    doc: Your CWL‐fed config file
 
+  # these are “dummy” inputs—just so CWL knows to mount them—but note we do
+  # *not* pass them on the command line, we rely on the JSON paths instead
   fastq_dir:
     type: Directory
-    doc: Directory containing FASTQ files
-
+    doc: Mounted so cutrun.sh can read FASTQs
   reference_genome_dir:
     type: Directory
-    doc: STAR genome index directory
-
+    doc: Mounted so cutrun.sh can read STAR index
   ecoli_index_dir:
     type: Directory
-    doc: E. coli STAR index directory
-
+    doc: Mounted so cutrun.sh can read spike‐in index
   chrom_sizes:
     type: File
-    doc: Chromosome sizes file
-
+    doc: Mounted so cutrun.sh can read chrom sizes
   annotation_genes:
     type: File
-    doc: Gene annotation GTF file
+    doc: Mounted so cutrun.sh can read GTF
 
-requirements:
-  - DockerRequirement:
-      dockerPull: biowardrobe2/cutrun-macs2-core:latest
-  - InitialWorkDirRequirement:
-      listing:
-        - entry: $(inputs.config_json)
-          entryname: config_for_docker.json
-
-hints: []
+arguments:
+  # cd into your project root, then call cutrun.sh on the staged
+  # config (always named config_for_docker.json)
+  - |
+    cd "$(inputs.project_dir.path)" && \
+    bash /usr/local/bin/cutrun.sh config_for_docker.json
 
 outputs:
   output_dir:
     type: Directory
     outputBinding:
       glob: output_replicates
-    doc: The main output directory produced by the pipeline
 
   log_stdout:
     type: File
     outputBinding:
       glob: cutrun_stdout.log
-    doc: Standard output log from the pipeline
 
   log_stderr:
     type: File
     outputBinding:
       glob: cutrun_stderr.log
-    doc: Standard error log from the pipeline
 
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
