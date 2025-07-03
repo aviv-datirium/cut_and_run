@@ -666,39 +666,20 @@ library(ggplot2)
 library(data.table)
 
 plot_file <- function(file) {
-  df <- fread(file, skip=1)
+  df <- fread(file, skip = 1)
   df[, sample := gsub("_complexity\\.txt$", "", basename(file))]
-  setnames(df, c("total_reads", "expected_unique", "sample"))
+  setnames(df, c("total_reads", "expected_unique", "ci_lower", "ci_upper", "sample"))
   return(df)
 }
 
-# Read all preseq outputs
-files <- list.files("preseq", pattern = "_complexity\\.txt$", full.names = TRUE)
+# Use OUTPUT_DIR from env or default to "."
+output_dir <- Sys.getenv("OUTPUT_DIR", unset = ".")
+preseq_dir <- file.path(output_dir, "preseq")
+
+files <- list.files(preseq_dir, pattern = "_complexity\\.txt$", full.names = TRUE)
 all_data <- rbindlist(lapply(files, plot_file))
 
 # Plot
-p <- ggplot(all_data, aes(x = total_reads, y = expected_unique, color = sample)) +
-  geom_line(size = 1) +
-  theme_minimal() +
-  labs(title = "Preseq Library Complexity Projection",
-       x = "Total Reads Sequenced",
-       y = "Expected Unique Reads") +
-  theme(legend.title = element_blank())
-
-library(ggplot2)
-library(data.table)
-
-plot_file <- function(file) {
-  df <- fread(file, skip=1)
-  df[, sample := gsub("_complexity\\.txt$", "", basename(file))]
-  setnames(df, c("total_reads", "expected_unique", "sample"))
-  return(df)
-}
-
-files <- list.files(file.path(Sys.getenv("OUTPUT_DIR"), "preseq"),
-                    pattern = "_complexity\\.txt$", full.names = TRUE)
-all_data <- rbindlist(lapply(files, plot_file))
-
 p <- ggplot(all_data, aes(x = total_reads, y = expected_unique, color = sample)) +
   geom_line(linewidth = 1) +
   theme_minimal() +
@@ -707,10 +688,11 @@ p <- ggplot(all_data, aes(x = total_reads, y = expected_unique, color = sample))
        y = "Expected Unique Reads") +
   theme(legend.title = element_blank())
 
-ggsave(filename = file.path(Sys.getenv("OUTPUT_DIR"), "preseq", "preseq_complexity_curves.pdf"),
+# Save both PDF and PNG
+ggsave(filename = file.path(preseq_dir, "preseq_complexity_curves.pdf"),
        plot = p, width = 8, height = 6)
 
-ggsave(filename = file.path(Sys.getenv("OUTPUT_DIR"), "preseq", "preseq_complexity_curves.png"),
+ggsave(filename = file.path(preseq_dir, "preseq_complexity_curves.png"),
        plot = p, width = 8, height = 6, dpi = 300)
 EOF
 

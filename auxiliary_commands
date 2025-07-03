@@ -70,3 +70,10 @@ docker run --rm -it \
   cutrun-macs2-core:latest
 
   --user $(id -u):$(id -g) \
+
+Run preseq plotting (run from dockerfiles):
+docker run --rm -it \
+  -v "$PWD":/project \
+  --workdir /project/output_replicates \
+  cutrun-macs2-core:latest \
+  bash -c "Rscript preseq/plot_preseq.R"
