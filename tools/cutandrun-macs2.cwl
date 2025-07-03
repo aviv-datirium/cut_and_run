@@ -1,69 +1,48 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-baseCommand: ["bash", "-c"]
-arguments:
-  - bash /usr/local/bin/cutrun.sh $(inputs.config_json.path)
-
-inputs:
-  config_json:
-    type: File
-    inputBinding:
-      position: 1
-    doc: Path to the JSON config file
-
-  fastq_dir:
-    type: Directory
-    doc: Directory containing FASTQ files
-
-  reference_genome_dir:
-    type: Directory
-    doc: STAR genome index directory
-
-  ecoli_index_dir:
-    type: Directory
-    doc: E. coli STAR index directory
-
-  chrom_sizes:
-    type: File
-    doc: Chromosome sizes file
-
-  annotation_genes:
-    type: File
-    doc: Gene annotation GTF file
-
-outputs:
-  output_dir:
-    type: Directory
-    outputBinding:
-      glob: output_replicates
-    doc: The main output directory produced by the pipeline
-
-  log_stdout:
-    type: File
-    outputBinding:
-      glob: cutrun_stdout.log
-    doc: Standard output log from the pipeline
-
-  log_stderr:
-    type: File
-    outputBinding:
-      glob: cutrun_stderr.log
-    doc: Standard error log from the pipeline
-
-stdout: cutrun_stdout.log
-stderr: cutrun_stderr.log
-
+baseCommand: ["bash","-c"]
 requirements:
-  # Pull and run inside your image
-  - class: DockerRequirement
+  DockerRequirement:
     dockerPull: biowardrobe2/cutrun-macs2-core:latest
 
-  # Let us write out the JSON under the right name
-  - class: InitialWorkDirRequirement
+inputs:
+  # Mount your entire project here
+  project_dir:
+    type: Directory
+    doc: "Your project root containing fastq/, star_indices/, dockerfiles/, etc."
+
+  # Just the one config file
+  config_json:
+    type: File
+    doc: "The config_for_macs2_cwl.json to drive cutrun.sh"
+    # stage it into the workdir as config_for_docker.json
+requirements:
+  InitialWorkDirRequirement:
     listing:
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
 
-  # Enable JS expressions in valueFrom
-  - class: InlineJavascriptRequirement
+outputs:
+  # after the run, all of your outputs live under project/output_replicates
+  output_dir:
+    type: Directory
+    outputBinding:
+      glob: project/output_replicates
+  log_stdout:
+    type: File
+    outputBinding:
+      glob: cutrun_stdout.log
+  log_stderr:
+    type: File
+    outputBinding:
+      glob: cutrun_stderr.log
+
+stdout: cutrun_stdout.log
+stderr: cutrun_stderr.log
+
+arguments:
+  - |
+    # cd into the mounted project, then run the pipeline
+    cd "$(inputs.project_dir.path)" && \
+    bash /usr/local/bin/cutrun.sh config_for_docker.json
