@@ -7,10 +7,8 @@ requirements:
 
   - class: InitialWorkDirRequirement
     listing:
-      # bring in your JSON under its own name
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
-      # stage each Directory or File exactly where your JSON expects it
       - entry: $(inputs.fastq_dir)
         entryname: fastq
       - entry: $(inputs.reference_genome_dir)
@@ -25,34 +23,27 @@ requirements:
 baseCommand: ["bash", "-c"]
 arguments:
   - |
-    # run pipeline in the CWL scratch dir
     bash /usr/local/bin/cutrun.sh config_for_docker.json \
       > cutrun_stdout.log 2> cutrun_stderr.log
 
 inputs:
   config_json:
     type: File
-    doc: your JSON config for the pipeline
 
   fastq_dir:
     type: Directory
-    doc: fastq/min_msto211h
 
   reference_genome_dir:
     type: Directory
-    doc: star_indices/hg38
 
   ecoli_index_dir:
     type: Directory
-    doc: star_indices/ecoli_canonical
 
   chrom_sizes:
     type: File
-    doc: chrom/hg38.chrom.sizes
 
   annotation_genes:
     type: File
-    doc: annotation/hg38.refGene.gtf
 
 outputs:
   output_dir:
