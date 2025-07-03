@@ -64,18 +64,3 @@ requirements:
     listing:
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
-
-      - entry: $(inputs.fastq_dir)
-        entryname: inputs/fastq/min_msto211h
-
-      - entry: $(inputs.reference_genome_dir)
-        entryname: inputs/star_indices/hg38
-
-      - entry: $(inputs.ecoli_index_dir)
-        entryname: inputs/star_indices/ecoli_canonical
-
-      - entry: $(inputs.chrom_sizes)
-        entryname: inputs/chrom/hg38.chrom.sizes
-
-      - entry: $(inputs.annotation_genes)
-        entryname: inputs/annotation/hg38.refGene.gtf
