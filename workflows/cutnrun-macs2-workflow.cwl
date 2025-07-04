@@ -1,32 +1,14 @@
+# workflows/cutnrun-macs2-workflow.cwl
 cwlVersion: v1.2
 class: Workflow
 
 inputs:
-  config_json:
-    type: File
-    doc: |
-      Your JSON config (with relative paths inside the staged workspace,
-      e.g. "fastq/min_msto211h/…", etc.)
-
-  fastq_dir:
-    type: Directory
-    doc: "Directory of FASTQ files (e.g. fastq/min_msto211h)"
-
-  reference_genome_dir:
-    type: Directory
-    doc: "STAR index for the host genome (e.g. star_indices/hg38)"
-
-  ecoli_index_dir:
-    type: Directory
-    doc: "STAR index for the E. coli spike-in (e.g. star_indices/ecoli_canonical)"
-
-  chrom_sizes:
-    type: File
-    doc: "Chromosome sizes file (e.g. chrom/hg38.chrom.sizes)"
-
-  annotation_genes:
-    type: File
-    doc: "Gene annotation GTF (e.g. annotation/hg38.refGene.gtf)"
+  config_json:          File
+  fastq_dir:            Directory
+  reference_genome_dir: Directory
+  ecoli_index_dir:      Directory
+  chrom_sizes:          File
+  annotation_genes:     File
 
 steps:
   run_cutrun:
