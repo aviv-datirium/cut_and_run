@@ -84,7 +84,7 @@ $PATH
 RUN echo "conda activate cutrun" >> /root/.bashrc
 
 # Copy pipeline script + entrypoint
-COPY seacr_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
+COPY scripts/seacr_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
 COPY docker_entrypoint_seacr.sh                  /usr/local/bin/docker_entrypoint.sh
 RUN chmod +x /usr/local/bin/cutrun.sh /usr/local/bin/docker_entrypoint.sh
 
