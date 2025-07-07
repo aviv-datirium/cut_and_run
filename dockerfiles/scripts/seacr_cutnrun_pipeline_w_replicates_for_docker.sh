@@ -437,96 +437,83 @@ fi
 ###############################################################################
 # 12  SEACR PEAKS: replicate, merged, pooled                                  #
 ###############################################################################
-# ── A. create bedGraphs *on-demand* so SEACR always has its inputs ──────────
-make_bg () {                       # $1 = out.bedgraph   $2 = input.bam
-    [[ -s $1 ]] || bedtools genomecov -bg -ibam "$2" -pc \
-                    | sort -k1,1 -k2,2n > "$1"
-}
+# Build a “pooled control” bedgraph if any controls exist
+if (( ${#CTRL_NAMES[@]} )); then
+  mkdir -p "$BW_DIR"
+  make_bg "$BW_DIR/control_merged.bedgraph" "$CTRL_MRG"
+  POOLED_C_BG="$BW_DIR/control_merged.bedgraph"
+else
+  unset POOLED_C_BG
+fi
 
-# replicate bedGraphs
-for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
-    make_bg "$BW_DIR/${n}.bedgraph"  "$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-done
-# merged bedGraphs
-make_bg "$BW_DIR/treatment_merged.bedgraph"  "$T_MRG"
-make_bg "$BW_DIR/control_merged.bedgraph"    "$CTRL_MRG"
-
-SEACR_HOME=/tmp/seacr_bin
-mkdir -p "$SEACR_HOME" && chmod 1777 "$SEACR_HOME"
-
-cp  "$(command -v seacr)" "$SEACR_HOME/seacr"
-cp  "$(dirname "$(command -v seacr)")"/SEACR_1.3.R "$SEACR_HOME/"
-chmod +x "$SEACR_HOME/seacr"
-
-export PATH="$SEACR_HOME:$PATH"
-
-# --- hard stop on stale copies ---
-unset SEACR_BIN
-hash  -r
-alias seacr="$SEACR_HOME/seacr"
-
-# helper so scratch files land in SEACR_HOME
-seacr_call() (
-    cd "$SEACR_HOME" || exit 1
-    seacr "$@"
-)
-
-echo "Using seacr at: $(command -v seacr)"
-ls -l "$SEACR_HOME"
-
-# ── A  replicate peaks ───────────────────────────────────────────────────────
-for n in "${TREAT_NAMES[@]}" "${CTRL_NAMES[@]}"; do
-  IN_BG="$BW_DIR/${n}.bedgraph"         # created above if missing
+# ── A  replicate peaks ────────────────────────────────────────────────────────
+for n in "${TREAT_NAMES[@]}"; do
+  IN_BG="$BW_DIR/${n}.bedgraph"
   OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
 
   log SEACR "$n" start
-	seacr_call "$IN_BG" "$SEACR_THRESH" "$SEACR_NORM" "$SEACR_STRICT" "$OUT_BED" \
-    >>"$LOG_DIR/seacr_${n}.log" 2>&1
 
-produced="${OUT_BED}.stringent.bed"        # SEACR’s real output name
-if [[ $? -eq 0 && ( -e $OUT_BED || -e $produced ) ]]; then
-    log SEACR "$n" done
-else
-    log SEACR "$n" FAIL
-fi
+  if [[ -n "$POOLED_C_BG" ]]; then
+    # with control: signal.bg control.bg norm stringency outprefix
+    seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
+      >>"$LOG_DIR/seacr_${n}.log" 2>&1
+
+    # rename the .stringent.bed / .relaxed.bed to .bed
+    for ext in stringent relaxed; do
+      if [[ -e "${OUT_BED%.bed}.${ext}.bed" ]]; then
+        mv "${OUT_BED%.bed}.${ext}.bed" "$OUT_BED"
+        break
+      fi
+    done
+
+  else
+    # no control: signal.bg threshold norm stringency
+    seacr_call "$IN_BG" "$SEACR_THRESH" "$SEACR_NORM" "$SEACR_STRICT" \
+      >>"$LOG_DIR/seacr_${n}.log" 2>&1
+
+    # rename default output
+    mv "${IN_BG%.bedgraph}.${SEACR_STRICT}.bed" "$OUT_BED"
+  fi
+
+  log SEACR "$n" done
 done
 
-# ── B  treatment-merged vs control-merged ───────────────────────────────────
-if [[ -s $T_MRG && -s $CTRL_MRG ]]; then
+# ── B  treatment-merged vs control-merged ────────────────────────────────────
+if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
   MERGED_T_BG="$BW_DIR/treatment_merged.bedgraph"
   MERGED_C_BG="$BW_DIR/control_merged.bedgraph"
-  OUT_BED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
+  OUT_MERGED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
 
-  log SEACR treatmentMerged_vs_controlMerged start
-	seacr_call "$MERGED_T_BG" "$MERGED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "$OUT_BED" \
+  log SEACR merged start
+  seacr_call "$MERGED_T_BG" "$MERGED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_MERGED%.bed}" \
     >>"$LOG_DIR/seacr_merged.log" 2>&1
 
-produced="${OUT_BED}.stringent.bed"
-if [[ $? -eq 0 && ( -e $OUT_BED || -e $produced ) ]]; then
-    log SEACR treatmentMerged_vs_controlMerged done
-else
-	log SEACR treatmentMerged_vs_controlMerged FAIL
-	fi
+  for ext in stringent relaxed; do
+    if [[ -e "${OUT_MERGED%.bed}.${ext}.bed" ]]; then
+      mv "${OUT_MERGED%.bed}.${ext}.bed" "$OUT_MERGED"
+      break
+    fi
+  done
+  log SEACR merged done
 fi
 
-# ── C  each replicate vs pooled control ─────────────────────────────────────
-if [[ -s $CTRL_MRG ]]; then
-  POOLED_C_BG="$BW_DIR/control_merged.bedgraph"
-
+# ── C  each replicate vs pooled control ──────────────────────────────────────
+if [[ -n "$POOLED_C_BG" ]]; then
   for n in "${TREAT_NAMES[@]}"; do
     IN_BG="$BW_DIR/${n}.bedgraph"
-    OUT_BED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
+    OUT_POOLED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
 
     log SEACR "${n}_vs_ctrlPooled" start
-	seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "$OUT_BED" \
-	    >>"$LOG_DIR/seacr_${n}.log" 2>&1
-	
-	produced="${OUT_BED}.stringent.bed"
-	if [[ $? -eq 0 && ( -e $OUT_BED || -e $produced ) ]]; then
-	    log SEACR "${n}_vs_ctrlPooled" done
-	else
-	    log SEACR "${n}_vs_ctrlPooled" FAIL
-	fi
+    seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_POOLED%.bed}" \
+      >>"$LOG_DIR/seacr_${n}.log" 2>&1
+
+    for ext in stringent relaxed; do
+      if [[ -e "${OUT_POOLED%.bed}.${ext}.bed" ]]; then
+        mv "${OUT_POOLED%.bed}.${ext}.bed" "$OUT_POOLED"
+        break
+      fi
+    done
+    log SEACR "${n}_vs_ctrlPooled" done
   done
 fi
 
