@@ -107,3 +107,4 @@ docker run --rm -it \
 
 bash /tmp/real_pipeline.sh /project/dockerfiles/config_for_macs2_cwl.json
 
+cd to docker fi

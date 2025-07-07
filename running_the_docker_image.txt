@@ -1,0 +1,47 @@
+cd to dockerfiles, where the config_for_macs2_cwl.json is, and then run:
+
+docker run --rm -it \
+  -v "$PWD":/project \
+  -v /mnt/data/home/aviv/fastq:/project/fastq:ro \
+  -v /mnt/data/home/aviv/star_indices:/project/star_indices:ro \
+  -v /mnt/data/home/aviv/chrom:/project/chrom:ro \
+  -v /mnt/data/home/aviv/annotation:/project/annotation:ro \
+  --workdir /project \
+  cutrun-macs2-core:latest \
+  bash /usr/local/bin/cutrun.sh /project/config_for_macs2_cwl.json
+  
+drwxr-xr-x 10 aviv aviv 4096 Jul  3 19:04 ./
+drwxr-xr-x 18 aviv aviv 4096 Jul  7 13:06 ../
+drwxr-xr-x  6 root root 4096 Jul  7 13:15 alignment_replicates/
+drwxr-xr-x  2 root root 4096 Jul  1 14:52 annotation/
+drwxr-xr-x  2 root root 4096 Jul  1 14:52 chrom/
+-rw-r--r--  1 aviv aviv 1151 Jun 30 13:19 config_for_macs2.json
+-rw-r--r--  1 aviv aviv  957 Jul  3 19:04 config_for_macs2_cwl.json
+-rw-r--r--  1 aviv aviv  960 Jul  3 17:42 config_for_macs2_docker.json
+-rw-r--r--  1 aviv aviv 1340 Jun 29 22:08 config_for_seacr_docker.json
+-rw-r--r--  1 aviv aviv 3098 Jul  3 16:50 cutandrun-macs2-Dockerfile
+-rw-r--r--  1 aviv aviv 2401 Jun 29 22:08 cutandrun-seacr-Dockerfile
+-rwxr-xr-x  1 aviv aviv  282 Jul  3 16:50 docker_entrypoint.sh*
+drwxr-xr-x  2 root root 4096 Jul  1 12:41 fastq/
+-rw-r--r--  1 root root  320 Jul  1 12:06 fastqc_.log
+-rw-r--r--  1 root root  218 Jul  1 12:06 fastqc_parallel.log
+lrwxrwxrwx  1 aviv aviv   57 Jul  1 12:06 macs2_cutnrun_pipeline_w_replicates_for_docker.sh -> scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh*
+drwxr-xr-x  8 root root 4096 Jul  3 17:23 output_replicates/
+-rw-r--r--  1 root root 1361 Jul  1 12:06 pipeline.log
+drwxr-xr-x  3 root root 4096 Jul  3 17:45 project/
+drwxr-xr-x  2 aviv aviv 4096 Jul  2 20:35 scripts/
+drwxr-xr-x  2 root root 4096 Jul  1 14:52 star_indices/
+
+The general command:
+
+docker run --rm -it \
+  -v /full/path/to/config_for_macs2_cwl.json:/project/config_for_docker.json:ro \
+  -v /full/path/to/fastq:/project/fastq:ro \
+  -v /full/path/to/star_indices:/project/star_indices:ro \
+  -v /full/path/to/chrom:/project/chrom:ro \
+  -v /full/path/to/annotation:/project/annotation:ro \
+  -v /full/path/to/output_directory:/project/output_directory \
+  --workdir /project \
+  biowardrobe2/cutrun-macs2-core:latest \
+  bash -c "bash /usr/local/bin/cutrun.sh config_for_docker.json"
+  
