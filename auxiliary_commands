@@ -11,7 +11,7 @@ jq '
   .ecoli_index |= sub("^star_indices/"; "inputs/star_indices/") |
   .chrom_sizes |= sub("^chrom/"; "inputs/chrom/") |
   .annotation_genes |= sub("^annotation/"; "inputs/annotation/")
-' dockerfiles/config_for_macs2_docker.json > dockerfiles/config_for_macs2_cwl.json
+' dockerfiles/config_for_seacr_docker.json > dockerfiles/config_for_seacr_cwl.json
 
 
 from /mnt/data/home/aviv/cut_and_run/dockerfiles run:

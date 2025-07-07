@@ -17,9 +17,9 @@
       }
     ]
   },
-  "alignment_dir": "alignment_replicates",
-  "output_dir": "output_replicates",
-  "log_dir": "output_replicates/logs",
+  "alignment_dir": "alignment_seacr",
+  "output_dir": "output_seacr",
+  "log_dir": "output_seacr/logs",
   "reference_genome": "star_indices/hg38",
   "ecoli_index": "star_indices/ecoli_canonical",
   "chrom_sizes": "chrom/hg38.chrom.sizes",
@@ -30,8 +30,8 @@
   "num_threads": 8,
   "num_parallel_threads": 4,
   "seacr": {
-    "threshold": 0.01,            // numeric, or "0.01"
-    "norm":      "non",           // "norm" or "non"
-    "stringency":"stringent"      // "relaxed" or "stringent"
+    "threshold": 0.01,
+    "norm": "non",
+    "stringency": "stringent"
   }
 }
