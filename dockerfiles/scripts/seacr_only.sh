@@ -4,7 +4,7 @@ set -euo pipefail
 CONFIG=$1   # e.g. config_for_seacr_docker.json
 
 # 0. Load config
-ALIGNMENT_DIR=$(jq -r .alignment_dir       "$CONFIG")
+ALIGNMENT_DIR=$(jq -r .alignment_dir      "$CONFIG")
 OUTPUT_DIR  =$(jq -r .output_dir          "$CONFIG")
 LOG_DIR     =$(jq -r .log_dir             "$CONFIG")
 BW_DIR      =$(jq -r .output_dir "$CONFIG")/bigwig_bedgraphs
