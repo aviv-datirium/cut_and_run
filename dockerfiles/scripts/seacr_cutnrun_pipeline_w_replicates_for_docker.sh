@@ -26,6 +26,7 @@ cat <<'BANNER'
         pooled//*.narrowPeak
         merged/…/*.narrowPeak
      annotated_peaks/          ⇠   *.annotated.{bed,tsv}
+     preseq/
      logs/                     ⇠   STAR, Picard, Trim, etc.
 
  MAJOR STEPS
@@ -41,6 +42,7 @@ cat <<'BANNER'
   8  Spike-in scale factors – host/spike read ratio per replicate
   9  BedGraph + BigWig generation (scaled if factors exist)
  10  Peak-to-gene annotation (bedtools intersect)
+ 11  Preseq complexity estimation and plotting
 
  USAGE
  ─────
@@ -52,44 +54,49 @@ cat <<'BANNER'
  ────────────
    bash ≥4 · samtools ≥1.10 · bedtools ≥2.28 · STAR ≥2.7 · Java ≥17
    Trim Galore ≥0.6.10 · Picard ≥2.18 · SEACR ≥1.3 · cutadapt ≥4.1
-   R 4.x (for optional DiffBind) · GNU coreutils/awk · PIGZ · GNU Parallel
+   R 4.x (for plotting) · GNU coreutils/awk · PIGZ · GNU Parallel
 
 BANNER
 
 ###############################################################################
 # 0  CONFIG + PATHS                                                           #
 ###############################################################################
-CONFIG_FILE="${1:-/mnt/data/home/aviv/cut_and_run/dockerfiles/config_for_docker.json}"
-shift || true          # remove $1 so "$@" stays clean for future use
+# 0. Make script directory discoverable & cd into it
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR" || exit 1
 
-ALIGNMENT_DIR=$(jq -r '.alignment_dir'  "$CONFIG_FILE")
-OUTPUT_DIR=$(   jq -r '.output_dir'     "$CONFIG_FILE")
-LOG_DIR=$(      jq -r '.log_dir'        "$CONFIG_FILE")
+# 1. Locate the config (default to config_for_docker.json in this dir)
+CONFIG_FILE="${1:-config_for_docker.json}"
+shift || true
 
-REFERENCE_GENOME=$(jq -r '.reference_genome'   "$CONFIG_FILE")
-ECOLI_INDEX=$(     jq -r '.ecoli_index'        "$CONFIG_FILE")
-ANNOTATION_GENES=$(jq -r '.annotation_genes'   "$CONFIG_FILE")
-CHROM_SIZE=$(      jq -r '.chrom_sizes'        "$CONFIG_FILE")
+# 2. Move into the config’s directory so all jq-paths are relative
+cd "$(dirname "$CONFIG_FILE")" || exit 1
+CONFIG_FILE="$(basename "$CONFIG_FILE")"
+CONFIG_DIR="$(pwd)"
 
-GENOME_SIZE_STRING=$(jq -r '.genome_size'      "$CONFIG_FILE")
+# 3. Read everything through jq, prefixing with CONFIG_DIR
+ALIGNMENT_DIR="$CONFIG_DIR/$(jq -r '.alignment_dir'     "$CONFIG_FILE")"
+OUTPUT_DIR="$CONFIG_DIR/$(jq -r '.output_dir'            "$CONFIG_FILE")"
+LOG_DIR="$CONFIG_DIR/$(jq -r '.log_dir'                 "$CONFIG_FILE")"
+REFERENCE_GENOME="$CONFIG_DIR/$(jq -r '.reference_genome'   "$CONFIG_FILE")"
+ECOLI_INDEX="$CONFIG_DIR/$(jq -r '.ecoli_index'          "$CONFIG_FILE")"
+ANNOTATION_GENES="$CONFIG_DIR/$(jq -r '.annotation_genes'  "$CONFIG_FILE")"
+CHROM_SIZE="$CONFIG_DIR/$(jq -r '.chrom_sizes'           "$CONFIG_FILE")"
+
+GENOME_SIZE_STRING=$(jq -r '.genome_size'       "$CONFIG_FILE")
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' "$CONFIG_FILE")
 FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
-NUM_THREADS=$(jq    -r '.num_threads'          "$CONFIG_FILE")
-NUM_PARALLEL_THREADS=$(jq    -r '.num_parallel_threads'          "$CONFIG_FILE")
+NUM_THREADS=$(jq -r '.num_threads'             "$CONFIG_FILE")
+NUM_PARALLEL_THREADS=$(jq -r '.num_parallel_threads' "$CONFIG_FILE")
 
 TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE"))
 TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE"))
-CTRL_R1=($( jq -r '.samples.control[]?.r1 // empty' "$CONFIG_FILE"))
-CTRL_R2=($( jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
+CTRL_R1=($(jq -r '.samples.control[]?.r1 // empty' "$CONFIG_FILE"))
+CTRL_R2=($(jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
 
-SEACR_THRESH=$(   jq -r '.seacr.threshold'   "$CONFIG_FILE")
-SEACR_NORM=$(     jq -r '.seacr.norm'        "$CONFIG_FILE")
-SEACR_STRICT=$(   jq -r '.seacr.stringency'  "$CONFIG_FILE")
-
-# provide sane defaults when the key is absent or null
-: ${SEACR_THRESH:=0.01}            # numeric threshold
-: ${SEACR_NORM:=non}               # "norm" | "non"
-: ${SEACR_STRICT:=stringent}       # "stringent" | "relaxed"
+SEACR_THRESH=$(jq -r '.seacr.threshold // 0.01'   "$CONFIG_FILE")
+SEACR_NORM=  $(jq -r '.seacr.norm      // "non"' "$CONFIG_FILE")
+SEACR_STRICT=$(jq -r '.seacr.stringency // "stringent"' "$CONFIG_FILE")
 
 ###############################################################################
 # 1  TOOL LOCATIONS                                                           #
@@ -252,162 +259,162 @@ if [[ $RUN_ONLY_BLOCK == "yes" ]]; then
     exit 0
 fi
 
-#~ ###############################################################################
-#~ # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
-#~ ###############################################################################
-#~ log FastQC Conditions "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
+###############################################################################
+# 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
+###############################################################################
+log FastQC Conditions "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}"
 
-#~ ALL_FASTQS=( "${TREAT_R1[@]}" "${TREAT_R2[@]}"
-             #~ "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}" )
+ALL_FASTQS=( "${TREAT_R1[@]}" "${TREAT_R2[@]}"
+             "${CTRL_R1[@]:-}" "${CTRL_R2[@]:-}" )
 
-#~ run_fastqc () {                       # $1 = FASTQ
-  #~ local fq="$1" base
-  #~ base=$(basename "$fq")
-  #~ log FastQC "$base" start
-  #~ if "$FASTQC_BIN" --extract -o "$FASTQC_DIR" "$fq" \
-        #~ >>"$LOG_DIR/fastqc_${base}.log" 2>&1 ; then
-      #~ log FastQC "$base" done
-  #~ else
-      #~ log FastQC "$base" FAIL
-  #~ fi
-#~ }
-#~ export -f run_fastqc log
-#~ export LOG_DIR FASTQC_DIR FASTQC_BIN
+run_fastqc () {                       # $1 = FASTQ
+  local fq="$1" base
+  base=$(basename "$fq")
+  log FastQC "$base" start
+  if "$FASTQC_BIN" --extract -o "$FASTQC_DIR" "$fq" \
+        >>"$LOG_DIR/fastqc_${base}.log" 2>&1 ; then
+      log FastQC "$base" done
+  else
+      log FastQC "$base" FAIL
+  fi
+}
+export -f run_fastqc log
+export LOG_DIR FASTQC_DIR FASTQC_BIN
 
-#~ if command -v parallel >/dev/null 2>&1; then
-  #~ log FastQC ALL "running ${#ALL_FASTQS[@]} files with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  #~ parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           #~ run_fastqc ::: "${ALL_FASTQS[@]}" \
-    #~ 2>&1 | tee -a "$LOG_DIR/fastqc_parallel.log"
-#~ else
-  #~ log FastQC ALL "GNU parallel not found – running serially"
-  #~ for fq in "${ALL_FASTQS[@]}"; do run_fastqc "$fq"; done
-#~ fi
+if command -v parallel >/dev/null 2>&1; then
+  log FastQC ALL "running ${#ALL_FASTQS[@]} files with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           run_fastqc ::: "${ALL_FASTQS[@]}" \
+    2>&1 | tee -a "$LOG_DIR/fastqc_parallel.log"
+else
+  log FastQC ALL "GNU parallel not found – running serially"
+  for fq in "${ALL_FASTQS[@]}"; do run_fastqc "$fq"; done
+fi
 
-#~ ###############################################################################
-#~ # 6  TRIMMING  – per-sample logging (start / done)                            #
-#~ ###############################################################################
-#~ log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_PARALLEL_THREADS)"
+###############################################################################
+# 6  TRIMMING  – per-sample logging (start / done)                            #
+###############################################################################
+log Trim ALL "Treatment=${#TREAT_R1[@]}  Control=${#CTRL_R1[@]}  (Trim Galore! --cores $NUM_PARALLEL_THREADS)"
 
-#~ # ── treatment replicates ────────────────────────────────────────────────────
-#~ for i in "${!TREAT_R1[@]}"; do
-  #~ trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
-#~ done
+# ── treatment replicates ────────────────────────────────────────────────────
+for i in "${!TREAT_R1[@]}"; do
+  trim_one_pair "${TREAT_R1[$i]}" "${TREAT_R2[$i]}" "${TREAT_NAMES[$i]}" || continue
+done
 
-#~ # ── control replicates (if any) ─────────────────────────────────────────────
-#~ for i in "${!CTRL_R1[@]}"; do
-  #~ trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
-#~ done
+# ── control replicates (if any) ─────────────────────────────────────────────
+for i in "${!CTRL_R1[@]}"; do
+  trim_one_pair "${CTRL_R1[$i]}" "${CTRL_R2[$i]}" "${CTRL_NAMES[$i]}" || continue
+done
 
-#~ ###############################################################################
-#~ # 7  HOST GENOME ALIGNMENT                                                    #
-#~ ###############################################################################
-#~ for n in "${SAMPLES[@]}"; do
-  #~ log STARhost "$n" start
-  #~ run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
-           #~ "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
-           #~ "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME" \
-           #~ --outReadsUnmapped Fastx          # ← NEW OPTION
-  #~ log STARhost "$n" done
-#~ done
+###############################################################################
+# 7  HOST GENOME ALIGNMENT                                                    #
+###############################################################################
+for n in "${SAMPLES[@]}"; do
+  log STARhost "$n" start
+  run_star "$ALIGNMENT_DIR/${n}_trimmed_R1.fq.gz" \
+           "$ALIGNMENT_DIR/${n}_trimmed_R2.fq.gz" \
+           "$ALIGNMENT_DIR/${n}." "$REFERENCE_GENOME" \
+           --outReadsUnmapped Fastx          # ← NEW OPTION
+  log STARhost "$n" done
+done
 
-#~ ###############################################################################
-#~ # 8  SPIKE-IN ALIGNMENT (E. coli)                                             #
-#~ ###############################################################################
-#~ for n in "${SAMPLES[@]}"; do
-  #~ # locate mate FASTQs produced in Step 8
-  #~ read -r U1 U2 < <(get_unmapped_mates "$n")
+###############################################################################
+# 8  SPIKE-IN ALIGNMENT (E. coli)                                             #
+###############################################################################
+for n in "${SAMPLES[@]}"; do
+  # locate mate FASTQs produced in Step 8
+  read -r U1 U2 < <(get_unmapped_mates "$n")
 
-  #~ if [[ -z $U1 ]]; then
-    #~ log SPIKE "$n" "skip (no unmapped mates)"
-    #~ continue
-  #~ fi
+  if [[ -z $U1 ]]; then
+    log SPIKE "$n" "skip (no unmapped mates)"
+    continue
+  fi
 
-  #~ log SPIKE "$n" start
-  #~ run_star "$U1" "$U2" \
-           #~ "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX"
-  #~ mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
-     #~ "$SPIKE_DIR/${n}.ecoli.sorted.bam"
-  #~ samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
-  #~ log SPIKE "$n" done
-#~ done
+  log SPIKE "$n" start
+  run_star "$U1" "$U2" \
+           "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX"
+  mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
+     "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
+  log SPIKE "$n" done
+done
 
-#~ ###############################################################################
-#~ # 9  PICARD RG + DEDUP                                                        #
-#~ ###############################################################################
-#~ picard_dedup () {                    # $1 = sample basename
-  #~ local n="$1"
-  #~ log Picard "$n" start
+###############################################################################
+# 9  PICARD RG + DEDUP                                                        #
+###############################################################################
+picard_dedup () {                    # $1 = sample basename
+  local n="$1"
+  log Picard "$n" start
 
-  #~ local inbam="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
-  #~ [[ -s $inbam ]] || { log Picard "$n" "skip (missing BAM)"; return; }
+  local inbam="$ALIGNMENT_DIR/${n}.Aligned.sortedByCoord.out.bam"
+  [[ -s $inbam ]] || { log Picard "$n" "skip (missing BAM)"; return; }
 
-  #~ "$PICARD_CMD" AddOrReplaceReadGroups \
-       #~ I="$inbam" \
-       #~ O="$ALIGNMENT_DIR/${n}.rg.bam" \
-       #~ RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" \
-       #~ VALIDATION_STRINGENCY=LENIENT \
-       #~ >>"$LOG_DIR/picard_${n}.log" 2>&1
+  "$PICARD_CMD" AddOrReplaceReadGroups \
+       I="$inbam" \
+       O="$ALIGNMENT_DIR/${n}.rg.bam" \
+       RGID=1 RGLB=lib RGPL=ILM RGPU=unit RGSM="$n" \
+       VALIDATION_STRINGENCY=LENIENT \
+       >>"$LOG_DIR/picard_${n}.log" 2>&1
 
-  #~ "$PICARD_CMD" MarkDuplicates \
-       #~ I="$ALIGNMENT_DIR/${n}.rg.bam" \
-       #~ O="$ALIGNMENT_DIR/${n}.dedup.bam" \
-       #~ M="$LOG_DIR/${n}.metrics.txt" \
-       #~ REMOVE_DUPLICATES=true \
-       #~ VALIDATION_STRINGENCY=LENIENT \
-       #~ >>"$LOG_DIR/picard_${n}.log" 2>&1
+  "$PICARD_CMD" MarkDuplicates \
+       I="$ALIGNMENT_DIR/${n}.rg.bam" \
+       O="$ALIGNMENT_DIR/${n}.dedup.bam" \
+       M="$LOG_DIR/${n}.metrics.txt" \
+       REMOVE_DUPLICATES=true \
+       VALIDATION_STRINGENCY=LENIENT \
+       >>"$LOG_DIR/picard_${n}.log" 2>&1
 
-  #~ samtools index "$ALIGNMENT_DIR/${n}.dedup.bam" \
-       #~ >>"$LOG_DIR/picard_${n}.log" 2>&1
+  samtools index "$ALIGNMENT_DIR/${n}.dedup.bam" \
+       >>"$LOG_DIR/picard_${n}.log" 2>&1
 
-  #~ log Picard "$n" done
-#~ }
-#~ export -f picard_dedup log
+  log Picard "$n" done
+}
+export -f picard_dedup log
 
-#~ if command -v parallel >/dev/null 2>&1; then
-  #~ log Picard ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  #~ parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           #~ picard_dedup ::: "${SAMPLES[@]}"
-#~ else
-  #~ log Picard ALL "GNU parallel not found – running serially"
-  #~ for n in "${SAMPLES[@]}"; do picard_dedup "$n"; done
-#~ fi
+if command -v parallel >/dev/null 2>&1; then
+  log Picard ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           picard_dedup ::: "${SAMPLES[@]}"
+else
+  log Picard ALL "GNU parallel not found – running serially"
+  for n in "${SAMPLES[@]}"; do picard_dedup "$n"; done
+fi
 
 ###############################################################################
 # 10  FRAGMENT FILTER                                                         #
 ###############################################################################
-# pick the awk condition once
-#~ case $FRAGMENT_SIZE_FILTER in
-  #~ histones)              AWK_CMD='{if($9>=130 && $9<=300 || $1~/^@/)print}';;
-  #~ transcription_factors) AWK_CMD='{if($9<130 || $1~/^@/)print}';;
-  #~ *)                     AWK_CMD='{if($9<1000||$1~/^@/)print}';;
-#~ esac
+#~ # pick the awk condition once
+case $FRAGMENT_SIZE_FILTER in
+  histones)              AWK_CMD='{if($9>=130 && $9<=300 || $1~/^@/)print}';;
+  transcription_factors) AWK_CMD='{if($9<130 || $1~/^@/)print}';;
+  *)                     AWK_CMD='{if($9<1000||$1~/^@/)print}';;
+esac
 
-#~ frag_filter () {                    # $1 = sample basename
-  #~ local n="$1"
-  #~ log FragFilt "$n" start
+frag_filter () {                    # $1 = sample basename
+  local n="$1"
+  log FragFilt "$n" start
 
-  #~ samtools view -h "$ALIGNMENT_DIR/${n}.dedup.bam" \
-    #~ | awk "$AWK_CMD" \
-    #~ | samtools view -bS - \
-        #~ > "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" 2>>"$LOG_DIR/fragfilt_${n}.log"
+  samtools view -h "$ALIGNMENT_DIR/${n}.dedup.bam" \
+    | awk "$AWK_CMD" \
+    | samtools view -bS - \
+        > "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" 2>>"$LOG_DIR/fragfilt_${n}.log"
 
-  #~ samtools index "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" \
-        #~ >>"$LOG_DIR/fragfilt_${n}.log" 2>&1
+  samtools index "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" \
+        >>"$LOG_DIR/fragfilt_${n}.log" 2>&1
 
-  #~ log FragFilt "$n" done
-#~ }
-#~ export -f frag_filter log
-#~ export ALIGNMENT_DIR LOG_DIR NUM_THREADS AWK_CMD
+  log FragFilt "$n" done
+}
+export -f frag_filter log
+export ALIGNMENT_DIR LOG_DIR NUM_THREADS AWK_CMD
 
-#~ if command -v parallel >/dev/null 2>&1; then
-  #~ log FragFilt ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  #~ parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           #~ frag_filter ::: "${SAMPLES[@]}"
-#~ else
-  #~ log FragFilt ALL "GNU parallel not found – running serially"
-  #~ for n in "${SAMPLES[@]}"; do frag_filter "$n"; done
-#~ fi
+if command -v parallel >/dev/null 2>&1; then
+  log FragFilt ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           frag_filter ::: "${SAMPLES[@]}"
+else
+  log FragFilt ALL "GNU parallel not found – running serially"
+  for n in "${SAMPLES[@]}"; do frag_filter "$n"; done
+fi
 
 ###############################################################################
 # 11  MERGE BAMs   (treatment & control groups)                               #
@@ -618,6 +625,79 @@ else
   log Annotate ALL "GNU parallel not found – running serially"
   for np in "${NP_FILES[@]}"; do annotate_one "$np"; done
 fi
+
+###############################################################################
+# 16  PRESEQ COMPLEXITY ESTIMATION                                            #
+###############################################################################
+# create output folder
+PRESEQ_DIR="$OUTPUT_DIR/preseq"
+mkdir -p "$PRESEQ_DIR"
+
+# function to run preseq on one sample
+preseq_one () {                      # $1 = sample name
+  local n="$1"
+  local bam="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  local out="$PRESEQ_DIR/${n}_complexity.txt"
+
+  log Preseq "$n" start
+
+  if [[ ! -s $bam ]]; then
+    log Preseq "$n" skip "missing BAM"
+    return
+  fi
+
+  preseq lc_extrap -B -o "$out" -s 1000000 "$bam" \
+    >>"$LOG_DIR/preseq_${n}.log" 2>&1 \
+    && log Preseq "$n" done \
+    || log Preseq "$n" FAIL
+}
+
+export -f preseq_one log
+export ALIGNMENT_DIR OUTPUT_DIR LOG_DIR
+
+# run in parallel (or fall back to serial)
+if command -v parallel >/dev/null 2>&1; then
+  log Preseq ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           preseq_one ::: "${SAMPLES[@]}"
+else
+  log Preseq ALL "GNU parallel not found – running serially"
+  for n in "${SAMPLES[@]}"; do preseq_one "$n"; done
+fi
+
+###############################################################################
+# 17  PRESEQ PLOTTING                                                         #
+###############################################################################
+plot_preseq_curves () {
+  local r_script="$PRESEQ_DIR/plot_preseq.R"
+  log Preseq Plotting "start"
+
+  cat > "$r_script" <<'EOF'
+library(ggplot2); library(data.table)
+
+plot_file <- function(f) {
+  d <- fread(f, skip=1)
+  if (ncol(d)!=4) stop(paste("Bad columns in",f))
+  setnames(d, c("total_reads","expected_unique","ci_lower","ci_upper"))
+  d[, sample := sub("_complexity\\.txt$","",basename(f))]
+  return(d)
+}
+
+files <- list.files("$(basename "$PRESEQ_DIR")", pattern="_complexity\\.txt$", full.names=TRUE)
+all <- rbindlist(lapply(files, plot_file))
+p <- ggplot(all, aes(total_reads, expected_unique, color=sample)) +
+     geom_line() + theme_minimal() +
+     labs(title="Preseq Complexity", x="Reads", y="Unique Reads")
+ggsave(file.path("$(basename "$PRESEQ_DIR")","preseq_complexity_curves.pdf"), p)
+EOF
+
+  Rscript "$r_script" >>"$LOG_DIR/preseq_plot.log" 2>&1 \
+    && log Preseq Plotting "done: $PRESEQ_DIR/preseq_complexity_curves.pdf" \
+    || log Preseq Plotting "FAIL – see preseq_plot.log"
+}
+
+export PRESEQ_DIR LOG_DIR
+plot_preseq_curves
 
 # PIPELINE COMPLETED ##########################################################
 log DONE ALL "Outputs in $OUTPUT_DIR"

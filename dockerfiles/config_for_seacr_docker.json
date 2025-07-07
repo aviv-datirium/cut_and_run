@@ -1,20 +1,20 @@
 {
   "samples": {
     "treatment": [
-      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST1_S28_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST1_S28_R2_001.fastq.gz"},
-      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST2_S29_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/MYC-MST2_S29_R2_001.fastq.gz"}
+      { "r1": "fastq/min_msto211h/MYC-MST1_S28_R1_001.fastq.gz", "r2": "fastq/min_msto211h/MYC-MST1_S28_R2_001.fastq.gz"},
+      { "r1": "fastq/min_msto211h/MYC-MST2_S29_R1_001.fastq.gz", "r2": "fastq/min_msto211h/MYC-MST2_S29_R2_001.fastq.gz"}
       ],
     "control": [
-      { "r1": "/mnt/data/home/aviv/fastq/min_msto211h/IgG-MSR2_S31_R1_001.fastq.gz", "r2": "/mnt/data/home/aviv/fastq/min_msto211h/IgG-MSR2_S31_R2_001.fastq.gz" }
+      { "r1": "fastq/min_msto211h/IgG-MSR2_S31_R1_001.fastq.gz", "r2": "fastq/min_msto211h/IgG-MSR2_S31_R2_001.fastq.gz" }
     ]
   },
-  "alignment_dir": "/mnt/data/home/aviv/alignment_replicates",
-  "output_dir": "/mnt/data/home/aviv/output_replicates",
-  "log_dir": "/mnt/data/home/aviv/output_replicates/logs",
-  "reference_genome": "/mnt/data/home/aviv/star_indices/hg38",
-  "ecoli_index": "/mnt/data/home/aviv/star_indices/ecoli_canonical",
-  "chrom_sizes": "/mnt/data/home/aviv/chrom/hg38.chrom.sizes",
-  "annotation_genes": "/mnt/data/home/aviv/annotation/hg38.refGene.gtf",
+  "alignment_dir": "alignment_replicates",
+  "output_dir": "output_replicates",
+  "log_dir": "output_replicates/logs",
+  "reference_genome": "star_indices/hg38",
+  "ecoli_index": "star_indices/ecoli_canonical",
+  "chrom_sizes": "chrom/hg38.chrom.sizes",
+  "annotation_genes": "annotation/hg38.refGene.gtf",
   "genome_size": "hs",
   "custom_genome_size": null,
   "fragment_size_filter": "below_1000",

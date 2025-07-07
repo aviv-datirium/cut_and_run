@@ -1,55 +1,92 @@
 ###############################################################################
-# CUT&RUN Core Pipeline — Dockerfile
+# CUT&RUN + SEACR Core Pipeline — Dockerfile
 #
-# QUICK COMMANDS
-# ─────────────────────────────────────────────────────────────────────────────
-# Build locally (from folder containing this Dockerfile):
-#     docker build --no-cache --rm -f cutandrun-seacr-Dockerfile -t cutrun-seacr-core:latest .
+# Build locally:
+#     docker build --no-cache --rm -f cutandrun-seacr-Dockerfile \
+#            -t cutrun-seacr-core:latest .
 #
-# Pull from registry (if image was pushed):
-#     docker pull avivdemorgan/cutrun-seacr-core:latest
+# Push/pull:
+#     docker push biowardrobe2/cutrun-seacr-core:latest
+#     docker pull biowardrobe2/cutrun-seacr-core:latest
 #
-# Run on your own data/config:
-#     docker run --rm -it \
-#       -v /abs/path/to/config.json:/pipeline/config.json \
-#       -v /abs/path/to/data:/data \
-#       cutrun-seacr-core:latest /usr/local/bin/cutrun.sh
-#
-# Smoke-test (shows help):
-#     docker run --rm cutrun-seacr-core:latest /usr/local/bin/cutrun.sh -h
+# Run:
+#     docker run --rm -v /abs/path/to/config.json:/project/config.json \
+#                -v /abs/path/to/data:/project/data \
+#                cutrun-seacr-core:latest /project/config.json
 ###############################################################################
 
-FROM mambaorg/micromamba:1.5.6
+FROM condaforge/miniforge3:25.3.0-3
+
 LABEL maintainer="aviv.de.morgan@datirium.com"
-ENV DEBIAN_FRONTEND=noninteractive
-ENV MAMBA_DOCKERFILE_ACTIVATE=1
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PATH=/opt/conda/bin:$PATH \
+    HOME=/tmp \
+    USER=nobody
 
 WORKDIR /tmp
 
-# ---------- install core bio-tools ------------------------------------------
-RUN micromamba create -y -n cutrun -c conda-forge -c bioconda \
-        python=3.9 \
-        jq samtools=1.18 bedtools=2.31 star=2.7.11b picard=2.27 \
-        trim-galore=0.6.10 cutadapt=4.1 \
-        seacr=1.3 \
-        ucsc-bedgraphtobigwig ucsc-bedclip \
-        parallel pigz fastqc=0.11.9 \
-    && micromamba clean -a -y
+# Tool versions
+ENV TRIMGALORE_VERSION=0.6.10 \
+    SAMTOOLS_VERSION=1.22 \
+    BEDTOOLS_VERSION=2.31.1 \
+    UCSC_APPS_VERSION=481 \
+    R_BASE_VERSION=4.4.3 \
+    UNZIP_VERSION=6.0 \
+    CUTADAPT_VERSION=4.1 \
+    STAR_VERSION=2.7.11b \
+    PICARD_VERSION=2.27 \
+    FASTQC_VERSION=0.12.1 \
+    JQ_VERSION=1.7 \
+    PRESEQ_VERSION=3.2.0 \
+    SEACR_VERSION=1.3 \
+    FILE_VERSION=5.46
 
-# create a simple wrapper so `seacr` is on $PATH and make "seacr" visible on $PATH
-RUN ln -s /opt/conda/envs/cutrun/bin/SEACR_1.3.sh \
-          /opt/conda/envs/cutrun/bin/seacr
+# 1) core pipeline env (fastqc, trim-galore, cutadapt, STAR, picard, bedtools, jq, preseq)
+RUN mamba create -y -n cutrun -c bioconda -c conda-forge \
+      trim-galore=${TRIMGALORE_VERSION} \
+      file=${FILE_VERSION} \
+      samtools=${SAMTOOLS_VERSION} \
+      bedtools=${BEDTOOLS_VERSION} \
+      cutadapt=${CUTADAPT_VERSION} \
+      star=${STAR_VERSION} \
+      picard=${PICARD_VERSION} \
+      fastqc=${FASTQC_VERSION} \
+      r-base=${R_BASE_VERSION} \
+      r-data.table \
+      r-tidyverse \
+      unzip=${UNZIP_VERSION} \
+      jq=${JQ_VERSION} \
+      parallel \
+  && conda clean -afy
 
-USER root
-RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
+# 2) SEACR env
+RUN mamba create -y -n seacr -c bioconda seacr=${SEACR_VERSION} && conda clean -afy
 
-# ---------- copy pipeline script -------------------------------------------
-WORKDIR /pipeline
-COPY --chmod=0755 scripts/seacr_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
-COPY config_for_macs2_cwl.json ./
-COPY docker_entrypoint.sh /usr/local/bin/docker_entrypoint
-RUN chmod +x /usr/local/bin/docker_entrypoint
+# 3) preseq env
+RUN mamba create -y -n preseq -c bioconda preseq=${PRESEQ_VERSION} && conda clean -afy
 
-# ---------- default command (CWL can override) ------------------------------
-ENTRYPOINT ["/usr/local/bin/docker_entrypoint"]
-CMD ["/pipeline/config_for_docker.json"]
+# 4) UCSC genome utilities
+RUN mamba create -y -n ucsc -c bioconda ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} && conda clean -afy
+
+# 5) symlink SEACR script into PATH of cutrun env
+RUN ln -s /opt/conda/envs/seacr/bin/SEACR_1.3.sh \
+          /opt/conda/envs/seacr/bin/seacr
+
+# 6) expose all envs on default PATH
+ENV PATH=/opt/conda/envs/cutrun/bin:\
+/opt/conda/envs/seacr/bin:\
+/opt/conda/envs/preseq/bin:\
+/opt/conda/envs/ucsc/bin:\
+$PATH
+
+# Auto-activate "cutrun" by default
+RUN echo "conda activate cutrun" >> /root/.bashrc
+
+# Copy pipeline script + entrypoint
+COPY seacr_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
+COPY docker_entrypoint_seacr.sh                  /usr/local/bin/docker_entrypoint.sh
+RUN chmod +x /usr/local/bin/cutrun.sh /usr/local/bin/docker_entrypoint.sh
+
+# Use our entrypoint
+ENTRYPOINT ["/usr/local/bin/docker_entrypoint.sh"]
