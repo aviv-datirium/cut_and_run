@@ -191,7 +191,6 @@ run_star () {
               --readFilesIn "$r1" "$r2" \
               --readFilesCommand zcat \
               --outSAMtype BAM SortedByCoordinate \
-              --outReadsUnmapped Fastx \
               --outFileNamePrefix "$prefix" \
               "${extra[@]}" \
               > "$LOG_DIR/$(basename "$prefix")STAR.log" \
@@ -338,7 +337,7 @@ for n in "${SAMPLES[@]}"; do
 
   log SPIKE "$n" start
   run_star "$U1" "$U2" \
-           "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX"
+           "$SPIKE_DIR/${n}_ecoli_" "$ECOLI_INDEX" --outReadsUnmapped Fastx
   mv "$SPIKE_DIR/${n}_ecoli_Aligned.sortedByCoord.out.bam" \
      "$SPIKE_DIR/${n}.ecoli.sorted.bam"
   samtools index "$SPIKE_DIR/${n}.ecoli.sorted.bam"
