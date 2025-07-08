@@ -94,9 +94,10 @@ TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE"))
 CTRL_R1=($(jq -r '.samples.control[]?.r1 // empty' "$CONFIG_FILE"))
 CTRL_R2=($(jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
 
-SEACR_THRESH=$(jq -r '.seacr.threshold // 0.01'   "$CONFIG_FILE")
-SEACR_NORM=  $(jq -r '.seacr.norm      // "non"' "$CONFIG_FILE")
-SEACR_STRICT=$(jq -r '.seacr.stringency // "stringent"' "$CONFIG_FILE")
+SEACR_THRESH=$(jq -r '.seacr.threshold   // 0.01'    "$CONFIG_FILE")
+SEACR_NORM=$(jq -r '.seacr.norm        // "norm"'   "$CONFIG_FILE")
+SEACR_STRICT=$(jq -r '.seacr.stringency // "relaxed"' "$CONFIG_FILE")
+
 
 # ── Locate SEACR and wrap it ────────────────────────────────────────────────
 if command -v seacr >/dev/null 2>&1; then
