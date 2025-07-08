@@ -417,195 +417,195 @@ esac
   #~ for n in "${SAMPLES[@]}"; do frag_filter "$n"; done
 #~ fi
 
-###############################################################################
-# 11 MERGE BAMs (treatment & control)
-###############################################################################
-T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
-log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
-merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
-log MERGE Treatment Done
+#~ ###############################################################################
+#~ # 11 MERGE BAMs (treatment & control)
+#~ ###############################################################################
+#~ T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
+#~ log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
+#~ merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
+#~ log MERGE Treatment Done
 
-if (( ${#CTRL_NAMES[@]} )); then
-  CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
-  log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
-  merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
-  log MERGE Control Done
-  mkdir -p "$BW_DIR"
-fi
+#~ if (( ${#CTRL_NAMES[@]} )); then
+  #~ CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
+  #~ log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
+  #~ merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
+  #~ log MERGE Control Done
+  #~ mkdir -p "$BW_DIR"
+#~ fi
 
-###############################################################################
-# 12 SEACR PEAKS: replicate, merged, pooled
-###############################################################################
-if (( ${#CTRL_NAMES[@]} )); then
-  mkdir -p "$BW_DIR"
-  bam_to_bedgraph "$CTRL_MRG" "$BW_DIR/control_merged.bedgraph"
-  POOLED_C_BG="$BW_DIR/control_merged.bedgraph"
-else
-  unset POOLED_C_BG
-fi
+#~ ###############################################################################
+#~ # 12 SEACR PEAKS: replicate, merged, pooled
+#~ ###############################################################################
+#~ if (( ${#CTRL_NAMES[@]} )); then
+  #~ mkdir -p "$BW_DIR"
+  #~ bam_to_bedgraph "$CTRL_MRG" "$BW_DIR/control_merged.bedgraph"
+  #~ POOLED_C_BG="$BW_DIR/control_merged.bedgraph"
+#~ else
+  #~ unset POOLED_C_BG
+#~ fi
 
-for n in "${TREAT_NAMES[@]}"; do
-  IN_BG="$BW_DIR/${n}.bedgraph"
-  OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
-  log SEACR "$n" start
-  if [[ -n "$POOLED_C_BG" ]]; then
-	echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
-    seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
-      >>"$LOG_DIR/seacr_${n}.log" 2>&1
-    for ext in stringent relaxed; do
-      if [[ -e "${OUT_BED%.bed}.${ext}.bed" ]]; then
-        mv "${OUT_BED%.bed}.${ext}.bed" "$OUT_BED"
-        break
-      fi
-    done
-  else
-	echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
-    seacr_call "$IN_BG" "$SEACR_THRESH" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
-      >>"$LOG_DIR/seacr_${n}.log" 2>&1
-    mv "${OUT_BED%.bed}.${SEACR_STRICT}.bed" "$OUT_BED"
-  fi
-  log SEACR "$n" done
-done
+#~ for n in "${TREAT_NAMES[@]}"; do
+  #~ IN_BG="$BW_DIR/${n}.bedgraph"
+  #~ OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
+  #~ log SEACR "$n" start
+  #~ if [[ -n "$POOLED_C_BG" ]]; then
+	#~ echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
+    #~ seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
+      #~ >>"$LOG_DIR/seacr_${n}.log" 2>&1
+    #~ for ext in stringent relaxed; do
+      #~ if [[ -e "${OUT_BED%.bed}.${ext}.bed" ]]; then
+        #~ mv "${OUT_BED%.bed}.${ext}.bed" "$OUT_BED"
+        #~ break
+      #~ fi
+    #~ done
+  #~ else
+	#~ echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
+    #~ seacr_call "$IN_BG" "$SEACR_THRESH" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
+      #~ >>"$LOG_DIR/seacr_${n}.log" 2>&1
+    #~ mv "${OUT_BED%.bed}.${SEACR_STRICT}.bed" "$OUT_BED"
+  #~ fi
+  #~ log SEACR "$n" done
+#~ done
 
-# merged vs pooled
-if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
-  MERGED_T_BG="$BW_DIR/treatment_merged.bedgraph"
-  MERGED_C_BG="$BW_DIR/control_merged.bedgraph"
-  OUT_MERGED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
-  log SEACR merged start
-  echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
-  seacr_call "$MERGED_T_BG" "$MERGED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_MERGED%.bed}" \
-    >>"$LOG_DIR/seacr_merged.log" 2>&1
-  for ext in stringent relaxed; do
-    if [[ -e "${OUT_MERGED%.bed}.${ext}.bed" ]]; then
-      mv "${OUT_MERGED%.bed}.${ext}.bed" "$OUT_MERGED"
-      break
-    fi
-  done
-  log SEACR merged done
-fi
+#~ # merged vs pooled
+#~ if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
+  #~ MERGED_T_BG="$BW_DIR/treatment_merged.bedgraph"
+  #~ MERGED_C_BG="$BW_DIR/control_merged.bedgraph"
+  #~ OUT_MERGED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
+  #~ log SEACR merged start
+  #~ echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
+  #~ seacr_call "$MERGED_T_BG" "$MERGED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_MERGED%.bed}" \
+    #~ >>"$LOG_DIR/seacr_merged.log" 2>&1
+  #~ for ext in stringent relaxed; do
+    #~ if [[ -e "${OUT_MERGED%.bed}.${ext}.bed" ]]; then
+      #~ mv "${OUT_MERGED%.bed}.${ext}.bed" "$OUT_MERGED"
+      #~ break
+    #~ fi
+  #~ done
+  #~ log SEACR merged done
+#~ fi
 
-# each replicate vs pooled control
-if [[ -n "$POOLED_C_BG" ]]; then
-  for n in "${TREAT_NAMES[@]}"; do
-    IN_BG="$BW_DIR/${n}.bedgraph"
-    OUT_POOLED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
-    log SEACR "${n}_vs_ctrlPooled" start
-    echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
-    seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_POOLED%.bed}" \
-      >>"$LOG_DIR/seacr_${n}.log" 2>&1
-    for ext in stringent relaxed; do
-      if [[ -e "${OUT_POOLED%.bed}.${ext}.bed" ]]; then
-        mv "${OUT_POOLED%.bed}.${ext}.bed" "$OUT_POOLED"
-        break
-      fi
-    done
-    log SEACR "${n}_vs_ctrlPooled" done
-  done
-fi
+#~ # each replicate vs pooled control
+#~ if [[ -n "$POOLED_C_BG" ]]; then
+  #~ for n in "${TREAT_NAMES[@]}"; do
+    #~ IN_BG="$BW_DIR/${n}.bedgraph"
+    #~ OUT_POOLED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
+    #~ log SEACR "${n}_vs_ctrlPooled" start
+    #~ echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
+    #~ seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_POOLED%.bed}" \
+      #~ >>"$LOG_DIR/seacr_${n}.log" 2>&1
+    #~ for ext in stringent relaxed; do
+      #~ if [[ -e "${OUT_POOLED%.bed}.${ext}.bed" ]]; then
+        #~ mv "${OUT_POOLED%.bed}.${ext}.bed" "$OUT_POOLED"
+        #~ break
+      #~ fi
+    #~ done
+    #~ log SEACR "${n}_vs_ctrlPooled" done
+  #~ done
+#~ fi
 
-###############################################################################
-# 13  SPIKE SCALE FACTORS                                                     #
-###############################################################################
-declare -A SCALE                    # sample → host/spike factor
-read_count () { samtools view -c -F 2304 "$1"; }
+#~ ###############################################################################
+#~ # 13  SPIKE SCALE FACTORS                                                     #
+#~ ###############################################################################
+#~ declare -A SCALE                    # sample → host/spike factor
+#~ read_count () { samtools view -c -F 2304 "$1"; }
 
-for n in "${SAMPLES[@]}"; do
-  host_bam="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-  spike_bam="$SPIKE_DIR/${n}.ecoli.sorted.bam"
+#~ for n in "${SAMPLES[@]}"; do
+  #~ host_bam="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  #~ spike_bam="$SPIKE_DIR/${n}.ecoli.sorted.bam"
 
-  # ── skip if spike-in BAM is missing or empty ──────────────────────────────
-  if [[ ! -s $spike_bam ]]; then
-      log Scale "$n" "no spike-in BAM – scale=1"
-      SCALE["$n"]=1
-      continue
-  fi
+  #~ # ── skip if spike-in BAM is missing or empty ──────────────────────────────
+  #~ if [[ ! -s $spike_bam ]]; then
+      #~ log Scale "$n" "no spike-in BAM – scale=1"
+      #~ SCALE["$n"]=1
+      #~ continue
+  #~ fi
 
-  h=$(read_count "$host_bam")
-  s=$(read_count "$spike_bam")
+  #~ h=$(read_count "$host_bam")
+  #~ s=$(read_count "$spike_bam")
 
-  if (( s > 0 )); then
-      SCALE["$n"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f", h/s}')
-  else
-      SCALE["$n"]=1
-  fi
+  #~ if (( s > 0 )); then
+      #~ SCALE["$n"]=$(awk -v h=$h -v s=$s 'BEGIN{printf "%.6f", h/s}')
+  #~ else
+      #~ SCALE["$n"]=1
+  #~ fi
 
-  log Scale "$n" "host=$h  spike=$s  scale=${SCALE[$n]}"
-done
+  #~ log Scale "$n" "host=$h  spike=$s  scale=${SCALE[$n]}"
+#~ done
 
-###############################################################################
-# 14  BIGWIG GENERATION                                                       #
-###############################################################################
-bigwig_one () {                       # $1 = sample basename
-  local n="$1"
-  local bg="$BW_DIR/${n}.bedgraph"
-  local bam="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
-  local scalef="${SCALE[$n]:-1}"
+#~ ###############################################################################
+#~ # 14  BIGWIG GENERATION                                                       #
+#~ ###############################################################################
+#~ bigwig_one () {                       # $1 = sample basename
+  #~ local n="$1"
+  #~ local bg="$BW_DIR/${n}.bedgraph"
+  #~ local bam="$ALIGNMENT_DIR/${n}.dedup.filtered.bam"
+  #~ local scalef="${SCALE[$n]:-1}"
 
-  log BigWig "$n" "start  scale=$scalef"
+  #~ log BigWig "$n" "start  scale=$scalef"
 
-  # BedGraph
-  bedtools genomecov -ibam "$bam" -bg -pc > "$bg"
+  #~ # BedGraph
+  #~ bedtools genomecov -ibam "$bam" -bg -pc > "$bg"
 
-  # optional spike-in scaling
-  if [[ $scalef != 1 ]]; then
-      awk -v f="$scalef" '{$4=$4*f; print }' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
-  fi
+  #~ # optional spike-in scaling
+  #~ if [[ $scalef != 1 ]]; then
+      #~ awk -v f="$scalef" '{$4=$4*f; print }' "$bg" > "${bg}.tmp" && mv "${bg}.tmp" "$bg"
+  #~ fi
 
-  # BigWig
-  bedGraphToBigWig "$bg" "$CHROM_SIZE" "$BW_DIR/${n}.bw"
+  #~ # BigWig
+  #~ bedGraphToBigWig "$bg" "$CHROM_SIZE" "$BW_DIR/${n}.bw"
 
-  log BigWig "$n" done
-}
-export -f bigwig_one log
-export BW_DIR ALIGNMENT_DIR CHROM_SIZE SCALE
+  #~ log BigWig "$n" done
+#~ }
+#~ export -f bigwig_one log
+#~ export BW_DIR ALIGNMENT_DIR CHROM_SIZE SCALE
 
-if command -v parallel >/dev/null 2>&1; then
-  log BigWig ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-  parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-           bigwig_one ::: "${SAMPLES[@]}"
-else
-  log BigWig ALL "GNU parallel not found – running serially"
-  for n in "${SAMPLES[@]}"; do bigwig_one "$n"; done
-fi
+#~ if command -v parallel >/dev/null 2>&1; then
+  #~ log BigWig ALL "running ${#SAMPLES[@]} samples with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+  #~ parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+           #~ bigwig_one ::: "${SAMPLES[@]}"
+#~ else
+  #~ log BigWig ALL "GNU parallel not found – running serially"
+  #~ for n in "${SAMPLES[@]}"; do bigwig_one "$n"; done
+#~ fi
 
-###############################################################################
-# 15  PEAK ANNOTATION                                                         #
-###############################################################################
-annotate_one () {                     # $1 = full path to narrowPeak
-  local np="$1"
-  [[ -f $np ]] || { log Annotating "$(basename "$np")" "skip (no file)"; return; }
+#~ ###############################################################################
+#~ # 15  PEAK ANNOTATION                                                         #
+#~ ###############################################################################
+#~ annotate_one () {                     # $1 = full path to narrowPeak
+  #~ local np="$1"
+  #~ [[ -f $np ]] || { log Annotating "$(basename "$np")" "skip (no file)"; return; }
 
-  local base=${np##*/}; base=${base%.narrowPeak}
-  log Annotate "$base" start
+  #~ local base=${np##*/}; base=${base%.narrowPeak}
+  #~ log Annotate "$base" start
 
-  bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
-      > "$ANN_DIR/${base}.annotated.bed"
+  #~ bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
+      #~ > "$ANN_DIR/${base}.annotated.bed"
 
-  log Annotate "$base" done
-}
+  #~ log Annotate "$base" done
+#~ }
 
-export -f annotate_one log
-export ANNOTATION_GENES ANN_DIR
+#~ export -f annotate_one log
+#~ export ANNOTATION_GENES ANN_DIR
 
-# Collect all narrowPeak paths into an array
-mapfile -t NP_FILES < <(find "$PEAK_DIR" -type f -name "*.narrowPeak" | sort)
+#~ # Collect all narrowPeak paths into an array
+#~ mapfile -t NP_FILES < <(find "$PEAK_DIR" -type f -name "*.narrowPeak" | sort)
 
-if (( ${#NP_FILES[@]} )); then
-  # only run if we found peaks
-  if command -v parallel >/dev/null 2>&1; then
-    log Annotate ALL "running ${#NP_FILES[@]} peaks with GNU parallel (-j $NUM_PARALLEL_THREADS)"
-    parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
-             annotate_one ::: "${NP_FILES[@]}"
-  else
-    log Annotate ALL "running ${#NP_FILES[@]} peaks serially"
-    for np in "${NP_FILES[@]}"; do
-      annotate_one "$np"
-    done
-  fi
-else
-  log Annotate ALL "skip (no peak files found)"
-fi
+#~ if (( ${#NP_FILES[@]} )); then
+  #~ # only run if we found peaks
+  #~ if command -v parallel >/dev/null 2>&1; then
+    #~ log Annotate ALL "running ${#NP_FILES[@]} peaks with GNU parallel (-j $NUM_PARALLEL_THREADS)"
+    #~ parallel --line-buffer -j "$NUM_PARALLEL_THREADS" --halt now,fail=1 \
+             #~ annotate_one ::: "${NP_FILES[@]}"
+  #~ else
+    #~ log Annotate ALL "running ${#NP_FILES[@]} peaks serially"
+    #~ for np in "${NP_FILES[@]}"; do
+      #~ annotate_one "$np"
+    #~ done
+  #~ fi
+#~ else
+  #~ log Annotate ALL "skip (no peak files found)"
+#~ fi
 
 ###############################################################################
 # 16  PRESEQ COMPLEXITY ESTIMATION                                            #
