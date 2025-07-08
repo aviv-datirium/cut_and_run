@@ -260,12 +260,6 @@ case $GENOME_SIZE_STRING in
   sc) GENOME_SIZE=12000000   ;;  *)  GENOME_SIZE=$CUSTOM_GENOME_SIZE ;;
 esac
 
-# In the main script call it conditionally
-if [[ $RUN_ONLY_BLOCK == "yes" ]]; then
-    run_block
-    exit 0
-fi
-
 #~ ###############################################################################
 #~ # 5  FASTQC  – per-sample logging (start / ok / FAIL)                         #
 #~ ###############################################################################
