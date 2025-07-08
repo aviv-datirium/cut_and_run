@@ -449,6 +449,7 @@ for n in "${TREAT_NAMES[@]}"; do
   OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
   log SEACR "$n" start
   if [[ -n "$POOLED_C_BG" ]]; then
+	echo "[DEBUG] Running: seacr_call $@" 1>&2
     seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
     for ext in stringent relaxed; do
@@ -458,6 +459,7 @@ for n in "${TREAT_NAMES[@]}"; do
       fi
     done
   else
+	echo "[DEBUG] Running: seacr_call $@" 1>&2
     seacr_call "$IN_BG" "$SEACR_THRESH" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
     mv "${OUT_BED%.bed}.${SEACR_STRICT}.bed" "$OUT_BED"
@@ -471,6 +473,7 @@ if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
   MERGED_C_BG="$BW_DIR/control_merged.bedgraph"
   OUT_MERGED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
   log SEACR merged start
+  echo "[DEBUG] Running: seacr_call $@" 1>&2
   seacr_call "$MERGED_T_BG" "$MERGED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_MERGED%.bed}" \
     >>"$LOG_DIR/seacr_merged.log" 2>&1
   for ext in stringent relaxed; do
@@ -488,6 +491,7 @@ if [[ -n "$POOLED_C_BG" ]]; then
     IN_BG="$BW_DIR/${n}.bedgraph"
     OUT_POOLED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
     log SEACR "${n}_vs_ctrlPooled" start
+    echo "[DEBUG] Running: seacr_call $@" 1>&2
     seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_POOLED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
     for ext in stringent relaxed; do
@@ -649,28 +653,38 @@ plot_preseq_curves () {
   local r_script="$PRESEQ_DIR/plot_preseq.R"
   log Preseq Plotting "start"
 
-  cat > "$r_script" <<'EOF'
-library(ggplot2); library(data.table)
+  # write the R script with $PRESEQ_DIR expanded
+  cat > "$r_script" <<EOF
+library(ggplot2)
+library(data.table)
 
 plot_file <- function(f) {
   d <- fread(f, skip=1)
-  if (ncol(d)!=4) stop(paste("Bad columns in",f))
+  if (ncol(d) != 4) stop(paste("Bad columns in", f))
   setnames(d, c("total_reads","expected_unique","ci_lower","ci_upper"))
-  d[, sample := sub("_complexity\\.txt$","",basename(f))]
+  d[, sample := sub("_complexity\\.txt\$","",basename(f))]
   return(d)
 }
 
-files <- list.files("$(basename "$PRESEQ_DIR")", pattern="_complexity\\.txt$", full.names=TRUE)
+# look in the actual PRESEQ_DIR for files
+files <- list.files("$PRESEQ_DIR", pattern="_complexity\\\\.txt\$", full.names=TRUE)
+if (length(files) == 0) {
+  stop("No complexity files found in $PRESEQ_DIR")
+}
 all <- rbindlist(lapply(files, plot_file))
+
 p <- ggplot(all, aes(total_reads, expected_unique, color=sample)) +
      geom_line() + theme_minimal() +
      labs(title="Preseq Complexity", x="Reads", y="Unique Reads")
-ggsave(file.path("$(basename "$PRESEQ_DIR")","preseq_complexity_curves.pdf"), p)
+
+ggsave(file.path("$PRESEQ_DIR","preseq_complexity_curves.pdf"), p)
 EOF
 
-  Rscript "$r_script" >>"$LOG_DIR/preseq_plot.log" 2>&1 \
-    && log Preseq Plotting "done: $PRESEQ_DIR/preseq_complexity_curves.pdf" \
-    || log Preseq Plotting "FAIL – see preseq_plot.log"
+  if Rscript "$r_script" >>"$LOG_DIR/preseq_plot.log" 2>&1; then
+    log Preseq Plotting "done: $PRESEQ_DIR/preseq_complexity_curves.pdf"
+  else
+    log Preseq Plotting "FAIL – see preseq_plot.log"
+  fi
 }
 
 export PRESEQ_DIR LOG_DIR
