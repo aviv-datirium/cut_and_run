@@ -71,28 +71,28 @@ cd "$(dirname "$CONFIG_FILE")" || exit 1
 CONFIG_FILE="$(basename "$CONFIG_FILE")"
 CONFIG_DIR="$(pwd)"
 
-ALIGNMENT_DIR="$CONFIG_DIR/$(jq -r '.alignment_dir'     "$CONFIG_FILE")"
-OUTPUT_DIR  ="$CONFIG_DIR/$(jq -r '.output_dir'            "$CONFIG_FILE")"
-LOG_DIR     ="$CONFIG_DIR/$(jq -r '.log_dir'               "$CONFIG_FILE")"
-REFERENCE_GENOME="$CONFIG_DIR/$(jq -r '.reference_genome'   "$CONFIG_FILE")"
-ECOLI_INDEX      ="$CONFIG_DIR/$(jq -r '.ecoli_index'        "$CONFIG_FILE")"
-ANNOTATION_GENES ="$CONFIG_DIR/$(jq -r '.annotation_genes'  "$CONFIG_FILE")"
-CHROM_SIZE       ="$CONFIG_DIR/$(jq -r '.chrom_sizes'         "$CONFIG_FILE")"
+ALIGNMENT_DIR="$CONFIG_DIR/$(jq -r '.alignment_dir' "$CONFIG_FILE")"
+OUTPUT_DIR="$CONFIG_DIR/$(jq -r '.output_dir' "$CONFIG_FILE")"
+LOG_DIR="$CONFIG_DIR/$(jq -r '.log_dir' "$CONFIG_FILE")"
+REFERENCE_GENOME="$CONFIG_DIR/$(jq -r '.reference_genome' "$CONFIG_FILE")"
+ECOLI_INDEX="$CONFIG_DIR/$(jq -r '.ecoli_index' "$CONFIG_FILE")"
+ANNOTATION_GENES="$CONFIG_DIR/$(jq -r '.annotation_genes' "$CONFIG_FILE")"
+CHROM_SIZE="$CONFIG_DIR/$(jq -r '.chrom_sizes' "$CONFIG_FILE")"
 
-GENOME_SIZE_STRING=$(jq -r '.genome_size'       "$CONFIG_FILE")
+GENOME_SIZE_STRING=$(jq -r '.genome_size' "$CONFIG_FILE")
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' "$CONFIG_FILE")
 FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
-NUM_THREADS=$(jq -r '.num_threads'             "$CONFIG_FILE")
+NUM_THREADS=$(jq -r '.num_threads' "$CONFIG_FILE")
 NUM_PARALLEL_THREADS=$(jq -r '.num_parallel_threads' "$CONFIG_FILE")
 
-TREAT_R1=($(jq -r '.samples.treatment[]?.r1'     "$CONFIG_FILE"))
-TREAT_R2=($(jq -r '.samples.treatment[]?.r2'     "$CONFIG_FILE"))
+TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE"))
+TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE"))
 CTRL_R1=($(jq -r '.samples.control[]?.r1 // empty' "$CONFIG_FILE"))
 CTRL_R2=($(jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
 
 # SEACR parameters with defaults
 SEACR_THRESH=$(jq -r '.seacr.threshold   // 0.01'   "$CONFIG_FILE")
-SEACR_NORM  =$(jq -r '.seacr.norm        // "norm"' "$CONFIG_FILE")
+SEACR_NORM=$(jq -r '.seacr.norm        // "norm"' "$CONFIG_FILE")
 SEACR_STRICT=$(jq -r '.seacr.stringency // "relaxed"'  "$CONFIG_FILE")
 
 # ── Locate SEACR and wrap it in seacr_call() ──────────────────────────────────────
