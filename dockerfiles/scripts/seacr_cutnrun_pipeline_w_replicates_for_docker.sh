@@ -61,27 +61,23 @@ BANNER
 ###############################################################################
 # 0  CONFIG + PATHS                                                           #
 ###############################################################################
-# 0. Make script directory discoverable & cd into it
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
 
-# 1. Locate the config (default to config_for_docker.json in this dir)
 CONFIG_FILE="${1:-config_for_docker.json}"
 shift || true
 
-# 2. Move into the config’s directory so all jq-paths are relative
 cd "$(dirname "$CONFIG_FILE")" || exit 1
 CONFIG_FILE="$(basename "$CONFIG_FILE")"
 CONFIG_DIR="$(pwd)"
 
-# 3. Read everything through jq, prefixing with CONFIG_DIR
 ALIGNMENT_DIR="$CONFIG_DIR/$(jq -r '.alignment_dir'     "$CONFIG_FILE")"
-OUTPUT_DIR="$CONFIG_DIR/$(jq -r '.output_dir'            "$CONFIG_FILE")"
-LOG_DIR="$CONFIG_DIR/$(jq -r '.log_dir'                 "$CONFIG_FILE")"
+OUTPUT_DIR  ="$CONFIG_DIR/$(jq -r '.output_dir'            "$CONFIG_FILE")"
+LOG_DIR     ="$CONFIG_DIR/$(jq -r '.log_dir'               "$CONFIG_FILE")"
 REFERENCE_GENOME="$CONFIG_DIR/$(jq -r '.reference_genome'   "$CONFIG_FILE")"
-ECOLI_INDEX="$CONFIG_DIR/$(jq -r '.ecoli_index'          "$CONFIG_FILE")"
-ANNOTATION_GENES="$CONFIG_DIR/$(jq -r '.annotation_genes'  "$CONFIG_FILE")"
-CHROM_SIZE="$CONFIG_DIR/$(jq -r '.chrom_sizes'           "$CONFIG_FILE")"
+ECOLI_INDEX      ="$CONFIG_DIR/$(jq -r '.ecoli_index'        "$CONFIG_FILE")"
+ANNOTATION_GENES ="$CONFIG_DIR/$(jq -r '.annotation_genes'  "$CONFIG_FILE")"
+CHROM_SIZE       ="$CONFIG_DIR/$(jq -r '.chrom_sizes'         "$CONFIG_FILE")"
 
 GENOME_SIZE_STRING=$(jq -r '.genome_size'       "$CONFIG_FILE")
 CUSTOM_GENOME_SIZE=$(jq -r '.custom_genome_size' "$CONFIG_FILE")
@@ -89,29 +85,29 @@ FRAGMENT_SIZE_FILTER=$(jq -r '.fragment_size_filter' "$CONFIG_FILE")
 NUM_THREADS=$(jq -r '.num_threads'             "$CONFIG_FILE")
 NUM_PARALLEL_THREADS=$(jq -r '.num_parallel_threads' "$CONFIG_FILE")
 
-TREAT_R1=($(jq -r '.samples.treatment[]?.r1' "$CONFIG_FILE"))
-TREAT_R2=($(jq -r '.samples.treatment[]?.r2' "$CONFIG_FILE"))
+TREAT_R1=($(jq -r '.samples.treatment[]?.r1'     "$CONFIG_FILE"))
+TREAT_R2=($(jq -r '.samples.treatment[]?.r2'     "$CONFIG_FILE"))
 CTRL_R1=($(jq -r '.samples.control[]?.r1 // empty' "$CONFIG_FILE"))
 CTRL_R2=($(jq -r '.samples.control[]?.r2 // empty' "$CONFIG_FILE"))
 
-SEACR_THRESH=$(jq -r '.seacr.threshold   // 0.01'    "$CONFIG_FILE")
-SEACR_NORM=$(jq -r '.seacr.norm        // "norm"'   "$CONFIG_FILE")
-SEACR_STRICT=$(jq -r '.seacr.stringency // "relaxed"' "$CONFIG_FILE")
+# SEACR parameters with defaults
+SEACR_THRESH=$(jq -r '.seacr.threshold   // 0.01'   "$CONFIG_FILE")
+SEACR_NORM  =$(jq -r '.seacr.norm        // "norm"' "$CONFIG_FILE")
+SEACR_STRICT=$(jq -r '.seacr.stringency // "relaxed"'  "$CONFIG_FILE")
 
-
-# ── Locate SEACR and wrap it ────────────────────────────────────────────────
+# ── Locate SEACR and wrap it in seacr_call() ──────────────────────────────────────
+# 1) prefer the 'seacr' command if installed in PATH
 if command -v seacr >/dev/null 2>&1; then
-  # if micromamba/conda put a seacr launcher on PATH
   seacr_call() { seacr "$@"; }
-
-elif [[ -f "${CONDA_PREFIX:-/opt/conda/envs/cutrun}/share/SEACR_1.3.sh" ]]; then
-  # fallback to the script in cutrun env
-  SEACR_SCRIPT="${CONDA_PREFIX:-/opt/conda/envs/cutrun}/share/SEACR_1.3.sh"
-  seacr_call() { bash "$SEACR_SCRIPT" "$@"; }
-
 else
-  echo "ERROR: SEACR not found in PATH or in \$CONDA_PREFIX/share" >&2
-  exit 1
+  # 2) search for the SEACR script under the cutrun env prefix
+  SEACR_SCRIPT=$(find "${CONDA_PREFIX:-/opt/conda/envs/cutrun}" -type f -name 'SEACR_*.sh' | head -n1 || true)
+  if [[ -x "$SEACR_SCRIPT" ]]; then
+    seacr_call() { bash "$SEACR_SCRIPT" "$@"; }
+  else
+    echo "ERROR: SEACR not found in PATH or under \$CONDA_PREFIX" >&2
+    exit 1
+  fi
 fi
 
 ###############################################################################
