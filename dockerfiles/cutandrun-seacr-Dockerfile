@@ -69,9 +69,7 @@ RUN mamba create -y -n ucsc -c bioconda ucsc-bedgraphtobigwig=${UCSC_APPS_VERSIO
   && conda clean -afy
 
 # 4) Expose environments on PATH so tools are callable without re-activating
-ENV PATH=/opt/conda/envs/cutrun/bin: \
-    /opt/conda/envs/preseq/bin: \
-    /opt/conda/envs/ucsc/bin:$PATH
+ENV PATH=/opt/conda/envs/cutrun/bin:/opt/conda/envs/preseq/bin:/opt/conda/envs/ucsc/bin:$PATH
 
 # Copy pipeline script + entrypoint
 COPY scripts/seacr_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
