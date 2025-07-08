@@ -1,13 +1,16 @@
 #!/bin/bash
-# Make conda available
-source /opt/conda/bin/activate
+set -e
 
-# Activate only the unified env
+# load conda’s shell function
+source /opt/conda/etc/profile.d/conda.sh
+
+# always activate the unified 'cutrun' environment
 conda activate cutrun
 
-# Dispatch to your pipeline or to whatever command the user passed
+# if the first argument is a .json config, run the pipeline script
 if [[ "$1" =~ \.json$ ]]; then
-  exec bash /usr/local/bin/cutrun.sh "$@"
+  exec bash /usr/local/bin/cutrun.sh "$1"
 else
+  # otherwise, run whatever command was passed
   exec "$@"
 fi

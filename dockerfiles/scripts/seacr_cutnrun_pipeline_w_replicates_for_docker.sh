@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -o pipefail
+set -euo pipefail
 
 cat <<'BANNER'
 
@@ -117,37 +117,32 @@ fi
 # 1  TOOL LOCATIONS                                                           #
 ###############################################################################
 PICARD_CMD="$(command -v picard)"
-export PICARD_CMD ALIGNMENT_DIR LOG_DIR NUM_THREADS
 FASTQC_BIN="$(command -v fastqc)"
-STAR_BIN="$(command -v STAR)"
+STAR_BIN  ="$(command -v STAR)"
+export PICARD_CMD FASTQC_BIN STAR_BIN ALIGNMENT_DIR LOG_DIR NUM_THREADS
 
 ###############################################################################
-# 2  FOLDERS + LOGGER                                                         #
+# 2  DIRECTORIES + LOGGER                                                      #
 ###############################################################################
 mkdir -p "$OUTPUT_DIR" "$LOG_DIR" "$ALIGNMENT_DIR"
-
-# timestamp the old log (if any) before we start the new one
-RUN_TS=$(date +'%Y%m%d_%H%M%S')                 # e.g. 20250624_104832
-if [[ -f $LOG_DIR/pipeline.log ]]; then
-    mv "$LOG_DIR/pipeline.log" \
-       "$LOG_DIR/pipeline_${RUN_TS}.log"
+RUN_TS=$(date +'%Y%m%d_%H%M%S')
+if [[ -f "$LOG_DIR/pipeline.log" ]]; then
+  mv "$LOG_DIR/pipeline.log" "$LOG_DIR/pipeline_${RUN_TS}.log"
 fi
-# create a fresh empty logfile for this run
 : > "$LOG_DIR/pipeline.log"
-                               
+
 FASTQC_DIR="$OUTPUT_DIR/fastqc_reports"
 SPIKE_DIR="$ALIGNMENT_DIR/spikein"
 PEAK_DIR="$OUTPUT_DIR/seacr_peaks"
-export PEAK_DIR
 BW_DIR="$OUTPUT_DIR/bigwig_bedgraphs"
 ANN_DIR="$OUTPUT_DIR/annotated_peaks"
-for d in "$FASTQC_DIR" "$SPIKE_DIR" "$PEAK_DIR"/{replicate,merged,pooled} \
-         "$BW_DIR" "$ANN_DIR"; do mkdir -p "$d"; done
+for d in "$FASTQC_DIR" "$SPIKE_DIR" "$PEAK_DIR"/{replicate,merged,pooled} "$BW_DIR" "$ANN_DIR"; do
+  mkdir -p "$d"
+done
 
-log(){ printf '[%(%F %T)T] %-10s %-15s %s\n' -1 "$1" "$2" "${*:3}" \
-      | tee -a "$LOG_DIR/pipeline.log"; }
-
-log START Paramaters "Config=$CONFIG_FILE"
+log(){ printf '[%(%F %T)T] %-10s %-15s %s
+' -1 "$1" "$2" "${*:3}" | tee -a "$LOG_DIR/pipeline.log"; }
+log START Parameters "Config=$CONFIG_FILE"
 
 ###############################################################################
 # 3  HELPER FUNCTIONS                                                         #
@@ -432,9 +427,8 @@ fi
 #~ fi
 
 ###############################################################################
-# 11  MERGE BAMs   (treatment & control groups)                               #
+# 11 MERGE BAMs (treatment & control)
 ###############################################################################
-# ── make merged BAMs *once*
 T_MRG="$ALIGNMENT_DIR/treatment_merged.bam"
 log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
 merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
@@ -445,64 +439,49 @@ if (( ${#CTRL_NAMES[@]} )); then
   log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
   merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
   log MERGE Control Done
-  # ── NEW: make the bedGraph SEACR expects ────────────────────────────────
   mkdir -p "$BW_DIR"
 fi
 
 ###############################################################################
-# 12  SEACR PEAKS: replicate, merged, pooled                                  #
+# 12 SEACR PEAKS: replicate, merged, pooled
 ###############################################################################
-# Build a “pooled control” bedgraph if any controls exist
 if (( ${#CTRL_NAMES[@]} )); then
   mkdir -p "$BW_DIR"
-  make_bg "$BW_DIR/control_merged.bedgraph" "$CTRL_MRG"
+  bam_to_bedgraph "$CTRL_MRG" "$BW_DIR/control_merged.bedgraph"
   POOLED_C_BG="$BW_DIR/control_merged.bedgraph"
 else
   unset POOLED_C_BG
 fi
 
-# ── A  replicate peaks ────────────────────────────────────────────────────────
 for n in "${TREAT_NAMES[@]}"; do
   IN_BG="$BW_DIR/${n}.bedgraph"
   OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
-
   log SEACR "$n" start
-
   if [[ -n "$POOLED_C_BG" ]]; then
-    # with control: signal.bg control.bg norm stringency outprefix
     seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
-
-    # rename the .stringent.bed / .relaxed.bed to .bed
     for ext in stringent relaxed; do
       if [[ -e "${OUT_BED%.bed}.${ext}.bed" ]]; then
         mv "${OUT_BED%.bed}.${ext}.bed" "$OUT_BED"
         break
       fi
     done
-
   else
-    # no control: signal.bg threshold norm stringency
-    seacr_call "$IN_BG" "$SEACR_THRESH" "$SEACR_NORM" "$SEACR_STRICT" \
+    seacr_call "$IN_BG" "$SEACR_THRESH" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
-
-    # rename default output
-    mv "${IN_BG%.bedgraph}.${SEACR_STRICT}.bed" "$OUT_BED"
+    mv "${OUT_BED%.bed}.${SEACR_STRICT}.bed" "$OUT_BED"
   fi
-
   log SEACR "$n" done
 done
 
-# ── B  treatment-merged vs control-merged ────────────────────────────────────
+# merged vs pooled
 if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
   MERGED_T_BG="$BW_DIR/treatment_merged.bedgraph"
   MERGED_C_BG="$BW_DIR/control_merged.bedgraph"
   OUT_MERGED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
-
   log SEACR merged start
   seacr_call "$MERGED_T_BG" "$MERGED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_MERGED%.bed}" \
     >>"$LOG_DIR/seacr_merged.log" 2>&1
-
   for ext in stringent relaxed; do
     if [[ -e "${OUT_MERGED%.bed}.${ext}.bed" ]]; then
       mv "${OUT_MERGED%.bed}.${ext}.bed" "$OUT_MERGED"
@@ -512,16 +491,14 @@ if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
   log SEACR merged done
 fi
 
-# ── C  each replicate vs pooled control ──────────────────────────────────────
+# each replicate vs pooled control
 if [[ -n "$POOLED_C_BG" ]]; then
   for n in "${TREAT_NAMES[@]}"; do
     IN_BG="$BW_DIR/${n}.bedgraph"
     OUT_POOLED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
-
     log SEACR "${n}_vs_ctrlPooled" start
     seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_POOLED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
-
     for ext in stringent relaxed; do
       if [[ -e "${OUT_POOLED%.bed}.${ext}.bed" ]]; then
         mv "${OUT_POOLED%.bed}.${ext}.bed" "$OUT_POOLED"
