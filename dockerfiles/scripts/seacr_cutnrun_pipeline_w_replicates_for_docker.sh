@@ -449,7 +449,7 @@ for n in "${TREAT_NAMES[@]}"; do
   OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
   log SEACR "$n" start
   if [[ -n "$POOLED_C_BG" ]]; then
-	echo "[DEBUG] Running: seacr_call $@" 1>&2
+	echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
     seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
     for ext in stringent relaxed; do
@@ -459,7 +459,7 @@ for n in "${TREAT_NAMES[@]}"; do
       fi
     done
   else
-	echo "[DEBUG] Running: seacr_call $@" 1>&2
+	echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
     seacr_call "$IN_BG" "$SEACR_THRESH" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
     mv "${OUT_BED%.bed}.${SEACR_STRICT}.bed" "$OUT_BED"
@@ -473,7 +473,7 @@ if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
   MERGED_C_BG="$BW_DIR/control_merged.bedgraph"
   OUT_MERGED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
   log SEACR merged start
-  echo "[DEBUG] Running: seacr_call $@" 1>&2
+  echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
   seacr_call "$MERGED_T_BG" "$MERGED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_MERGED%.bed}" \
     >>"$LOG_DIR/seacr_merged.log" 2>&1
   for ext in stringent relaxed; do
@@ -491,7 +491,7 @@ if [[ -n "$POOLED_C_BG" ]]; then
     IN_BG="$BW_DIR/${n}.bedgraph"
     OUT_POOLED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
     log SEACR "${n}_vs_ctrlPooled" start
-    echo "[DEBUG] Running: seacr_call $@" 1>&2
+    echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
     seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_POOLED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
     for ext in stringent relaxed; do
