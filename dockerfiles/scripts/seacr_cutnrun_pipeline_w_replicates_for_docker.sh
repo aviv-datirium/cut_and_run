@@ -115,7 +115,7 @@ fi
 ###############################################################################
 PICARD_CMD="$(command -v picard)"
 FASTQC_BIN="$(command -v fastqc)"
-STAR_BIN  ="$(command -v STAR)"
+STAR_BIN="$(command -v STAR)"
 export PICARD_CMD FASTQC_BIN STAR_BIN ALIGNMENT_DIR LOG_DIR NUM_THREADS
 
 ###############################################################################
