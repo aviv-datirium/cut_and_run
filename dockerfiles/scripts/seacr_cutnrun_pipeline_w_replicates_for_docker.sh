@@ -182,15 +182,20 @@ trim_one_pair () {                # $1 R1  $2 R2  $3 SAMPLE multi-thread Cutadap
   fi
 }
 
-run_star () {                     # R1  R2  OUTPREFIX  GENOMEDIR
+run_star () {
+  local r1="$1" r2="$2" prefix="$3" gdir="$4"
+  shift 4
+  local extra=("$@")
   "$STAR_BIN" --runThreadN "$NUM_THREADS" \
-              --genomeDir "$4" \
-              --readFilesIn "$1" "$2" \
+              --genomeDir "$gdir" \
+              --readFilesIn "$r1" "$r2" \
               --readFilesCommand zcat \
               --outSAMtype BAM SortedByCoordinate \
-              --outFileNamePrefix "$3" \
-              > "$LOG_DIR/$(basename "$3")STAR.log" \
-              2> "$LOG_DIR/$(basename "$3")STAR_err.log"
+              --outReadsUnmapped Fastx \
+              --outFileNamePrefix "$prefix" \
+              "${extra[@]}" \
+              > "$LOG_DIR/$(basename "$prefix")STAR.log" \
+              2> "$LOG_DIR/$(basename "$prefix")STAR_err.log"
 }
 
 get_unmapped_mates () {
