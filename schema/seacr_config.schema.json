@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CUT&RUN + SEACR Pipeline Configuration Schema",
+  "type": "object",
+  "required": [
+    "samples",
+    "alignment_dir",
+    "output_dir",
+    "log_dir",
+    "reference_genome",
+    "ecoli_index",
+    "chrom_sizes",
+    "annotation_genes",
+    "genome_size",
+    "fragment_size_filter",
+    "num_threads",
+    "num_parallel_threads",
+    "seacr"
+  ],
+  "properties": {
+    "samples": {
+      "type": "object",
+      "description": "List of treatment and control sample FASTQ pairs.",
+      "properties": {
+        "treatment": {
+          "type": "array",
+          "description": "One or more treatment replicates.",
+          "items": { "$ref": "#/definitions/samplePair" },
+          "minItems": 1
+        },
+        "control": {
+          "type": "array",
+          "description": "Zero or more control (IgG) replicates.",
+          "items": { "$ref": "#/definitions/samplePair" },
+          "minItems": 0
+        }
+      },
+      "required": ["treatment"]
+    },
+    "alignment_dir": {
+      "type": "string",
+      "description": "Directory for intermediate alignment BAM files."
+    },
+    "output_dir": {
+      "type": "string",
+      "description": "Directory for final pipeline outputs (bigwigs, peaks, etc.)."
+    },
+    "log_dir": {
+      "type": "string",
+      "description": "Directory for pipeline log files."
+    },
+    "reference_genome": {
+      "type": "string",
+      "description": "Path to host genome STAR index directory."
+    },
+    "ecoli_index": {
+      "type": "string",
+      "description": "Path to E. coli spike-in STAR index directory."
+    },
+    "chrom_sizes": {
+      "type": "string",
+      "description": "Chromosome sizes file (e.g. .chrom.sizes)."
+    },
+    "annotation_genes": {
+      "type": "string",
+      "description": "Annotation file for peak-gene intersections (GTF/BED)."
+    },
+    "genome_size": {
+      "type": "string",
+      "description": "Predefined genome size key or 'custom'.",
+      "enum": ["hs", "mm", "dm", "ce", "sc"]
+    },
+    "custom_genome_size": {
+      "type": ["integer", "null"],
+      "description": "Absolute genome size (override) if genome_size is not a preset key."
+    },
+    "fragment_size_filter": {
+      "type": "string",
+      "description": "Fragment length filtering mode.",
+      "enum": ["histones", "transcription_factors", "below_1000"]
+    },
+    "num_threads": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Threads for alignment and heavy tools."
+    },
+    "num_parallel_threads": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Jobs for parallelizable steps (FastQC, Preseq, etc.)."
+    },
+    "seacr": {
+      "type": "object",
+      "description": "Configuration for SEACR peak-calling.",
+      "required": ["threshold", "norm", "stringency"],
+      "properties": {
+        "threshold": {
+          "type": "number",
+          "description": "FDR threshold or background cutoff for SEACR."
+        },
+        "norm": {
+          "type": "string",
+          "enum": ["norm", "non"],
+          "description": "Control normalization mode: 'norm' or 'non'."
+        },
+        "stringency": {
+          "type": "string",
+          "enum": ["relaxed", "stringent"],
+          "description": "Peak stringency level for SEACR."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "samplePair": {
+      "type": "object",
+      "description": "One FASTQ read pair.",
+      "properties": {
+        "r1": {
+          "type": "string",
+          "description": "Path to Read 1 FASTQ (gzipped)."
+        },
+        "r2": {
+          "type": "string",
+          "description": "Path to Read 2 FASTQ (gzipped)."
+        }
+      },
+      "required": ["r1", "r2"]
+    }
+  }
+}

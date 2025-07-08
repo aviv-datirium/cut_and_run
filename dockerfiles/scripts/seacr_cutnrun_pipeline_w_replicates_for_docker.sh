@@ -653,7 +653,7 @@ plot_preseq_curves () {
   local r_script="$PRESEQ_DIR/plot_preseq.R"
   log Preseq Plotting "start"
 
-  # write the R script with $PRESEQ_DIR expanded
+  # Write R script with PRESEQ_DIR expanded
   cat > "$r_script" <<EOF
 library(ggplot2)
 library(data.table)
@@ -661,23 +661,21 @@ library(data.table)
 plot_file <- function(f) {
   d <- fread(f, skip=1)
   if (ncol(d) != 4) stop(paste("Bad columns in", f))
-  setnames(d, c("total_reads","expected_unique","ci_lower","ci_upper"))
-  d[, sample := sub("_complexity\\.txt\$","",basename(f))]
+  setnames(d, c("total_reads", "expected_unique", "ci_lower", "ci_upper"))
+  d[, sample := sub("_complexity\\\\.txt\$", "", basename(f))]
   return(d)
 }
 
-# look in the actual PRESEQ_DIR for files
+# Look directly in the preseq output directory
 files <- list.files("$PRESEQ_DIR", pattern="_complexity\\\\.txt\$", full.names=TRUE)
-if (length(files) == 0) {
-  stop("No complexity files found in $PRESEQ_DIR")
-}
+if (length(files) == 0) stop("No complexity files found in $PRESEQ_DIR")
 all <- rbindlist(lapply(files, plot_file))
 
 p <- ggplot(all, aes(total_reads, expected_unique, color=sample)) +
      geom_line() + theme_minimal() +
      labs(title="Preseq Complexity", x="Reads", y="Unique Reads")
 
-ggsave(file.path("$PRESEQ_DIR","preseq_complexity_curves.pdf"), p)
+ggsave(file.path("$PRESEQ_DIR", "preseq_complexity_curves.pdf"), p)
 EOF
 
   if Rscript "$r_script" >>"$LOG_DIR/preseq_plot.log" 2>&1; then

@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CUT&RUN + MACS2 Pipeline Configuration Schema",
+  "type": "object",
+  "required": [
+    "samples",
+    "alignment_dir",
+    "output_dir",
+    "log_dir",
+    "reference_genome",
+    "ecoli_index",
+    "chrom_sizes",
+    "annotation_genes",
+    "genome_size",
+    "fragment_size_filter",
+    "num_threads",
+    "num_parallel_threads",
+    "macs2"
+  ],
+  "properties": {
+    "samples": {
+      "type": "object",
+      "description": "List of treatment and control sample FASTQ pairs.",
+      "properties": {
+        "treatment": {
+          "type": "array",
+          "description": "One or more treatment replicates.",
+          "items": { "$ref": "#/definitions/samplePair" },
+          "minItems": 1
+        },
+        "control": {
+          "type": "array",
+          "description": "Zero or more control (IgG) replicates.",
+          "items": { "$ref": "#/definitions/samplePair" },
+          "minItems": 0
+        }
+      },
+      "required": ["treatment"]
+    },
+    "alignment_dir": {
+      "type": "string",
+      "description": "Directory for intermediate alignment BAM files."
+    },
+    "output_dir": {
+      "type": "string",
+      "description": "Directory for final pipeline outputs (narrowPeak, bedGraph, BigWig)."
+    },
+    "log_dir": {
+      "type": "string",
+      "description": "Directory for pipeline log files."
+    },
+    "reference_genome": {
+      "type": "string",
+      "description": "Path to host genome STAR index directory."
+    },
+    "ecoli_index": {
+      "type": "string",
+      "description": "Path to E. coli spike-in STAR index directory."
+    },
+    "chrom_sizes": {
+      "type": "string",
+      "description": "Chromosome sizes file (e.g. .chrom.sizes)."
+    },
+    "annotation_genes": {
+      "type": "string",
+      "description": "Annotation file for gene annotation (GTF/BED)."
+    },
+    "genome_size": {
+      "type": "string",
+      "description": "Predefined genome size key or 'custom'.",
+      "enum": ["hs", "mm", "dm", "ce", "sc"]
+    },
+    "custom_genome_size": {
+      "type": ["integer", "null"],
+      "description": "Absolute genome size if overriding pre-set."
+    },
+    "fragment_size_filter": {
+      "type": "string",
+      "description": "Fragment length filtering mode.",
+      "enum": ["histones", "transcription_factors", "below_1000"]
+    },
+    "num_threads": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Threads for alignment and downstream tools."
+    },
+    "num_parallel_threads": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Jobs for parallelizable steps (FastQC, BigWig generation)."
+    },
+    "macs2": {
+      "type": "object",
+      "description": "MACS2 peak-calling parameters.",
+      "required": ["pvalue", "qvalue", "format", "nomodel", "extsize"],
+      "properties": {
+        "pvalue": {
+          "type": "number",
+          "description": "p-value cutoff for MACS2 peak calling."
+        },
+        "qvalue": {
+          "type": "number",
+          "description": "q-value (FDR) cutoff for MACS2."
+        },
+        "format": {
+          "type": "string",
+          "description": "Input format for MACS2 (e.g. BAM, BAMPE, BED)."
+        },
+        "nomodel": {
+          "type": "boolean",
+          "description": "Skip model building; use `extsize` parameter instead."
+        },
+        "extsize": {
+          "type": "integer",
+          "description": "Tag extension size when `nomodel=true`."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "samplePair": {
+      "type": "object",
+      "description": "Pair of FASTQ files for a sample.",
+      "properties": {
+        "r1": {"type": "string", "description": "Read 1 FASTQ (gzipped)."},
+        "r2": {"type": "string", "description": "Read 2 FASTQ (gzipped)."}
+      },
+      "required": ["r1", "r2"]
+    }
+  }
+}
