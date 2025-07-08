@@ -613,6 +613,7 @@ esac
 # create output folder
 PRESEQ_DIR="$OUTPUT_DIR/preseq"
 mkdir -p "$PRESEQ_DIR"
+export PRESEQ_DIR
 
 # function to run preseq on one sample
 preseq_one () {                      # $1 = sample name
