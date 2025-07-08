@@ -98,6 +98,21 @@ SEACR_THRESH=$(jq -r '.seacr.threshold // 0.01'   "$CONFIG_FILE")
 SEACR_NORM=  $(jq -r '.seacr.norm      // "non"' "$CONFIG_FILE")
 SEACR_STRICT=$(jq -r '.seacr.stringency // "stringent"' "$CONFIG_FILE")
 
+# ── Locate SEACR and wrap it ────────────────────────────────────────────────
+if command -v seacr >/dev/null 2>&1; then
+  # if micromamba/conda put a seacr launcher on PATH
+  seacr_call() { seacr "$@"; }
+
+elif [[ -f "${CONDA_PREFIX:-/opt/conda/envs/cutrun}/share/SEACR_1.3.sh" ]]; then
+  # fallback to the script in cutrun env
+  SEACR_SCRIPT="${CONDA_PREFIX:-/opt/conda/envs/cutrun}/share/SEACR_1.3.sh"
+  seacr_call() { bash "$SEACR_SCRIPT" "$@"; }
+
+else
+  echo "ERROR: SEACR not found in PATH or in \$CONDA_PREFIX/share" >&2
+  exit 1
+fi
+
 ###############################################################################
 # 1  TOOL LOCATIONS                                                           #
 ###############################################################################

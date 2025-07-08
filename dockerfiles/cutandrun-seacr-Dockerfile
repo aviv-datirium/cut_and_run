@@ -42,7 +42,7 @@ ENV TRIMGALORE_VERSION=0.6.10 \
     SEACR_VERSION=1.3 \
     FILE_VERSION=5.46
 
-# 1) core pipeline env (fastqc, trim-galore, cutadapt, STAR, picard, bedtools, jq, preseq)
+# 1) Create a single 'cutrun' environment with all tools
 RUN mamba create -y -n cutrun -c bioconda -c conda-forge \
       trim-galore=${TRIMGALORE_VERSION} \
       file=${FILE_VERSION} \
@@ -58,35 +58,18 @@ RUN mamba create -y -n cutrun -c bioconda -c conda-forge \
       unzip=${UNZIP_VERSION} \
       jq=${JQ_VERSION} \
       parallel \
+      preseq=${PRESEQ_VERSION} \
+      seacr=${SEACR_VERSION} \
+      ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} \
   && conda clean -afy
 
-# 2) SEACR env
-RUN mamba create -y -n seacr -c bioconda seacr=${SEACR_VERSION} && conda clean -afy
-
-# 3) preseq env
-RUN mamba create -y -n preseq -c bioconda preseq=${PRESEQ_VERSION} && conda clean -afy
-
-# 4) UCSC genome utilities
-RUN mamba create -y -n ucsc -c bioconda ucsc-bedgraphtobigwig=${UCSC_APPS_VERSION} && conda clean -afy
-
-# 5) symlink SEACR script into PATH of cutrun env
-RUN ln -s /opt/conda/envs/seacr/bin/SEACR_1.3.sh \
-          /opt/conda/envs/seacr/bin/seacr
-
-# 6) expose all envs on default PATH
-ENV PATH=/opt/conda/envs/cutrun/bin:\
-/opt/conda/envs/seacr/bin:\
-/opt/conda/envs/preseq/bin:\
-/opt/conda/envs/ucsc/bin:\
-$PATH
-
-# Auto-activate "cutrun" by default
-RUN echo "conda activate cutrun" >> /root/.bashrc
+# Expose only the 'cutrun' env on PATH
+ENV PATH=/opt/conda/envs/cutrun/bin:$PATH
 
 # Copy pipeline script + entrypoint
 COPY scripts/seacr_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cutrun.sh
 COPY docker_entrypoint_seacr.sh                  /usr/local/bin/docker_entrypoint.sh
 RUN chmod +x /usr/local/bin/cutrun.sh /usr/local/bin/docker_entrypoint.sh
 
-# Use our entrypoint
+# Use custom entrypoint
 ENTRYPOINT ["/usr/local/bin/docker_entrypoint.sh"]

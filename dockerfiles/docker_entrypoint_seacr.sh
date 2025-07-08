@@ -1,15 +1,11 @@
 #!/bin/bash
-
 # Make conda available
 source /opt/conda/bin/activate
 
-# Stack the envs so each toolset is on $PATH
+# Activate only the unified env
 conda activate cutrun
-conda activate seacr
-conda activate preseq
-conda activate ucsc
 
-# If the first argument ends in “.json”, hand it off to your pipeline script
+# Dispatch to your pipeline or to whatever command the user passed
 if [[ "$1" =~ \.json$ ]]; then
   exec bash /usr/local/bin/cutrun.sh "$@"
 else
