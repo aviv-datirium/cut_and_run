@@ -2,18 +2,14 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
-  # allow $(…) JavaScript expressions
   InlineJavascriptRequirement: {}
-
-  # use your freshly-built image
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
-
   InitialWorkDirRequirement:
     listing:
       # 1) launcher script
       - class: File
-        basename: "run.sh"
+        basename: run.sh
         contents: |
           #!/usr/bin/env bash
           set -euo pipefail
@@ -21,35 +17,35 @@ requirements:
           bash /usr/local/bin/cutrun.sh config_for_docker.json
         executable: true
 
-      # 2) config JSON under exactly this name
+      # 2) config JSON under fixed name
       - class: File
-        location: $(inputs.config_json.path)
-        basename: "config_for_docker.json"
+        location: $(inputs.config_json.location)
+        basename: config_for_docker.json
 
       # 3) fastq directory
       - class: Directory
-        location: $(inputs.fastq_dir.path)
-        basename: "fastq"
+        location: $(inputs.fastq_dir.location)
+        basename: fastq
 
       # 4) host STAR index
       - class: Directory
-        location: $(inputs.reference_genome_dir.path)
-        basename: "star_indices/hg38"
+        location: $(inputs.reference_genome_dir.location)
+        basename: star_indices/hg38
 
       # 5) spike-in STAR index
       - class: Directory
-        location: $(inputs.ecoli_index_dir.path)
-        basename: "star_indices/ecoli_canonical"
+        location: $(inputs.ecoli_index_dir.location)
+        basename: star_indices/ecoli_canonical
 
-      # 6) chrom sizes file
+      # 6) chrom sizes
       - class: File
-        location: $(inputs.chrom_sizes.path)
-        basename: "chrom/hg38.chrom.sizes"
+        location: $(inputs.chrom_sizes.location)
+        basename: chrom/hg38.chrom.sizes
 
       # 7) annotation GTF
       - class: File
-        location: $(inputs.annotation_genes.path)
-        basename: "annotation/hg38.refGene.gtf"
+        location: $(inputs.annotation_genes.location)
+        basename: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
 
