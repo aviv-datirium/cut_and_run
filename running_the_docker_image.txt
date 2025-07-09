@@ -46,3 +46,15 @@ docker run --rm -it \
   biowardrobe2/cutrun-macs2-core:latest \
   bash -c "bash /usr/local/bin/cutrun.sh config_for_docker.json"
   
+  
+  docker run --rm -it \
+  -v /mnt/data/home/aviv/cut_and_run/dockerfiles/config_for_seacr_docker.json:/project/config_for_docker.json:ro \
+  -v "$PWD":/project \
+  -v /mnt/data/home/aviv/fastq:/project/fastq:ro \
+  -v /mnt/data/home/aviv/star_indices:/project/star_indices:ro \
+  -v /mnt/data/home/aviv/chrom:/project/chrom:ro \
+  -v /mnt/data/home/aviv/annotation:/project/annotation:ro \
+  -v /mnt/data/home/aviv/output_macs2_docker:/project/output_directory_macs2 \
+  --workdir /project \
+  cutrun-seacr-core:latest \
+  bash -c "bash/usr/local/bin/cutrun.sh config_for_docker.json"

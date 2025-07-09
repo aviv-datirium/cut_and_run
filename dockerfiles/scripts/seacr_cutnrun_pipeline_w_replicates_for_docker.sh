@@ -644,8 +644,8 @@ annotate_one () {                     # $1 = full path to narrowPeak
 export -f annotate_one log
 export ANNOTATION_GENES ANN_DIR
 
-# Collect all narrowPeak paths into an array
-mapfile -t NP_FILES < <(find "$PEAK_DIR" -type f -name "*.narrowPeak" | sort)
+# Collect all SEACR BED file paths into an array
+mapfile -t NP_FILES < <(find "$PEAK_DIR" -type f -name "*.bed" | sort)
 
 if (( ${#NP_FILES[@]} )); then
   # only run if we found peaks
