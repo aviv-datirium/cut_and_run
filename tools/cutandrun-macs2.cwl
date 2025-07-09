@@ -7,37 +7,32 @@ requirements:
 
   InitialWorkDirRequirement:
     listing:
-      - class: Dirent
-        entry: |
+      # 1) tiny launcher script
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          cd "$(pwd)"
           bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
 
-      - class: Dirent
-        entry: $(inputs.config_json.path)
+      # 2) your config JSON, exactly this name
+      - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
-      - class: Dirent
-        entry: $(inputs.fastq_dir.path)
+      # 3) data dirs & files
+      - entry: $(inputs.fastq_dir.path)
         entryname: fastq
 
-      - class: Dirent
-        entry: $(inputs.reference_genome_dir.path)
+      - entry: $(inputs.reference_genome_dir.path)
         entryname: star_indices/hg38
 
-      - class: Dirent
-        entry: $(inputs.ecoli_index_dir.path)
+      - entry: $(inputs.ecoli_index_dir.path)
         entryname: star_indices/ecoli_canonical
 
-      - class: Dirent
-        entry: $(inputs.chrom_sizes.path)
+      - entry: $(inputs.chrom_sizes.path)
         entryname: chrom/hg38.chrom.sizes
 
-      - class: Dirent
-        entry: $(inputs.annotation_genes.path)
+      - entry: $(inputs.annotation_genes.path)
         entryname: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
