@@ -18,35 +18,35 @@ requirements:
         writable: true
 
       # 2) config JSON
-      - class: ExpressionDirent
+      - class: Dirent
         entry: $(inputs.config_json.path)
         basename: config_for_docker.json
 
-      # 3) FASTQ dir → ./fastq
-      - class: ExpressionDirent
+      # 3) FASTQ directory
+      - class: Dirent
         entry: $(inputs.fastq_dir.path)
         basename: fastq
 
-      # 4) host genome index → ./star_indices/hg38
-      - class: ExpressionDirent
+      # 4) host genome STAR index
+      - class: Dirent
         entry: $(inputs.reference_genome_dir.path)
         dirname: star_indices
         basename: hg38
 
-      # 5) E. coli index → ./star_indices/ecoli_canonical
-      - class: ExpressionDirent
+      # 5) E. coli STAR index
+      - class: Dirent
         entry: $(inputs.ecoli_index_dir.path)
         dirname: star_indices
         basename: ecoli_canonical
 
-      # 6) chrom sizes → ./chrom/hg38.chrom.sizes
-      - class: ExpressionDirent
+      # 6) chromosome sizes
+      - class: Dirent
         entry: $(inputs.chrom_sizes.path)
         dirname: chrom
         basename: hg38.chrom.sizes
 
-      # 7) gene annotation → ./annotation/hg38.refGene.gtf
-      - class: ExpressionDirent
+      # 7) gene annotation GTF
+      - class: Dirent
         entry: $(inputs.annotation_genes.path)
         dirname: annotation
         basename: hg38.refGene.gtf
