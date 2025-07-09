@@ -7,7 +7,7 @@ baseCommand:
 
 requirements:
   - class: DockerRequirement
-    dockerPull: "biowardrobe2/cutrun-macs2-core:v1.1.1"
+    dockerPull: "cutrun-macs2-core:latest"
 
   - class: InitialWorkDirRequirement
     listing:
