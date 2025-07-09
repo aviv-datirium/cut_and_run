@@ -2,14 +2,13 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
+  InlineJavascriptRequirement: {}  
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
-  InlineJavascriptRequirement: {}           # for $(...) in InitialWorkDir
   InitialWorkDirRequirement:
     listing:
-      # only stage the launcher script + config file
-      - class: Dirent
-        entry: |
+      # 1) launcher script
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
           cd "$(pwd)"
@@ -17,8 +16,8 @@ requirements:
         entryname: run.sh
         writable: true
 
-      - class: File
-        entry: $(inputs.config_json.path)
+      # 2) the JSON config only
+      - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
 baseCommand: [ bash, run.sh ]
