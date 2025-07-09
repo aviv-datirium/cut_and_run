@@ -5,37 +5,40 @@ requirements:
   InlineJavascriptRequirement: {}
   StepInputExpressionRequirement: {}
   DockerRequirement:
-    dockerPull: "cutrun-macs2-core:latest"
+    dockerPull: cutrun-macs2-core:latest
   InitialWorkDirRequirement:
     listing:
-      - class: Dirent
-        entry: |
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
           cd "$(pwd)"
           bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
-      - class: Dirent
-        entry: $(inputs.config_json.path)
+
+      # your config JSON, under exactly this name:
+      - entry: $(inputs.config_json)
         entryname: config_for_docker.json
-      - class: Dirent
-        entry: $(inputs.fastq_dir.path)
+
+      # data directories & files exactly where cutrun.sh expects them:
+      - entry: $(inputs.fastq_dir)
         entryname: fastq
-      - class: Dirent
-        entry: $(inputs.reference_genome_dir.path)
+
+      - entry: $(inputs.reference_genome_dir)
         entryname: star_indices/hg38
-      - class: Dirent
-        entry: $(inputs.ecoli_index_dir.path)
+
+      - entry: $(inputs.ecoli_index_dir)
         entryname: star_indices/ecoli_canonical
-      - class: Dirent
-        entry: $(inputs.chrom_sizes.path)
+
+      - entry: $(inputs.chrom_sizes)
         entryname: chrom/hg38.chrom.sizes
-      - class: Dirent
-        entry: $(inputs.annotation_genes.path)
+
+      - entry: $(inputs.annotation_genes)
         entryname: annotation/hg38.refGene.gtf
 
-baseCommand: [bash, run.sh]
+baseCommand:
+  - bash
+  - run.sh
 
 inputs:
   config_json:
@@ -55,15 +58,17 @@ stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
 
 outputs:
-  output_dir:
+  output_replicates:
     type: Directory
     outputBinding:
       glob: output_replicates
-  log_stdout:
+
+  cutrun_stdout:
     type: File
     outputBinding:
       glob: cutrun_stdout.log
-  log_stderr:
+
+  cutrun_stderr:
     type: File
     outputBinding:
       glob: cutrun_stderr.log
