@@ -10,22 +10,19 @@ requirements:
     dockerPull: "cutrun-macs2-core:latest"
 
 inputs:
+  # only the config file goes on the command‐line
   config_json:
     type: File
     inputBinding:
-      position: 1
+      position: 0
       prefix: ""
 
-  fastq_dir:
-    type: Directory
-  reference_genome_dir:
-    type: Directory
-  ecoli_index_dir:
-    type: Directory
-  chrom_sizes:
-    type: File
-  annotation_genes:
-    type: File
+  # all other inputs are just mounted, not passed
+  fastq_dir:            Directory
+  reference_genome_dir: Directory
+  ecoli_index_dir:      Directory
+  chrom_sizes:          File
+  annotation_genes:     File
 
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
