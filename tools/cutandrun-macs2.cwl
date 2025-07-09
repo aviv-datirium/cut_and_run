@@ -7,38 +7,49 @@ requirements:
     dockerPull: cutrun-macs2-core:latest
   InitialWorkDirRequirement:
     listing:
-      # (1) launcher script
-      - entry: |
+      # 1) launcher script
+      - class: File
+        basename: run.sh
+        contents: |
           #!/usr/bin/env bash
           set -euo pipefail
           cd "$(pwd)"
           bash /usr/local/bin/cutrun.sh config_for_docker.json
-        entryname: run.sh
         writable: true
 
-      # (2) your config JSON
-      - entry: $(inputs.config_json)
-        entryname: config_for_docker.json
+      # 2) your config JSON
+      - class: File
+        location: $(inputs.config_json.path)
+        basename: config_for_docker.json
 
-      # (3) fastq dir
-      - entry: $(inputs.fastq_dir)
-        entryname: fastq
+      # 3) FASTQs
+      - class: Directory
+        location: $(inputs.fastq_dir.path)
+        basename: fastq
 
-      # (4) host STAR index
-      - entry: $(inputs.reference_genome_dir)
-        entryname: star_indices/hg38
+      # 4) host genome index → star_indices/hg38
+      - class: Directory
+        location: $(inputs.reference_genome_dir.path)
+        dirname: star_indices
+        basename: hg38
 
-      # (5) spike‐in STAR index
-      - entry: $(inputs.ecoli_index_dir)
-        entryname: star_indices/ecoli_canonical
+      # 5) E. coli spike‐in index → star_indices/ecoli_canonical
+      - class: Directory
+        location: $(inputs.ecoli_index_dir.path)
+        dirname: star_indices
+        basename: ecoli_canonical
 
-      # (6) chrom sizes
-      - entry: $(inputs.chrom_sizes)
-        entryname: chrom/hg38.chrom.sizes
+      # 6) chrom sizes → chrom/hg38.chrom.sizes
+      - class: File
+        location: $(inputs.chrom_sizes.path)
+        dirname: chrom
+        basename: hg38.chrom.sizes
 
-      # (7) annotation GTF
-      - entry: $(inputs.annotation_genes)
-        entryname: annotation/hg38.refGene.gtf
+      # 7) gene annotation → annotation/hg38.refGene.gtf
+      - class: File
+        location: $(inputs.annotation_genes.path)
+        dirname: annotation
+        basename: hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
 
