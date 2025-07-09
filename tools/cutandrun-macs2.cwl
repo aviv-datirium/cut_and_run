@@ -3,6 +3,7 @@ class: CommandLineTool
 
 requirements:
   InlineJavascriptRequirement: {}
+  StepInputExpressionRequirement: {}         # ← allow $(…) in listing
   DockerRequirement:
     dockerPull: cutrun-macs2-core:latest
   InitialWorkDirRequirement:
@@ -28,7 +29,7 @@ requirements:
           location: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
-      # 3) FASTQ directory
+      # 3) FASTQ directory (staged as “fastq”)
       - class: Dirent
         entry:
           class: Directory
@@ -40,32 +41,28 @@ requirements:
         entry:
           class: Directory
           location: $(inputs.reference_genome_dir.path)
-        dirname: star_indices
-        entryname: hg38
+        entryname: star_indices/hg38
 
       # 5) E. coli STAR index
       - class: Dirent
         entry:
           class: Directory
           location: $(inputs.ecoli_index_dir.path)
-        dirname: star_indices
-        entryname: ecoli_canonical
+        entryname: star_indices/ecoli_canonical
 
       # 6) chromosome sizes
       - class: Dirent
         entry:
           class: File
           location: $(inputs.chrom_sizes.path)
-        dirname: chrom
-        entryname: hg38.chrom.sizes
+        entryname: chrom/hg38.chrom.sizes
 
-      # 7) gene annotation
+      # 7) gene annotation GTF
       - class: Dirent
         entry:
           class: File
           location: $(inputs.annotation_genes.path)
-        dirname: annotation
-        entryname: hg38.refGene.gtf
+        entryname: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
 
