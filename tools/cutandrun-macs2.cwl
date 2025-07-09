@@ -9,35 +9,37 @@ requirements:
     dockerPull: "biowardrobe2/cutrun-macs2-core:latest"
   - class: InitialWorkDirRequirement
     listing:
-      - entry: $(inputs.config_json)
-        entryname: config_for_docker.json
-      - entry: $(inputs.fastq_dir)
-        entryname: fastq
-      - entry: $(inputs.reference_genome_dir)
-        entryname: star_indices/hg38
-      - entry: $(inputs.ecoli_index_dir)
-        entryname: star_indices/ecoli_canonical
-      - entry: $(inputs.chrom_sizes)
-        entryname: chrom/hg38.chrom.sizes
-      - entry: $(inputs.annotation_genes)
-        entryname: annotation/hg38.refGene.gtf
+      # 1) the wrapper that invokes the container’s pipeline script
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          cd "$PWD"
+          cd "$(pwd)"
           exec bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
+      # 2) your config JSON
+      - entry: $(inputs.config_json)
+        entryname: config_for_docker.json
 
 inputs:
   config_json:
     type: File
     doc: "Your config_for_macs2_cwl.json"
-  fastq_dir:            Directory
-  reference_genome_dir: Directory
-  ecoli_index_dir:      Directory
-  chrom_sizes:          File
-  annotation_genes:     File
+  fastq_dir:
+    type: Directory
+    doc: "Directory of FASTQ files"
+  reference_genome_dir:
+    type: Directory
+    doc: "STAR genome index (hg38)"
+  ecoli_index_dir:
+    type: Directory
+    doc: "STAR E. coli index"
+  chrom_sizes:
+    type: File
+    doc: "chrom/hg38.chrom.sizes"
+  annotation_genes:
+    type: File
+    doc: "annotation/hg38.refGene.gtf"
 
 outputs:
   output_dir:

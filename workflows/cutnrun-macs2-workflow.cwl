@@ -1,4 +1,3 @@
-# workflows/cutnrun-macs2-workflow.cwl
 cwlVersion: v1.2
 class: Workflow
 
