@@ -440,14 +440,23 @@ fi
 ###############################################################################
 # 12 SEACR PEAKS: replicate, merged, pooled
 ###############################################################################
+# Build a “pooled control” bedgraph if any controls exist
 if (( ${#CTRL_NAMES[@]} )); then
   mkdir -p "$BW_DIR"
-  bam_to_bedgraph "$CTRL_MRG" "$BW_DIR/control_merged.bedgraph"
+  make_bg "$BW_DIR/control_merged.bedgraph" "$CTRL_MRG"
   POOLED_C_BG="$BW_DIR/control_merged.bedgraph"
 else
   unset POOLED_C_BG
 fi
 
+# ── PREP: make per-replicate bedGraphs for SEACR
+for n in "${TREAT_NAMES[@]}"; do
+  bam_to_bedgraph \
+    "$ALIGNMENT_DIR/${n}.dedup.filtered.bam" \
+    "$BW_DIR/${n}.bedgraph"
+done
+
+# ── A  replicate peaks
 for n in "${TREAT_NAMES[@]}"; do
   IN_BG="$BW_DIR/${n}.bedgraph"
   OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
