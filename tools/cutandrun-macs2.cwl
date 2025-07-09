@@ -6,14 +6,10 @@ baseCommand:
   - run.sh
 
 requirements:
-  DockerRequirement:
+  - class: DockerRequirement
     dockerPull: "biowardrobe2/cutrun-macs2-core:v1.1.1"
-    # overwrite the image’s ENTRYPOINT so it won’t try to do conda activate
-    dockerRunOptions:
-      - --entrypoint=/bin/bash
 
-  InitialWorkDirRequirement:
-    class: InitialWorkDirRequirement
+  - class: InitialWorkDirRequirement
     listing:
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
@@ -35,9 +31,16 @@ requirements:
         entryname: run.sh
         writable: true
 
+hints:
+  - class: DockerRequirement
+    # override the image’s ENTRYPOINT so conda-activate wrapper isn’t invoked
+    dockerRunOptions:
+      - --entrypoint=/bin/bash
+
 inputs:
   config_json:
     type: File
+    doc: "Your config_for_macs2_cwl.json"
   fastq_dir: Directory
   reference_genome_dir: Directory
   ecoli_index_dir: Directory
