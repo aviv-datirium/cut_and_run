@@ -480,39 +480,65 @@ for n in "${TREAT_NAMES[@]}"; do
   log SEACR "$n" done
 done
 
-# merged vs pooled
+# ── B  treatment-merged vs control-merged ────────────────────────────────────
 if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
   MERGED_T_BG="$BW_DIR/treatment_merged.bedgraph"
   MERGED_C_BG="$BW_DIR/control_merged.bedgraph"
   OUT_MERGED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
+
   log SEACR merged start
-  echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
-  seacr_call "$MERGED_T_BG" "$MERGED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_MERGED%.bed}" \
+
+  # DEBUG: show exactly what we're passing
+  echo "[DEBUG] Running: seacr_call \"$MERGED_T_BG\" \"$MERGED_C_BG\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_MERGED%.bed}\"" >&2
+
+  # Actually call SEACR on the merged bedGraphs
+  seacr_call \
+    "$MERGED_T_BG" \
+    "$MERGED_C_BG" \
+    "$SEACR_NORM" \
+    "$SEACR_STRICT" \
+    "${OUT_MERGED%.bed}" \
     >>"$LOG_DIR/seacr_merged.log" 2>&1
+
+  # pick up the .stringent/.relaxed file
   for ext in stringent relaxed; do
     if [[ -e "${OUT_MERGED%.bed}.${ext}.bed" ]]; then
       mv "${OUT_MERGED%.bed}.${ext}.bed" "$OUT_MERGED"
       break
     fi
   done
+
   log SEACR merged done
 fi
 
-# each replicate vs pooled control
+# ── C  each replicate vs pooled control ──────────────────────────────────────
 if [[ -n "$POOLED_C_BG" ]]; then
   for n in "${TREAT_NAMES[@]}"; do
     IN_BG="$BW_DIR/${n}.bedgraph"
     OUT_POOLED="$PEAK_DIR/pooled/${n}_vs_ctrlPooled_seacr.bed"
+
     log SEACR "${n}_vs_ctrlPooled" start
-    echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
-    seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_POOLED%.bed}" \
+
+    # DEBUG: show exactly what we're passing
+    echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$POOLED_C_BG\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_POOLED%.bed}\"" >&2
+
+    # call SEACR on each replicate vs the pooled control
+    seacr_call \
+      "$IN_BG" \
+      "$POOLED_C_BG" \
+      "$SEACR_NORM" \
+      "$SEACR_STRICT" \
+      "${OUT_POOLED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
+
+    # pick up the resulting .stringent or .relaxed file
     for ext in stringent relaxed; do
       if [[ -e "${OUT_POOLED%.bed}.${ext}.bed" ]]; then
         mv "${OUT_POOLED%.bed}.${ext}.bed" "$OUT_POOLED"
         break
       fi
     done
+
     log SEACR "${n}_vs_ctrlPooled" done
   done
 fi
