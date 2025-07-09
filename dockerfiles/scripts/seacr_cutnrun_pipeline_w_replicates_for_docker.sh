@@ -429,17 +429,21 @@ log MERGE Treatment "$T_MRG ${TREAT_NAMES[@]}"
 merge_bams "$T_MRG" "${TREAT_NAMES[@]}"
 log MERGE Treatment Done
 
+# if you have controls, merge them too
 if (( ${#CTRL_NAMES[@]} )); then
   CTRL_MRG="$ALIGNMENT_DIR/control_merged.bam"
   log MERGE Control "$CTRL_MRG ${CTRL_NAMES[@]}"
   merge_bams "$CTRL_MRG" "${CTRL_NAMES[@]}"
   log MERGE Control Done
-  mkdir -p "$BW_DIR"
 fi
+
+# make sure our bedGraph output dir exists before SEACR
+mkdir -p "$BW_DIR"
 
 ###############################################################################
 # 12 SEACR PEAKS: replicate, merged, pooled
 ###############################################################################
+
 # Build a “pooled control” bedgraph if any controls exist
 if (( ${#CTRL_NAMES[@]} )); then
   mkdir -p "$BW_DIR"
@@ -456,42 +460,60 @@ for n in "${TREAT_NAMES[@]}"; do
     "$BW_DIR/${n}.bedgraph"
 done
 
+# ── PREP: make treatment-merged bedGraph for SEACR
+bam_to_bedgraph \
+  "$T_MRG" \
+  "$BW_DIR/treatment_merged.bedgraph"
+MERGED_T_BG="$BW_DIR/treatment_merged.bedgraph"
+
 # ── A  replicate peaks
 for n in "${TREAT_NAMES[@]}"; do
   IN_BG="$BW_DIR/${n}.bedgraph"
   OUT_BED="$PEAK_DIR/replicate/${n}_seacr.bed"
+
   log SEACR "$n" start
+
   if [[ -n "$POOLED_C_BG" ]]; then
-	echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
-    seacr_call "$IN_BG" "$POOLED_C_BG" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
+    echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$POOLED_C_BG\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" >&2
+    seacr_call \
+      "$IN_BG" \
+      "$POOLED_C_BG" \
+      "$SEACR_NORM" \
+      "$SEACR_STRICT" \
+      "${OUT_BED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
+
     for ext in stringent relaxed; do
       if [[ -e "${OUT_BED%.bed}.${ext}.bed" ]]; then
         mv "${OUT_BED%.bed}.${ext}.bed" "$OUT_BED"
         break
       fi
     done
+
   else
-	echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" 1>&2
-    seacr_call "$IN_BG" "$SEACR_THRESH" "$SEACR_NORM" "$SEACR_STRICT" "${OUT_BED%.bed}" \
+    echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$SEACR_THRESH\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_BED%.bed}\"" >&2
+    seacr_call \
+      "$IN_BG" \
+      "$SEACR_THRESH" \
+      "$SEACR_NORM" \
+      "$SEACR_STRICT" \
+      "${OUT_BED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
-    mv "${OUT_BED%.bed}.${SEACR_STRICT}.bed" "$OUT_BED"
+
+    mv "${IN_BG%.bedgraph}.${SEACR_STRICT}.bed" "$OUT_BED"
   fi
+
   log SEACR "$n" done
 done
 
-# ── B  treatment-merged vs control-merged ────────────────────────────────────
+# ── B  treatment-merged vs control-merged
 if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
-  MERGED_T_BG="$BW_DIR/treatment_merged.bedgraph"
   MERGED_C_BG="$BW_DIR/control_merged.bedgraph"
   OUT_MERGED="$PEAK_DIR/merged/treatmentMerged_vs_controlMerged_seacr.bed"
 
   log SEACR merged start
 
-  # DEBUG: show exactly what we're passing
   echo "[DEBUG] Running: seacr_call \"$MERGED_T_BG\" \"$MERGED_C_BG\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_MERGED%.bed}\"" >&2
-
-  # Actually call SEACR on the merged bedGraphs
   seacr_call \
     "$MERGED_T_BG" \
     "$MERGED_C_BG" \
@@ -500,7 +522,6 @@ if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
     "${OUT_MERGED%.bed}" \
     >>"$LOG_DIR/seacr_merged.log" 2>&1
 
-  # pick up the .stringent/.relaxed file
   for ext in stringent relaxed; do
     if [[ -e "${OUT_MERGED%.bed}.${ext}.bed" ]]; then
       mv "${OUT_MERGED%.bed}.${ext}.bed" "$OUT_MERGED"
@@ -511,7 +532,7 @@ if [[ -s $T_MRG && -n "$POOLED_C_BG" ]]; then
   log SEACR merged done
 fi
 
-# ── C  each replicate vs pooled control ──────────────────────────────────────
+# ── C  each replicate vs pooled control
 if [[ -n "$POOLED_C_BG" ]]; then
   for n in "${TREAT_NAMES[@]}"; do
     IN_BG="$BW_DIR/${n}.bedgraph"
@@ -519,10 +540,7 @@ if [[ -n "$POOLED_C_BG" ]]; then
 
     log SEACR "${n}_vs_ctrlPooled" start
 
-    # DEBUG: show exactly what we're passing
     echo "[DEBUG] Running: seacr_call \"$IN_BG\" \"$POOLED_C_BG\" \"$SEACR_NORM\" \"$SEACR_STRICT\" \"${OUT_POOLED%.bed}\"" >&2
-
-    # call SEACR on each replicate vs the pooled control
     seacr_call \
       "$IN_BG" \
       "$POOLED_C_BG" \
@@ -531,7 +549,6 @@ if [[ -n "$POOLED_C_BG" ]]; then
       "${OUT_POOLED%.bed}" \
       >>"$LOG_DIR/seacr_${n}.log" 2>&1
 
-    # pick up the resulting .stringent or .relaxed file
     for ext in stringent relaxed; do
       if [[ -e "${OUT_POOLED%.bed}.${ext}.bed" ]]; then
         mv "${OUT_POOLED%.bed}.${ext}.bed" "$OUT_POOLED"
