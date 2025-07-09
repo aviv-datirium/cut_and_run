@@ -1,18 +1,13 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-# We’ll need JS support for our $(...) expressions:
 requirements:
-  InlineJavascriptRequirement: {}
-
-  # pull your freshly-built image
   DockerRequirement:
-    dockerPull: "cutrun-macs2-core:latest"
+    dockerPull: cutrun-macs2-core:latest
 
-  # only stage the things we actually write into the container’s CWD:
   InitialWorkDirRequirement:
     listing:
-      # (1) a tiny launcher script
+      # 1) launcher
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
@@ -21,44 +16,53 @@ requirements:
         entryname: run.sh
         writable: true
 
-      # (2) your JSON config, under exactly this name:
+      # 2) the config JSON
       - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
-baseCommand:
-  - bash
-  - run.sh
+      # 3) data dirs & files exactly as your config expects them
+      - entry: $(inputs.fastq_dir.path)
+        entryname: fastq
+      - entry: $(inputs.reference_genome_dir.path)
+        entryname: star_indices/hg38
+      - entry: $(inputs.ecoli_index_dir.path)
+        entryname: star_indices/ecoli_canonical
+      - entry: $(inputs.chrom_sizes.path)
+        entryname: chrom/hg38.chrom.sizes
+      - entry: $(inputs.annotation_genes.path)
+        entryname: annotation/hg38.refGene.gtf
+
+baseCommand: [ bash, run.sh ]
 
 inputs:
   config_json:
     type: File
-    inputBinding:
-      position: 1
-      prefix: ""    # no extra flag, just the path
+  fastq_dir:
+    type: Directory
+  reference_genome_dir:
+    type: Directory
+  ecoli_index_dir:
+    type: Directory
+  chrom_sizes:
+    type: File
+  annotation_genes:
+    type: File
 
-  # everything else we mount read-only, no staging here:
-  fastq_dir:            Directory
-  reference_genome_dir: Directory
-  ecoli_index_dir:      Directory
-  chrom_sizes:          File
-  annotation_genes:     File
-
-# capture logs:
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
 
 outputs:
-  output_dir:
+  output_replicates:
     type: Directory
     outputBinding:
       glob: output_replicates
 
-  log_stdout:
+  cutrun_stdout:
     type: File
     outputBinding:
       glob: cutrun_stdout.log
 
-  log_stderr:
+  cutrun_stderr:
     type: File
     outputBinding:
       glob: cutrun_stderr.log
