@@ -2,38 +2,52 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
+  # for our $( ) expressions
+  InlineJavascriptRequirement: {}
+
+  # pull your image
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
 
+  # stage exactly what we need into the container CWD
   InitialWorkDirRequirement:
     listing:
-      # 1) tiny launcher script
-      - entry: |
+
+      # (1) the launcher script (runs cutrun.sh)
+      - class: Dirent
+        entry: |
           #!/usr/bin/env bash
           set -euo pipefail
+          cd "$(pwd)"
           bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
 
-      # 2) your config JSON, exactly this name
-      - entry: $(inputs.config_json.path)
-        entryname: config_for_docker.json
+      # (2) your JSON config
+      - class: File
+        path: $(inputs.config_json.path)
+        basename: config_for_docker.json
 
-      # 3) data dirs & files
-      - entry: $(inputs.fastq_dir.path)
-        entryname: fastq
+      # (3) data dirs & files laid out exactly under CWD
+      - class: Directory
+        path: $(inputs.fastq_dir.path)
+        basename: fastq
 
-      - entry: $(inputs.reference_genome_dir.path)
-        entryname: star_indices/hg38
+      - class: Directory
+        path: $(inputs.reference_genome_dir.path)
+        basename: star_indices/hg38
 
-      - entry: $(inputs.ecoli_index_dir.path)
-        entryname: star_indices/ecoli_canonical
+      - class: Directory
+        path: $(inputs.ecoli_index_dir.path)
+        basename: star_indices/ecoli_canonical
 
-      - entry: $(inputs.chrom_sizes.path)
-        entryname: chrom/hg38.chrom.sizes
+      - class: File
+        path: $(inputs.chrom_sizes.path)
+        basename: chrom/hg38.chrom.sizes
 
-      - entry: $(inputs.annotation_genes.path)
-        entryname: annotation/hg38.refGene.gtf
+      - class: File
+        path: $(inputs.annotation_genes.path)
+        basename: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
 
