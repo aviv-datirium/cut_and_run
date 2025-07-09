@@ -5,14 +5,14 @@ baseCommand: [ bash, run.sh ]
 
 requirements:
   - class: DockerRequirement
-    dockerPull: "biowardrobe2/cutrun-macs2-core:V1.1.1"
+    dockerPull: "biowardrobe2/cutrun-macs2-core:latest"
   - class: InitialWorkDirRequirement
     listing:
-      # 1) tiny wrapper script
+      # 1) the tiny wrapper script—no $(pwd) anywhere!
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          cd .                            # no more $(pwd)!
+          cd .                              # just stay in the staging dir
           exec bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
@@ -24,22 +24,33 @@ requirements:
 inputs:
   config_json:
     type: File
-    doc: "Your config_for_macs2_cwl.json"
-  fastq_dir:            Directory
-  reference_genome_dir: Directory
-  ecoli_index_dir:      Directory
-  chrom_sizes:          File
-  annotation_genes:     File
+
+  fastq_dir:
+    type: Directory
+
+  reference_genome_dir:
+    type: Directory
+
+  ecoli_index_dir:
+    type: Directory
+
+  chrom_sizes:
+    type: File
+
+  annotation_genes:
+    type: File
 
 outputs:
   output_dir:
     type: Directory
     outputBinding:
       glob: output_replicates
+
   log_stdout:
     type: File
     outputBinding:
       glob: cutrun_stdout.log
+
   log_stderr:
     type: File
     outputBinding:
