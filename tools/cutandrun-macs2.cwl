@@ -2,41 +2,26 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
-  # allow us to use $(inputs.foo) in InitialWorkDirRequirement
-  StepInputExpressionRequirement: {}
-  # pull your freshly-built image
   DockerRequirement:
-    dockerPull: cutrun-macs2-core:latest
-
-  # stage config + data into exactly the layout cutrun.sh expects
+    dockerPull: "cutrun-macs2-core:latest"
+  InlineJavascriptRequirement: {}           # for $(...) in InitialWorkDir
   InitialWorkDirRequirement:
     listing:
-      # config JSON must be named exactly this
-      - entry: $(inputs.config_json)
+      # only stage the launcher script + config file
+      - class: Dirent
+        entry: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          cd "$(pwd)"
+          bash /usr/local/bin/cutrun.sh config_for_docker.json
+        entryname: run.sh
+        writable: true
+
+      - class: File
+        entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
-      # raw FASTQs
-      - entry: $(inputs.fastq_dir)
-        entryname: fastq
-
-      # host reference indices
-      - entry: $(inputs.reference_genome_dir)
-        entryname: star_indices/hg38
-
-      # spike-in indices
-      - entry: $(inputs.ecoli_index_dir)
-        entryname: star_indices/ecoli_canonical
-
-      # chromosome sizes & annotation
-      - entry: $(inputs.chrom_sizes)
-        entryname: chrom/hg38.chrom.sizes
-      - entry: $(inputs.annotation_genes)
-        entryname: annotation/hg38.refGene.gtf
-
-baseCommand:
-  - /usr/local/bin/cutrun.sh
-arguments:
-  - config_for_docker.json
+baseCommand: [ bash, run.sh ]
 
 inputs:
   config_json:
