@@ -443,7 +443,7 @@ fi
 # Build a “pooled control” bedgraph if any controls exist
 if (( ${#CTRL_NAMES[@]} )); then
   mkdir -p "$BW_DIR"
-  make_bg "$BW_DIR/control_merged.bedgraph" "$CTRL_MRG"
+  bam_to_bedgraph "$CTRL_MRG" "$BW_DIR/control_merged.bedgraph"
   POOLED_C_BG="$BW_DIR/control_merged.bedgraph"
 else
   unset POOLED_C_BG
