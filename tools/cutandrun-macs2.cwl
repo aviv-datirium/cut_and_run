@@ -5,7 +5,7 @@ baseCommand: [ bash, run.sh ]
 
 requirements:
   - class: DockerRequirement
-    dockerPull: "biowardrobe2/cutrun-macs2-core:latest"
+    dockerPull: "biowardrobe2/cutrun-macs2-core:V1.1.1"
   - class: InitialWorkDirRequirement
     listing:
       # 1) tiny wrapper script
