@@ -628,11 +628,11 @@ fi
 ###############################################################################
 # 15  PEAK ANNOTATION                                                         #
 ###############################################################################
-annotate_one () {                     # $1 = full path to narrowPeak
+annotate_one () {
   local np="$1"
-  [[ -f $np ]] || { log Annotating "$(basename "$np")" "skip (no file)"; return; }
-
-  local base=${np##*/}; base=${base%.narrowPeak}
+  [[ -f $np ]] || { log Annotate "$(basename "$np")" "skip (no file)"; return; }
+  local base=${np##*/}         # e.g. MYC-MST1_S28_seacr.bed
+  base=${base%.bed}            # remove .bed suffix
   log Annotate "$base" start
 
   bedtools intersect -a "$np" -b "$ANNOTATION_GENES" -wa -wb \
