@@ -93,5 +93,7 @@ COPY scripts/macs2_cutnrun_pipeline_w_replicates_for_docker.sh /usr/local/bin/cu
 COPY docker_entrypoint.sh /usr/local/bin/docker_entrypoint.sh
 RUN chmod +x /usr/local/bin/cutrun.sh /usr/local/bin/docker_entrypoint.sh
 
-CMD ["/usr/local/bin/docker_entrypoint.sh"]
-
+# use a login‐shell so conda’s auto-activation kicks in
+ENTRYPOINT ["bash","-l","-c"]
+# default to running your MACS2 wrapper on the shipped config
+CMD ["/usr/local/bin/cutrun.sh config_for_docker.json"]
