@@ -4,19 +4,19 @@ class: CommandLineTool
 baseCommand: [ bash, run.sh ]
 
 requirements:
-  - class: InlineJavascriptRequirement
   - class: DockerRequirement
     dockerPull: "biowardrobe2/cutrun-macs2-core:latest"
   - class: InitialWorkDirRequirement
     listing:
-      # 1) the wrapper that invokes the container’s pipeline script
+      # 1) tiny wrapper script
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          cd "$(pwd)"
+          cd .                            # no more $(pwd)!
           exec bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
+
       # 2) your config JSON
       - entry: $(inputs.config_json)
         entryname: config_for_docker.json
@@ -25,21 +25,11 @@ inputs:
   config_json:
     type: File
     doc: "Your config_for_macs2_cwl.json"
-  fastq_dir:
-    type: Directory
-    doc: "Directory of FASTQ files"
-  reference_genome_dir:
-    type: Directory
-    doc: "STAR genome index (hg38)"
-  ecoli_index_dir:
-    type: Directory
-    doc: "STAR E. coli index"
-  chrom_sizes:
-    type: File
-    doc: "chrom/hg38.chrom.sizes"
-  annotation_genes:
-    type: File
-    doc: "annotation/hg38.refGene.gtf"
+  fastq_dir:            Directory
+  reference_genome_dir: Directory
+  ecoli_index_dir:      Directory
+  chrom_sizes:          File
+  annotation_genes:     File
 
 outputs:
   output_dir:
