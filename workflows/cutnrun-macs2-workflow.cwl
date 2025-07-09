@@ -2,12 +2,18 @@ cwlVersion: v1.2
 class: Workflow
 
 inputs:
-  config_json:          File
-  fastq_dir:            Directory
-  reference_genome_dir: Directory
-  ecoli_index_dir:      Directory
-  chrom_sizes:          File
-  annotation_genes:     File
+  config_json:
+    type: File
+  fastq_dir:
+    type: Directory
+  reference_genome_dir:
+    type: Directory
+  ecoli_index_dir:
+    type: Directory
+  chrom_sizes:
+    type: File
+  annotation_genes:
+    type: File
 
 steps:
   run_cutrun:
