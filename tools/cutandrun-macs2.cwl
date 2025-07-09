@@ -4,47 +4,40 @@ class: CommandLineTool
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "cutrun-macs2-core:latest"
+    dockerPull: cutrun-macs2-core:latest
   InitialWorkDirRequirement:
     listing:
-      # 1) launcher script
-      - class: File
-        basename: run.sh
-        contents: |
+      # (1) launcher script
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
           cd "$(pwd)"
           bash /usr/local/bin/cutrun.sh config_for_docker.json
-        executable: true
+        basename: run.sh
+        writable: true
 
-      # 2) config JSON under fixed name
-      - class: File
-        location: $(inputs.config_json.location)
+      # (2) your config JSON
+      - entry: $(inputs.config_json)
         basename: config_for_docker.json
 
-      # 3) fastq directory
-      - class: Directory
-        location: $(inputs.fastq_dir.location)
+      # (3) fastq dir
+      - entry: $(inputs.fastq_dir)
         basename: fastq
 
-      # 4) host STAR index
-      - class: Directory
-        location: $(inputs.reference_genome_dir.location)
+      # (4) host STAR index
+      - entry: $(inputs.reference_genome_dir)
         basename: star_indices/hg38
 
-      # 5) spike-in STAR index
-      - class: Directory
-        location: $(inputs.ecoli_index_dir.location)
+      # (5) spike-in STAR index
+      - entry: $(inputs.ecoli_index_dir)
         basename: star_indices/ecoli_canonical
 
-      # 6) chrom sizes
-      - class: File
-        location: $(inputs.chrom_sizes.location)
+      # (6) chrom sizes
+      - entry: $(inputs.chrom_sizes)
         basename: chrom/hg38.chrom.sizes
 
-      # 7) annotation GTF
-      - class: File
-        location: $(inputs.annotation_genes.location)
+      # (7) annotation GTF
+      - entry: $(inputs.annotation_genes)
         basename: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
