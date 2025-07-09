@@ -2,67 +2,57 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
+  # allow JS expressions everywhere
   InlineJavascriptRequirement: {}
-  StepInputExpressionRequirement: {}         # ← allow $(…) in listing
+  StepInputExpressionRequirement: {}
+
+  # pull your image
   DockerRequirement:
     dockerPull: cutrun-macs2-core:latest
+
+  # stage exactly what the container needs in its CWD
   InitialWorkDirRequirement:
     listing:
 
       # 1) launcher script
-      - class: Dirent
-        entry:
-          class: File
-          basename: run.sh
-          contents: |
-            #!/usr/bin/env bash
-            set -euo pipefail
-            cd "$(pwd)"
-            bash /usr/local/bin/cutrun.sh config_for_docker.json
-        entryname: run.sh
+      - class: File
+        basename: run.sh
+        contents: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          cd "$(pwd)"
+          bash /usr/local/bin/cutrun.sh config_for_docker.json
         writable: true
 
-      # 2) config JSON
-      - class: Dirent
-        entry:
-          class: File
-          location: $(inputs.config_json.path)
-        entryname: config_for_docker.json
+      # 2) the JSON config
+      - class: ExpressionDirent
+        name: config_for_docker.json
+        entry: $(inputs.config_json)
 
-      # 3) FASTQ directory (staged as “fastq”)
-      - class: Dirent
-        entry:
-          class: Directory
-          location: $(inputs.fastq_dir.path)
-        entryname: fastq
+      # 3) fastq data dir
+      - class: ExpressionDirent
+        name: fastq
+        entry: $(inputs.fastq_dir)
 
-      # 4) host-genome STAR index
-      - class: Dirent
-        entry:
-          class: Directory
-          location: $(inputs.reference_genome_dir.path)
-        entryname: star_indices/hg38
+      # 4) host‐genome STAR index
+      - class: ExpressionDirent
+        name: star_indices/hg38
+        entry: $(inputs.reference_genome_dir)
 
-      # 5) E. coli STAR index
-      - class: Dirent
-        entry:
-          class: Directory
-          location: $(inputs.ecoli_index_dir.path)
-        entryname: star_indices/ecoli_canonical
+      # 5) spike‐in STAR index
+      - class: ExpressionDirent
+        name: star_indices/ecoli_canonical
+        entry: $(inputs.ecoli_index_dir)
 
-      # 6) chromosome sizes
-      - class: Dirent
-        entry:
-          class: File
-          location: $(inputs.chrom_sizes.path)
-        entryname: chrom/hg38.chrom.sizes
+      # 6) chrom sizes file
+      - class: ExpressionDirent
+        name: chrom/hg38.chrom.sizes
+        entry: $(inputs.chrom_sizes)
 
-      # 7) gene annotation GTF
-      - class: Dirent
-        entry:
-          class: File
-          location: $(inputs.annotation_genes.path)
-        entryname: annotation/hg38.refGene.gtf
+      # 7) annotation GTF
+      - class: ExpressionDirent
+        name: annotation/hg38.refGene.gtf
+        entry: $(inputs.annotation_genes)
 
 baseCommand: [ bash, run.sh ]
 
