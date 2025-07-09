@@ -2,62 +2,6 @@
 
 set -euo pipefail
 
-cat <<'BANNER'
-
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ CUT&RUN PIPELINE (Paired-End) - Replicates · E. coli Spike-in · MACS2 Peaks ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
- This Bash workflow trims, aligns, deduplicates, filters, and peak-calls
- replicated CUT&RUN libraries. It supports an optional IgG/empty-vector control
- set, scales coverage tracks by E. coli spike-in, and writes three MACS2 peak
- tiers:
-
-   • replicate/   – one peak set per treatment replicate
-   • pooled/      – each treatment replicate vs pooled control
-   • merged/      – treatment-merged vs control-merged
-
- OUTPUT TREE
- ───────────
-   output/
-     fastqc_reports/           ⇠   FastQC HTML per FASTQ
-     bigwig_bedgraphs/         ⇠   *.bw + (optionally) *.bedgraph
-     seacr_peaks/
-        replicate//*.narrowPeak
-        pooled//*.narrowPeak
-        merged/…/*.narrowPeak
-     annotated_peaks/          ⇠   *.annotated.{bed,tsv}
-     preseq/
-     logs/                     ⇠   STAR, Picard, Trim, etc.
-
- MAJOR STEPS
- ───────────
-  0  Read paths & parameters (config.json)
-  1  FastQC on raw FASTQs
-  2  Trimming (Trimmomatic) – all treatment & control replicates
-  3  STAR   : host genome (hg38/mm10/…) → per-replicate BAM + index
-  4  STAR   : E. coli (spike-in) → per-replicate BAM + index
-  5  Picard : add-RG + duplicate removal
-  6  Fragment-size filtering (histone/TF/≤1 kb)
-  7  SEACR  : replicate, merged, pooled peak calling (paired-end mode)
-  8  Spike-in scale factors – host/spike read ratio per replicate
-  9  BedGraph + BigWig generation (scaled if factors exist)
- 10  Peak-to-gene annotation (bedtools intersect)
- 11  Preseq complexity estimation and plotting
-
- USAGE
- ─────
-   • Edit the config.json with absolute paths and replicate lists.
-   • Run: bash seacr_cut_and_run_pipeline_w_replicates.sh (no CLI arguments)
-   • Logs stream to stdout *and* to output/logs/pipeline.log
-
- REQUIREMENTS
- ────────────
-   bash ≥4 · samtools ≥1.10 · bedtools ≥2.28 · STAR ≥2.7 · Java ≥17
-   Trim Galore ≥0.6.10 · Picard ≥2.18 · SEACR ≥1.3 · cutadapt ≥4.1
-   R 4.x (for plotting) · GNU coreutils/awk · PIGZ · GNU Parallel
-
-BANNER
-
 ###############################################################################
 # 0  CONFIG + PATHS                                                           #
 ###############################################################################
@@ -127,6 +71,61 @@ if [[ -f "$LOG_DIR/pipeline.log" ]]; then
   mv "$LOG_DIR/pipeline.log" "$LOG_DIR/pipeline_${RUN_TS}.log"
 fi
 : > "$LOG_DIR/pipeline.log"
+
+# print the banner to both stdout and pipeline.log
+tee -a "$LOG_DIR/pipeline.log"<<'BANNER'
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ CUT&RUN PIPELINE (Paired-End) - Replicates · E. coli Spike-in · MACS2 Peaks ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+ This Bash workflow trims, aligns, deduplicates, filters, and peak-calls
+ replicated CUT&RUN libraries. It supports an optional IgG/empty-vector control
+ set, scales coverage tracks by E. coli spike-in, and writes three MACS2 peak
+ tiers:
+
+   • replicate/   – one peak set per treatment replicate
+   • pooled/      – each treatment replicate vs pooled control
+   • merged/      – treatment-merged vs control-merged
+
+ OUTPUT TREE
+ ───────────
+   output/
+     fastqc_reports/           ⇠   FastQC HTML per FASTQ
+     bigwig_bedgraphs/         ⇠   *.bw + (optionally) *.bedgraph
+     seacr_peaks/
+        replicate//*.narrowPeak
+        pooled//*.narrowPeak
+        merged/…/*.narrowPeak
+     annotated_peaks/          ⇠   *.annotated.{bed,tsv}
+     preseq/
+     logs/                     ⇠   STAR, Picard, Trim, etc.
+
+ MAJOR STEPS
+ ───────────
+  0  Read paths & parameters (config.json)
+  1  FastQC on raw FASTQs
+  2  Trimming (Trimmomatic) – all treatment & control replicates
+  3  STAR   : host genome (hg38/mm10/…) → per-replicate BAM + index
+  4  STAR   : E. coli (spike-in) → per-replicate BAM + index
+  5  Picard : add-RG + duplicate removal
+  6  Fragment-size filtering (histone/TF/≤1 kb)
+  7  SEACR  : replicate, merged, pooled peak calling (paired-end mode)
+  8  Spike-in scale factors – host/spike read ratio per replicate
+  9  BedGraph + BigWig generation (scaled if factors exist)
+ 10  Peak-to-gene annotation (bedtools intersect)
+ 11  Preseq complexity estimation and plotting
+
+ USAGE
+ ─────
+   • Edit the config.json with absolute paths and replicate lists.
+   • Run: bash seacr_cut_and_run_pipeline_w_replicates.sh (no CLI arguments)
+   • Logs stream to stdout *and* to output/logs/pipeline.log
+
+ REQUIREMENTS
+ ────────────
+   bash ≥4 · samtools ≥1.10 · bedtools ≥2.28 · STAR ≥2.7 · Java ≥17
+   Trim Galore ≥0.6.10 · Picard ≥2.18 · SEACR ≥1.3 · cutadapt ≥4.1
+   R 4.x (for plotting) · GNU coreutils/awk · PIGZ · GNU Parallel
+BANNER
 
 FASTQC_DIR="$OUTPUT_DIR/fastqc_reports"
 SPIKE_DIR="$ALIGNMENT_DIR/spikein"
