@@ -2,54 +2,54 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
-  # 1) Allow $(...) in InitialWorkDirRequirement
+  # allow $(…) JavaScript expressions
   InlineJavascriptRequirement: {}
 
-  # 2) Pull your freshly-built image
+  # use your freshly-built image
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
 
-  # 3) Stage only exactly what the pipeline expects under CWD
   InitialWorkDirRequirement:
     listing:
-      # (1) tiny launcher script
-      - entry: |
+      # 1) launcher script
+      - class: File
+        basename: "run.sh"
+        contents: |
           #!/usr/bin/env bash
           set -euo pipefail
-          cd "$$(pwd)"
+          cd "$(pwd)"
           bash /usr/local/bin/cutrun.sh config_for_docker.json
-        entryname: run.sh
-        writable: true
+        executable: true
 
-      # (2) your JSON config
-      - entry: $(inputs.config_json.path)
-        entryname: config_for_docker.json
-        class: File
+      # 2) config JSON under exactly this name
+      - class: File
+        location: $(inputs.config_json.path)
+        basename: "config_for_docker.json"
 
-      # (3) the FASTQs tree
-      - entry: $(inputs.fastq_dir.path)
-        entryname: fastq
-        class: Directory
+      # 3) fastq directory
+      - class: Directory
+        location: $(inputs.fastq_dir.path)
+        basename: "fastq"
 
-      # (4) host‐genome STAR index
-      - entry: $(inputs.reference_genome_dir.path)
-        entryname: star_indices/hg38
-        class: Directory
+      # 4) host STAR index
+      - class: Directory
+        location: $(inputs.reference_genome_dir.path)
+        basename: "star_indices/hg38"
 
-      # (5) spike‐in STAR index
-      - entry: $(inputs.ecoli_index_dir.path)
-        entryname: star_indices/ecoli_canonical
-        class: Directory
+      # 5) spike-in STAR index
+      - class: Directory
+        location: $(inputs.ecoli_index_dir.path)
+        basename: "star_indices/ecoli_canonical"
 
-      # (6) chrom.sizes
-      - entry: $(inputs.chrom_sizes.path)
-        entryname: chrom/hg38.chrom.sizes
-        class: File
+      # 6) chrom sizes file
+      - class: File
+        location: $(inputs.chrom_sizes.path)
+        basename: "chrom/hg38.chrom.sizes"
 
-      # (7) GTF
-      - entry: $(inputs.annotation_genes.path)
-        entryname: annotation/hg38.refGene.gtf
-        class: File
+      # 7) annotation GTF
+      - class: File
+        location: $(inputs.annotation_genes.path)
+        basename: "annotation/hg38.refGene.gtf"
 
 baseCommand: [ bash, run.sh ]
 
