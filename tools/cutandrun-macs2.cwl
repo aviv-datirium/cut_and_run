@@ -1,60 +1,59 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-baseCommand: [ bash, run.sh ]
+baseCommand:
+  - bash
+  - run.sh
 
 requirements:
-  - class: DockerRequirement
+  DockerRequirement:
     dockerPull: "biowardrobe2/cutrun-macs2-core:v1.1.1"
-  - class: InitialWorkDirRequirement
+    # overwrite the image’s ENTRYPOINT so it won’t try to do conda activate
+    dockerRunOptions:
+      - --entrypoint=/bin/bash
+
+  InitialWorkDirRequirement:
+    class: InitialWorkDirRequirement
     listing:
-      # 1) the tiny wrapper script—no $(pwd) anywhere!
+      - entry: $(inputs.config_json)
+        entryname: config_for_docker.json
+      - entry: $(inputs.fastq_dir)
+        entryname: fastq
+      - entry: $(inputs.reference_genome_dir)
+        entryname: star_indices/hg38
+      - entry: $(inputs.ecoli_index_dir)
+        entryname: star_indices/ecoli_canonical
+      - entry: $(inputs.chrom_sizes)
+        entryname: chrom/hg38.chrom.sizes
+      - entry: $(inputs.annotation_genes)
+        entryname: annotation/hg38.refGene.gtf
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          cd .                              # just stay in the staging dir
+          cd "$(pwd)"
           exec bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
 
-      # 2) your config JSON
-      - entry: $(inputs.config_json)
-        entryname: config_for_docker.json
-
 inputs:
   config_json:
     type: File
-
-  fastq_dir:
-    type: Directory
-
-  reference_genome_dir:
-    type: Directory
-
-  ecoli_index_dir:
-    type: Directory
-
-  chrom_sizes:
-    type: File
-
-  annotation_genes:
-    type: File
+  fastq_dir: Directory
+  reference_genome_dir: Directory
+  ecoli_index_dir: Directory
+  chrom_sizes: File
+  annotation_genes: File
 
 outputs:
   output_dir:
     type: Directory
     outputBinding:
       glob: output_replicates
-
   log_stdout:
     type: File
     outputBinding:
       glob: cutrun_stdout.log
-
   log_stderr:
     type: File
     outputBinding:
       glob: cutrun_stderr.log
-
-stdout: cutrun_stdout.log
-stderr: cutrun_stderr.log
