@@ -9,7 +9,7 @@ requirements:
 
   - class: InitialWorkDirRequirement
     listing:
-      # 1) our launcher script — makes the two output dirs, then runs cutrun.sh
+      # 1) launcher script: make the two dirs, then call cutrun.sh
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
@@ -18,27 +18,27 @@ requirements:
         entryname: run.sh
         writable: true
 
-      # 2) copy in your JSON config
-      - entry: $(inputs.config_json.path)
+      # 2) config JSON (full File object!)
+      - entry: $(inputs.config_json)
         entryname: config_for_docker.json
 
-      # 3) the FASTQ directory
-      - entry: $(inputs.fastq_dir.path)
+      # 3) fastq directory
+      - entry: $(inputs.fastq_dir)
         entryname: fastq
 
       # 4) genome indices
-      - entry: $(inputs.reference_genome_dir.path)
+      - entry: $(inputs.reference_genome_dir)
         entryname: star_indices/hg38
 
-      - entry: $(inputs.ecoli_index_dir.path)
+      - entry: $(inputs.ecoli_index_dir)
         entryname: star_indices/ecoli_canonical
 
       # 5) chromosome sizes
-      - entry: $(inputs.chrom_sizes.path)
+      - entry: $(inputs.chrom_sizes)
         entryname: chrom/hg38.chrom.sizes
 
-      # 6) gene annotation
-      - entry: $(inputs.annotation_genes.path)
+      # 6) gene annotation GTF
+      - entry: $(inputs.annotation_genes)
         entryname: annotation/hg38.refGene.gtf
 
 baseCommand:
