@@ -2,19 +2,13 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
-  # allow $(…) expressions in Dirent.entry
   InlineJavascriptRequirement: {}
-
-  # pull your locally built image
   DockerRequirement:
     dockerPull: cutrun-macs2-core:latest
-
-  # stage exactly the files and directories the pipeline needs
   InitialWorkDirRequirement:
     listing:
-      # 1) a tiny launcher script
-      - class: Dirent
-        entry: |
+      # 1) launcher
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
           bash /usr/local/bin/cutrun.sh config_for_docker.json
@@ -22,34 +16,34 @@ requirements:
         writable: true
 
       # 2) the JSON config
-      - class: Dirent
-        entry: $(inputs.config_json.path)
+      - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
+        writable: false
 
       # 3) fastqs
-      - class: Dirent
-        entry: $(inputs.fastq_dir.path)
+      - entry: $(inputs.fastq_dir.path)
         entryname: fastq
+        writable: false
 
       # 4) hg38 STAR index
-      - class: Dirent
-        entry: $(inputs.reference_genome_dir.path)
+      - entry: $(inputs.reference_genome_dir.path)
         entryname: star_indices/hg38
+        writable: false
 
       # 5) E. coli STAR index
-      - class: Dirent
-        entry: $(inputs.ecoli_index_dir.path)
+      - entry: $(inputs.ecoli_index_dir.path)
         entryname: star_indices/ecoli_canonical
+        writable: false
 
       # 6) chromosome sizes
-      - class: Dirent
-        entry: $(inputs.chrom_sizes.path)
+      - entry: $(inputs.chrom_sizes.path)
         entryname: chrom/hg38.chrom.sizes
+        writable: false
 
       # 7) gene annotation
-      - class: Dirent
-        entry: $(inputs.annotation_genes.path)
+      - entry: $(inputs.annotation_genes.path)
         entryname: annotation/hg38.refGene.gtf
+        writable: false
 
 baseCommand:
   - bash
