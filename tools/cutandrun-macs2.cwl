@@ -53,7 +53,10 @@ outputs:
   alignment_replicates:
     type: Directory
     outputBinding:
-      glob: alignment_replicates
+      # Match the directory itself plus everything under it
+      glob:
+        - alignment_replicates
+        - alignment_replicates/**
 
   cutrun_stdout:
     type: stdout
