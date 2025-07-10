@@ -9,7 +9,7 @@ requirements:
 
   - class: InitialWorkDirRequirement
     listing:
-      # 1) Launcher script: make the two output dirs, then call your pipeline.
+      # 1) launcher script
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
@@ -18,10 +18,10 @@ requirements:
         entryname: run.sh
         writable: true
 
-      # 2) Your config JSON, staged by copying it in.
-      - class: File
-        location: $(inputs.config_json.location)
-        basename: config_for_docker.json
+      # 2) your config JSON – stage the File object
+      - entry: $(inputs.config_json)
+        entryname: config_for_docker.json
+        writable: false
 
 inputs:
   config_json:
