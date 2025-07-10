@@ -2,14 +2,18 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
-  InlineJavascriptRequirement: {}      # ← turn on JS
+  # ← turn JS expressions back on
+  InlineJavascriptRequirement: {}
+
+  # pull your image
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
+
+  # stage exactly what you need into container CWD
   InitialWorkDirRequirement:
     listing:
-      # 1) launcher
-      - class: File
-        entry: |
+      # 1) launcher script
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
           cd "$(pwd)"
@@ -17,30 +21,24 @@ requirements:
         entryname: run.sh
         writable: true
 
-      # 2) config JSON
-      - class: File
-        entry: $(inputs.config_json.path)
+      # 2) your config JSON
+      - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
-      # 3) data dirs & files
-      - class: Directory
-        entry: $(inputs.fastq_dir.path)
+      # 3) inputs exactly where your pipeline expects them
+      - entry: $(inputs.fastq_dir.path)
         entryname: fastq
 
-      - class: Directory
-        entry: $(inputs.reference_genome_dir.path)
+      - entry: $(inputs.reference_genome_dir.path)
         entryname: star_indices/hg38
 
-      - class: Directory
-        entry: $(inputs.ecoli_index_dir.path)
+      - entry: $(inputs.ecoli_index_dir.path)
         entryname: star_indices/ecoli_canonical
 
-      - class: File
-        entry: $(inputs.chrom_sizes.path)
+      - entry: $(inputs.chrom_sizes.path)
         entryname: chrom/hg38.chrom.sizes
 
-      - class: File
-        entry: $(inputs.annotation_genes.path)
+      - entry: $(inputs.annotation_genes.path)
         entryname: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
@@ -48,14 +46,19 @@ baseCommand: [ bash, run.sh ]
 inputs:
   config_json:
     type: File
+
   fastq_dir:
     type: Directory
+
   reference_genome_dir:
     type: Directory
+
   ecoli_index_dir:
     type: Directory
+
   chrom_sizes:
     type: File
+
   annotation_genes:
     type: File
 
