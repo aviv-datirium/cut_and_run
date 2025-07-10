@@ -1,11 +1,9 @@
 cwlVersion: v1.2
 class: CommandLineTool
-
 baseCommand:
   - bash
   - run.sh
   - config_for_docker.json
-
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
@@ -16,47 +14,32 @@ requirements:
   InitialWorkDirRequirement:
     listing:
       # 1) wrapper script
-      - class: Dirent
+      - entryname: run.sh
         entry: |
           #!/usr/bin/env bash
           set -euo pipefail
           bash /usr/local/bin/cutrun.sh config_for_docker.json
-        entryname: run.sh
         writable: true
-
       # 2) our JSON config
-      - class: Dirent
-        entry: $(inputs.config_json.path)
-        entryname: config_for_docker.json
-
+      - entryname: config_for_docker.json
+        entry: $(inputs.config_json)
       # 3) fastqs
-      - class: Dirent
-        entry: $(inputs.fastq_dir.path)
-        entryname: fastq
-
+      - entryname: fastq
+        entry: $(inputs.fastq_dir)
       # 4) hg38 STAR index
-      - class: Dirent
-        entry: $(inputs.reference_genome_dir.path)
-        entryname: star_indices/hg38
-
+      - entryname: star_indices/hg38
+        entry: $(inputs.reference_genome_dir)
       # 5) E.coli STAR index
-      - class: Dirent
-        entry: $(inputs.ecoli_index_dir.path)
-        entryname: star_indices/ecoli_canonical
-
+      - entryname: star_indices/ecoli_canonical
+        entry: $(inputs.ecoli_index_dir)
       # 6) chrom sizes
-      - class: Dirent
-        entry: $(inputs.chrom_sizes.path)
-        entryname: chrom/hg38.chrom.sizes
-
+      - entryname: chrom/hg38.chrom.sizes
+        entry: $(inputs.chrom_sizes)
       # 7) gene annotation
-      - class: Dirent
-        entry: $(inputs.annotation_genes.path)
-        entryname: annotation/hg38.refGene.gtf
-
+      - entryname: annotation/hg38.refGene.gtf
+        entry: $(inputs.annotation_genes)
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
-
 inputs:
   config_json:
     type: File
@@ -70,23 +53,19 @@ inputs:
     type: File
   annotation_genes:
     type: File
-
 outputs:
   cutrun_stdout:
     type: File
     outputBinding:
       glob: cutrun_stdout.log
-
   cutrun_stderr:
     type: File
     outputBinding:
       glob: cutrun_stderr.log
-
   output_replicates:
     type: Directory
     outputBinding:
       glob: output_replicates
-
   alignment_replicates:
     type: Directory
     outputBinding:
