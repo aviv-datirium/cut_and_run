@@ -9,50 +9,58 @@ requirements:
 
   - class: InitialWorkDirRequirement
     listing:
-      # 1) launcher script — now creates the output dirs first
+      # 1) our launcher script — makes the two output dirs, then runs cutrun.sh
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          # make sure CWL can see these
           mkdir -p output_replicates alignment_replicates
-          # run the real cutrun
           bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
 
-      # 2) your config JSON
+      # 2) copy in your JSON config
       - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
-      # 3) data dirs & files exactly as your config expects them
+      # 3) the FASTQ directory
       - entry: $(inputs.fastq_dir.path)
         entryname: fastq
 
+      # 4) genome indices
       - entry: $(inputs.reference_genome_dir.path)
         entryname: star_indices/hg38
 
       - entry: $(inputs.ecoli_index_dir.path)
         entryname: star_indices/ecoli_canonical
 
+      # 5) chromosome sizes
       - entry: $(inputs.chrom_sizes.path)
         entryname: chrom/hg38.chrom.sizes
 
+      # 6) gene annotation
       - entry: $(inputs.annotation_genes.path)
         entryname: annotation/hg38.refGene.gtf
 
-baseCommand: [ bash, run.sh ]
+baseCommand:
+  - bash
+  - run.sh
 
 inputs:
   config_json:
     type: File
+
   fastq_dir:
     type: Directory
+
   reference_genome_dir:
     type: Directory
+
   ecoli_index_dir:
     type: Directory
+
   chrom_sizes:
     type: File
+
   annotation_genes:
     type: File
 
