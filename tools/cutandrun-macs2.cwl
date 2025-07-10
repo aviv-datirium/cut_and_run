@@ -2,17 +2,19 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
-  # ← turn JS expressions back on
+
+  # Allow $(...) JS expressions
   InlineJavascriptRequirement: {}
 
-  # pull your image
+  # Pull the image you built
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
 
-  # stage exactly what you need into container CWD
+  # Stage just exactly what your script needs in its CWD
   InitialWorkDirRequirement:
     listing:
-      # 1) launcher script
+
+      # 1) The launcher that calls your pipeline with the right filename
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
@@ -20,46 +22,24 @@ requirements:
         entryname: run.sh
         writable: true
 
-      # 2) your config JSON
+      # 2) Your config JSON, *renamed* to match the script’s argument
       - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
-
-      # 3) inputs exactly where your pipeline expects them
-      - entry: $(inputs.fastq_dir.path)
-        entryname: fastq
-
-      - entry: $(inputs.reference_genome_dir.path)
-        entryname: star_indices/hg38
-
-      - entry: $(inputs.ecoli_index_dir.path)
-        entryname: star_indices/ecoli_canonical
-
-      - entry: $(inputs.chrom_sizes.path)
-        entryname: chrom/hg38.chrom.sizes
-
-      - entry: $(inputs.annotation_genes.path)
-        entryname: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
 
 inputs:
   config_json:
     type: File
+    doc: |
+      A JSON file containing all of the parameters your cutnrun.sh needs.
 
-  fastq_dir:
-    type: Directory
-
-  reference_genome_dir:
-    type: Directory
-
-  ecoli_index_dir:
-    type: Directory
-
-  chrom_sizes:
-    type: File
-
-  annotation_genes:
-    type: File
+  # All other inputs are bind-mounted read-only; no staging here:
+  fastq_dir:            Directory
+  reference_genome_dir: Directory
+  ecoli_index_dir:      Directory
+  chrom_sizes:          File
+  annotation_genes:     File
 
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
