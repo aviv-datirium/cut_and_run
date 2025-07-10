@@ -10,20 +10,43 @@ baseCommand:
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: cutrun-macs2-core:latest
+    dockerPull: "cutrun-macs2-core:latest"
   ResourceRequirement:
     coresMin: 1
     ramMin: 256
   InitialWorkDirRequirement:
     listing:
-
-      # 1) our wrapper script
-      - entry: |
+      # 1) our tiny wrapper that makes the directories & symlinks
+      - entryname: run.sh
+        writable: true
+        entry: |
           #!/usr/bin/env bash
           set -euo pipefail
+
+          # recreate the layout the pipeline expects
+          mkdir -p star_indices/hg38 \
+                   star_indices/ecoli_canonical \
+                   fastq \
+                   chrom \
+                   annotation
+
+          # point those dirs at the real mounts
+          ln -sf "$(inputs.reference_genome_dir.path)" star_indices/hg38
+          ln -sf "$(inputs.ecoli_index_dir.path)"    star_indices/ecoli_canonical
+          ln -sf "$(inputs.fastq_dir.path)"          fastq
+          ln -sf "$(inputs.chrom_sizes.path)"        chrom/hg38.chrom.sizes
+          ln -sf "$(inputs.annotation_genes.path)"   annotation/hg38.refGene.gtf
+
+          # now run the real entrypoint
           bash /usr/local/bin/cutrun.sh config_for_docker.json
-        entryname: run.sh
-        writable: true
+
+          # relax perms so CWL can clean up
+          chmod -R a+rwx . || true
+
+      # 2) your JSON config
+      - entryname: config_for_docker.json
+        entry: $(inputs.config_json.path)
+
 
       # 2) the config JSON
       - entry: $(inputs.config_json)
