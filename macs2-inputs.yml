@@ -1,5 +1,20 @@
-config_json:       config_for_macs2_cwl.json
-fastq_dir:         /mnt/data/home/aviv/fastq/min_msto211h
-star_indices:      /mnt/data/home/aviv/star_indices        # <-- both hg38/ & ecoli_canonical/
-chrom_sizes:       /mnt/data/home/aviv/chrom/hg38.chrom.sizes
-annotation_genes:  /mnt/data/home/aviv/annotation/hg38.refGene.gtf
+# macs2-inputs.yml
+config_json:
+  class: File
+  path: /mnt/data/home/aviv/cut_and_run/config_for_macs2_cwl.json
+
+fastq_dir:
+  class: Directory
+  path: /mnt/data/home/aviv/fastq/min_msto211h
+
+star_indices:
+  class: Directory
+  path: /mnt/data/home/aviv/star_indices   # contains both hg38/ & ecoli_canonical/
+
+chrom_sizes:
+  class: File
+  path: /mnt/data/home/aviv/chrom/hg38.chrom.sizes
+
+annotation_genes:
+  class: File
+  path: /mnt/data/home/aviv/annotation/hg38.refGene.gtf

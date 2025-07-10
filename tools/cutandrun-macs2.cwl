@@ -1,3 +1,4 @@
+# tools/cutandrun-macs2.cwl
 cwlVersion: v1.2
 class: CommandLineTool
 
@@ -10,7 +11,6 @@ requirements:
   DockerRequirement:
     dockerPull: cutrun-macs2-core:latest
 
-  # Stage in everything under predictable names—no normal bind-mounts!
   InitialWorkDirRequirement:
     listing:
       - entry: $(inputs.config_json)
