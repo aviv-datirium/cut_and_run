@@ -6,8 +6,8 @@ inputs:
     type: File
   fastq_dir:
     type: Directory
-  index_dir:
-    type: Directory    # <-- contains both hg38/ and ecoli_canonical/ subfolders
+  star_indices:
+    type: Directory    # contains both hg38/ and ecoli_canonical/
   chrom_sizes:
     type: File
   annotation_genes:
@@ -19,7 +19,7 @@ steps:
     in:
       config_json:      config_json
       fastq_dir:        fastq_dir
-      star_indices:     index_dir       # map the combined dir here
+      star_indices:     star_indices
       chrom_sizes:      chrom_sizes
       annotation_genes: annotation_genes
     out:
