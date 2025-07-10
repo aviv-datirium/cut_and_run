@@ -1,18 +1,20 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
+baseCommand:
+  - bash
+  - run.sh
+  - config_for_docker.json
+
 requirements:
-  # enable JS expressions
   InlineJavascriptRequirement: {}
-
-  # pull the Docker image
   DockerRequirement:
-    dockerPull: "cutrun-macs2-core:latest"
-
-  # stage only what we need into the container’s CWD
+    dockerPull: cutrun-macs2-core:latest
+  ResourceRequirement:
+    coresMin: 1
+    ramMin: 256
   InitialWorkDirRequirement:
     listing:
-      # 1) the wrapper script
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
@@ -20,59 +22,61 @@ requirements:
         entryname: run.sh
         writable: true
 
-      # 2) config json
-      - entry: $(inputs.config_json.path)
+      - entry: $(inputs.config_json.location)
         entryname: config_for_docker.json
 
-      # 3) input dirs & files
-      - entry: $(inputs.fastq_dir.path)
+      - entry:
+          class: Directory
+          location: $(inputs.fastq_dir.location)
         entryname: fastq
-      - entry: $(inputs.reference_genome_dir.path)
+
+      - entry:
+          class: Directory
+          location: $(inputs.reference_genome_dir.location)
         entryname: star_indices/hg38
-      - entry: $(inputs.ecoli_index_dir.path)
+
+      - entry:
+          class: Directory
+          location: $(inputs.ecoli_index_dir.location)
         entryname: star_indices/ecoli_canonical
-      - entry: $(inputs.chrom_sizes.path)
+
+      - entry:
+          class: File
+          location: $(inputs.chrom_sizes.location)
         entryname: chrom/hg38.chrom.sizes
-      - entry: $(inputs.annotation_genes.path)
+
+      - entry:
+          class: File
+          location: $(inputs.annotation_genes.location)
         entryname: annotation/hg38.refGene.gtf
 
-  ResourceRequirement:
-    coresMin: 1
-    ramMin: 4096
-
-baseCommand: ["bash", "run.sh"]
+stdout: cutrun_stdout.log
+stderr: cutrun_stderr.log
 
 inputs:
   config_json:
     type: File
-    inputBinding: {}
-
   fastq_dir:
     type: Directory
-    inputBinding: {}
-
   reference_genome_dir:
     type: Directory
-    inputBinding: {}
-
   ecoli_index_dir:
     type: Directory
-    inputBinding: {}
-
   chrom_sizes:
     type: File
-    inputBinding: {}
-
   annotation_genes:
     type: File
-    inputBinding: {}
 
 outputs:
   cutrun_stdout:
-    type: stdout
+    type: File
+    outputBinding:
+      glob: cutrun_stdout.log
 
   cutrun_stderr:
-    type: stderr
+    type: File
+    outputBinding:
+      glob: cutrun_stderr.log
 
   output_replicates:
     type: Directory
