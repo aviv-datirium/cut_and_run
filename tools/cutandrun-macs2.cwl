@@ -2,13 +2,14 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
-  InlineJavascriptRequirement: {}
-  DockerRequirement:
+  - class: InlineJavascriptRequirement
+
+  - class: DockerRequirement
     dockerPull: cutrun-macs2-core:latest
 
-  InitialWorkDirRequirement:
+  - class: InitialWorkDirRequirement
     listing:
-      # 1) Your launcher script (static)
+      # 1) launcher script
       - class: Dirent
         entry: |
           #!/usr/bin/env bash
@@ -17,32 +18,32 @@ requirements:
         entryname: run.sh
         writable: true
 
-      # 2) Config JSON (dynamic, expression)
+      # 2) your config JSON
       - class: ExpressionDirent
         entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
-      # 3) FASTQ directory
+      # 3) FASTQ dir
       - class: ExpressionDirent
         entry: $(inputs.fastq_dir.path)
         entryname: fastq
 
-      # 4) STAR hg38 index
+      # 4) hg38 STAR indices
       - class: ExpressionDirent
         entry: $(inputs.reference_genome_dir.path)
         entryname: star_indices/hg38
 
-      # 5) STAR E. coli index
+      # 5) E. coli STAR indices
       - class: ExpressionDirent
         entry: $(inputs.ecoli_index_dir.path)
         entryname: star_indices/ecoli_canonical
 
-      # 6) Chrom sizes file
+      # 6) chromosome sizes
       - class: ExpressionDirent
         entry: $(inputs.chrom_sizes.path)
         entryname: chrom/hg38.chrom.sizes
 
-      # 7) Gene annotation GTF
+      # 7) gene annotations
       - class: ExpressionDirent
         entry: $(inputs.annotation_genes.path)
         entryname: annotation/hg38.refGene.gtf
