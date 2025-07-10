@@ -2,18 +2,14 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
-  # for our $( ) expressions
   InlineJavascriptRequirement: {}
 
-  # pull your image
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
 
-  # stage exactly what we need into the container CWD
   InitialWorkDirRequirement:
     listing:
-
-      # (1) the launcher script (runs cutrun.sh)
+      # 1) launcher script
       - class: Dirent
         entry: |
           #!/usr/bin/env bash
@@ -23,33 +19,35 @@ requirements:
         entryname: run.sh
         writable: true
 
-      # (2) your JSON config
+      # 2) config JSON, under this exact name
       - class: File
-        path: $(inputs.config_json.path)
+        location: $(inputs.config_json.location)
         basename: config_for_docker.json
 
-      # (3) data dirs & files laid out exactly under CWD
+      # 3) data dirs & files exactly how cutrun.sh expects them:
       - class: Directory
-        path: $(inputs.fastq_dir.path)
+        location: $(inputs.fastq_dir.location)
         basename: fastq
 
       - class: Directory
-        path: $(inputs.reference_genome_dir.path)
+        location: $(inputs.reference_genome_dir.location)
         basename: star_indices/hg38
 
       - class: Directory
-        path: $(inputs.ecoli_index_dir.path)
+        location: $(inputs.ecoli_index_dir.location)
         basename: star_indices/ecoli_canonical
 
       - class: File
-        path: $(inputs.chrom_sizes.path)
+        location: $(inputs.chrom_sizes.location)
         basename: chrom/hg38.chrom.sizes
 
       - class: File
-        path: $(inputs.annotation_genes.path)
+        location: $(inputs.annotation_genes.location)
         basename: annotation/hg38.refGene.gtf
 
-baseCommand: [ bash, run.sh ]
+baseCommand:
+  - bash
+  - run.sh
 
 inputs:
   config_json:
