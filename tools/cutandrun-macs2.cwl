@@ -3,33 +3,58 @@ class: CommandLineTool
 
 requirements:
   InlineJavascriptRequirement: {}
+
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
+
   InitialWorkDirRequirement:
     listing:
-      # Only stash our wrapper script
-      - class: Dirent
-        entry: |
+      # 1) the launcher script
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          # $1 is the config JSON
-          bash /usr/local/bin/cutrun.sh "$1"
+          bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
 
-baseCommand: [ bash, run.sh, $(inputs.config_json.path) ]
+      # 2) your config JSON (stage the File object itself, not its .path string)
+      - entry: $(inputs.config_json)
+        entryname: config_for_docker.json
+
+      # 3) data dirs & files exactly as your config expects them
+      - entry: $(inputs.fastq_dir)
+        entryname: fastq
+
+      - entry: $(inputs.reference_genome_dir)
+        entryname: star_indices/hg38
+
+      - entry: $(inputs.ecoli_index_dir)
+        entryname: star_indices/ecoli_canonical
+
+      - entry: $(inputs.chrom_sizes)
+        entryname: chrom/hg38.chrom.sizes
+
+      - entry: $(inputs.annotation_genes)
+        entryname: annotation/hg38.refGene.gtf
+
+baseCommand: [ bash, run.sh ]
 
 inputs:
   config_json:
     type: File
+
   fastq_dir:
     type: Directory
+
   reference_genome_dir:
     type: Directory
+
   ecoli_index_dir:
     type: Directory
+
   chrom_sizes:
     type: File
+
   annotation_genes:
     type: File
 
