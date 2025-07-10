@@ -5,13 +5,12 @@ requirements:
   - class: InlineJavascriptRequirement
 
   - class: DockerRequirement
-    dockerPull: cutrun-macs2-core:latest
+    dockerPull: "cutrun-macs2-core:latest"
 
   - class: InitialWorkDirRequirement
     listing:
       # 1) launcher script
-      - class: Dirent
-        entry: |
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
           bash /usr/local/bin/cutrun.sh config_for_docker.json
@@ -19,33 +18,23 @@ requirements:
         writable: true
 
       # 2) your config JSON
-      - class: Dirent
-        entry: $(inputs.config_json.path)
+      - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
-      # 3) fastq directory
-      - class: Dirent
-        entry: $(inputs.fastq_dir.path)
+      # 3) data dirs & files exactly as your config expects them
+      - entry: $(inputs.fastq_dir.path)
         entryname: fastq
 
-      # 4) human STAR indices
-      - class: Dirent
-        entry: $(inputs.reference_genome_dir.path)
+      - entry: $(inputs.reference_genome_dir.path)
         entryname: star_indices/hg38
 
-      # 5) E. coli STAR indices
-      - class: Dirent
-        entry: $(inputs.ecoli_index_dir.path)
+      - entry: $(inputs.ecoli_index_dir.path)
         entryname: star_indices/ecoli_canonical
 
-      # 6) chromosome sizes
-      - class: Dirent
-        entry: $(inputs.chrom_sizes.path)
+      - entry: $(inputs.chrom_sizes.path)
         entryname: chrom/hg38.chrom.sizes
 
-      # 7) gene annotation
-      - class: Dirent
-        entry: $(inputs.annotation_genes.path)
+      - entry: $(inputs.annotation_genes.path)
         entryname: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
@@ -72,11 +61,6 @@ outputs:
     type: Directory
     outputBinding:
       glob: output_replicates
-
-  alignment_replicates:
-    type: Directory
-    outputBinding:
-      glob: alignment_replicates
 
   cutrun_stdout:
     type: File
