@@ -6,10 +6,8 @@ inputs:
     type: File
   fastq_dir:
     type: Directory
-  reference_genome_dir:
-    type: Directory
-  ecoli_index_dir:
-    type: Directory
+  index_dir:
+    type: Directory    # <-- contains both hg38/ and ecoli_canonical/ subfolders
   chrom_sizes:
     type: File
   annotation_genes:
@@ -19,12 +17,11 @@ steps:
   run_cutrun:
     run: tools/cutandrun-macs2.cwl
     in:
-      config_json:          config_json
-      fastq_dir:            fastq_dir
-      reference_genome_dir: reference_genome_dir
-      ecoli_index_dir:      ecoli_index_dir
-      chrom_sizes:          chrom_sizes
-      annotation_genes:     annotation_genes
+      config_json:      config_json
+      fastq_dir:        fastq_dir
+      star_indices:     index_dir       # map the combined dir here
+      chrom_sizes:      chrom_sizes
+      annotation_genes: annotation_genes
     out:
       - output_replicates
       - alignment_replicates
