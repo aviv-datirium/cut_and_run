@@ -7,39 +7,33 @@ requirements:
     dockerPull: "cutrun-macs2-core:latest"
   InitialWorkDirRequirement:
     listing:
-      # 1) launcher script
-      - class: File
-        entry: |
+      # 1) launcher script:
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
           bash /usr/local/bin/cutrun.sh config_for_docker.json
-        basename: run.sh
+        entryname: run.sh
+        writable: true
 
-      # 2) copy in the config JSON
-      - class: File
-        location: $(inputs.config_json.path)
-        basename: config_for_docker.json
+      # 2) your config JSON:
+      - entry: $(inputs.config_json.path)
+        entryname: config_for_docker.json
 
-      # 3) copy in all of your data directories/files
-      - class: Directory
-        location: $(inputs.fastq_dir.path)
-        basename: fastq
+      # 3) data directories & files:
+      - entry: $(inputs.fastq_dir.path)
+        entryname: fastq
 
-      - class: Directory
-        location: $(inputs.reference_genome_dir.path)
-        basename: star_indices/hg38
+      - entry: $(inputs.reference_genome_dir.path)
+        entryname: star_indices/hg38
 
-      - class: Directory
-        location: $(inputs.ecoli_index_dir.path)
-        basename: star_indices/ecoli_canonical
+      - entry: $(inputs.ecoli_index_dir.path)
+        entryname: star_indices/ecoli_canonical
 
-      - class: File
-        location: $(inputs.chrom_sizes.path)
-        basename: chrom/hg38.chrom.sizes
+      - entry: $(inputs.chrom_sizes.path)
+        entryname: chrom/hg38.chrom.sizes
 
-      - class: File
-        location: $(inputs.annotation_genes.path)
-        basename: annotation/hg38.refGene.gtf
+      - entry: $(inputs.annotation_genes.path)
+        entryname: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
 
