@@ -1,20 +1,20 @@
-# macs2-inputs.yml
+# seacr-inputs.yml
 config_json:
   class: File
-  path: /mnt/data/home/aviv/cut_and_run/config_for_macs2_cwl.json
+  path: dockerfiles/config_for_seacr_docker.json
 
 fastq_dir:
   class: Directory
-  path: /mnt/data/home/aviv/fastq/min_msto211h
+  path: fastq
 
 star_indices:
   class: Directory
-  path: /mnt/data/home/aviv/star_indices
+  path: star_indices
 
 chrom_sizes:
   class: File
-  path: /mnt/data/home/aviv/chrom/hg38.chrom.sizes
+  path: chrom/hg38.chrom.sizes
 
 annotation_genes:
   class: File
-  path: /mnt/data/home/aviv/annotation/hg38.refGene.gtf
+  path: annotation/hg38.refGene.gtf
