@@ -2,56 +2,35 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
-  InlineJavascriptRequirement: {}
+  # 1) run inside your freshly built image
   DockerRequirement:
     dockerPull: cutrun-macs2-core:latest
+
+  # 2) drop into the container only the bits
   InitialWorkDirRequirement:
     listing:
-      # 1) launcher
+      # (a) our tiny wrapper that just execs cutrun.sh
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
+          # invoke the "real" pipeline
           bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
-        writable: true
 
-      # 2) the JSON config
-      - entry: $(inputs.config_json.path)
-        entryname: config_for_docker.json
-        writable: false
+      # (b) stage in YOUR config JSON under the name it expects:
+      - class: File
+        path: $(inputs.config_json.path)
+        basename: config_for_docker.json
 
-      # 3) fastqs
-      - entry: $(inputs.fastq_dir.path)
-        entryname: fastq
-        writable: false
-
-      # 4) hg38 STAR index
-      - entry: $(inputs.reference_genome_dir.path)
-        entryname: star_indices/hg38
-        writable: false
-
-      # 5) E. coli STAR index
-      - entry: $(inputs.ecoli_index_dir.path)
-        entryname: star_indices/ecoli_canonical
-        writable: false
-
-      # 6) chromosome sizes
-      - entry: $(inputs.chrom_sizes.path)
-        entryname: chrom/hg38.chrom.sizes
-        writable: false
-
-      # 7) gene annotation
-      - entry: $(inputs.annotation_genes.path)
-        entryname: annotation/hg38.refGene.gtf
-        writable: false
-
-baseCommand:
-  - bash
-  - run.sh
+# we DON'T stage the dirs manually here; CWL will bind-mount them
+baseCommand: [ bash, run.sh ]
 
 inputs:
+  # the only thing we copy in is the config file
   config_json:
     type: File
+
+  # these six inputs CWL will bind-mount read-only
   fastq_dir:
     type: Directory
   reference_genome_dir:
