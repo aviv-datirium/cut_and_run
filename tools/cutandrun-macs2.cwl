@@ -1,47 +1,57 @@
 cwlVersion: v1.2
+
 class: CommandLineTool
+
 baseCommand:
   - bash
   - run.sh
   - config_for_docker.json
+
 requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
-    dockerPull: "cutrun-macs2-core:latest"
-    dockerOutputDirectory: /tmp
+    dockerPull: cutrun-macs2-core:latest
   ResourceRequirement:
     coresMin: 1
     ramMin: 256
   InitialWorkDirRequirement:
     listing:
-      # 1) wrapper script
-      - entryname: run.sh
-        entry: |
+
+      # 1) our wrapper script
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          
-          # Create directory structure
-          mkdir -p star_indices chrom annotation
-          
-          # Create symlinks to the actual mounted paths in the container
-          # CWL mounts directories with specific names, let's find them
-          find /tmp -name "hg38" -type d | head -1 | xargs -I {} ln -sf {} star_indices/hg38
-          find /tmp -name "ecoli_canonical" -type d | head -1 | xargs -I {} ln -sf {} star_indices/ecoli_canonical
-          find /tmp -name "min_msto211h" -type d | head -1 | xargs -I {} ln -sf {} fastq
-          find /tmp -name "hg38.chrom.sizes" -type f | head -1 | xargs -I {} ln -sf {} chrom/hg38.chrom.sizes
-          find /tmp -name "hg38.refGene.gtf" -type f | head -1 | xargs -I {} ln -sf {} annotation/hg38.refGene.gtf
-          
-          # Run the actual pipeline
           bash /usr/local/bin/cutrun.sh config_for_docker.json
-          
-          # Fix permissions for cleanup
-          chmod -R 755 . 2>/dev/null || true
+        entryname: run.sh
         writable: true
-      # 2) our JSON config
-      - entryname: config_for_docker.json
-        entry: $(inputs.config_json)
+
+      # 2) the config JSON
+      - entry: $(inputs.config_json)
+        entryname: config_for_docker.json
+
+      # 3) the fastq directory
+      - entry: $(inputs.fastq_dir)
+        entryname: fastq
+
+      # 4) human genome index
+      - entry: $(inputs.reference_genome_dir)
+        entryname: star_indices/hg38
+
+      # 5) E. coli index
+      - entry: $(inputs.ecoli_index_dir)
+        entryname: star_indices/ecoli_canonical
+
+      # 6) chromosome sizes
+      - entry: $(inputs.chrom_sizes)
+        entryname: chrom/hg38.chrom.sizes
+
+      # 7) annotation GTF
+      - entry: $(inputs.annotation_genes)
+        entryname: annotation/hg38.refGene.gtf
+
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
+
 inputs:
   config_json:
     type: File
@@ -55,6 +65,7 @@ inputs:
     type: File
   annotation_genes:
     type: File
+
 outputs:
   cutrun_stdout:
     type: File
