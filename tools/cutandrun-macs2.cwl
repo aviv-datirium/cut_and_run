@@ -2,44 +2,63 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
+  # enable $(…) JavaScript expressions
   InlineJavascriptRequirement: {}
+
+  # pull your freshly‐built Docker image
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
+
+  # only stage the files you actually need into the container’s CWD
   InitialWorkDirRequirement:
     listing:
-      # 1) small launcher script
+      # (1) the launcher script
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          # run.sh and config_for_docker.json are in CWD
           bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
 
-      # 2) your JSON config
+      # (2) your JSON config, under exactly this name
       - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
+      # (3) data dirs & files exactly as your config expects them
+      - entry: $(inputs.fastq_dir.path)
+        entryname: fastq
+      - entry: $(inputs.reference_genome_dir.path)
+        entryname: star_indices/hg38
+      - entry: $(inputs.ecoli_index_dir.path)
+        entryname: star_indices/ecoli_canonical
+      - entry: $(inputs.chrom_sizes.path)
+        entryname: chrom/hg38.chrom.sizes
+      - entry: $(inputs.annotation_genes.path)
+        entryname: annotation/hg38.refGene.gtf
+
+# call *only* the launcher; it will read config_for_docker.json itself
 baseCommand: [ bash, run.sh ]
 
 inputs:
   config_json:
     type: File
-    inputBinding:                        # still needs to be on the command line
-      position: 1
 
-  # everything else will be bind-mounted by CWL under their staging paths:
   fastq_dir:
     type: Directory
+
   reference_genome_dir:
     type: Directory
+
   ecoli_index_dir:
     type: Directory
+
   chrom_sizes:
     type: File
+
   annotation_genes:
     type: File
 
+# capture logs
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
 
