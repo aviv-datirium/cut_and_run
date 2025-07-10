@@ -19,26 +19,27 @@ requirements:
         entry: |
           #!/usr/bin/env bash
           set -euo pipefail
+          
+          # Create directory structure
+          mkdir -p star_indices chrom annotation
+          
+          # Create symlinks to the actual mounted paths in the container
+          # CWL mounts directories with specific names, let's find them
+          find /tmp -name "hg38" -type d | head -1 | xargs -I {} ln -sf {} star_indices/hg38
+          find /tmp -name "ecoli_canonical" -type d | head -1 | xargs -I {} ln -sf {} star_indices/ecoli_canonical
+          find /tmp -name "min_msto211h" -type d | head -1 | xargs -I {} ln -sf {} fastq
+          find /tmp -name "hg38.chrom.sizes" -type f | head -1 | xargs -I {} ln -sf {} chrom/hg38.chrom.sizes
+          find /tmp -name "hg38.refGene.gtf" -type f | head -1 | xargs -I {} ln -sf {} annotation/hg38.refGene.gtf
+          
+          # Run the actual pipeline
           bash /usr/local/bin/cutrun.sh config_for_docker.json
+          
+          # Fix permissions for cleanup
+          chmod -R 755 . 2>/dev/null || true
         writable: true
       # 2) our JSON config
       - entryname: config_for_docker.json
         entry: $(inputs.config_json)
-      # 3) fastqs
-      - entryname: fastq
-        entry: $(inputs.fastq_dir)
-      # 4) hg38 STAR index
-      - entryname: star_indices/hg38
-        entry: $(inputs.reference_genome_dir)
-      # 5) E.coli STAR index
-      - entryname: star_indices/ecoli_canonical
-        entry: $(inputs.ecoli_index_dir)
-      # 6) chrom sizes
-      - entryname: chrom/hg38.chrom.sizes
-        entry: $(inputs.chrom_sizes)
-      # 7) gene annotation
-      - entryname: annotation/hg38.refGene.gtf
-        entry: $(inputs.annotation_genes)
 stdout: cutrun_stdout.log
 stderr: cutrun_stderr.log
 inputs:
