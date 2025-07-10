@@ -9,10 +9,13 @@ requirements:
 
   - class: InitialWorkDirRequirement
     listing:
-      # 1) launcher script
+      # 1) launcher script — now creates the output dirs first
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
+          # make sure CWL can see these
+          mkdir -p output_replicates alignment_replicates
+          # run the real cutrun
           bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
@@ -61,6 +64,11 @@ outputs:
     type: Directory
     outputBinding:
       glob: output_replicates
+
+  alignment_replicates:
+    type: Directory
+    outputBinding:
+      glob: alignment_replicates
 
   cutrun_stdout:
     type: File
