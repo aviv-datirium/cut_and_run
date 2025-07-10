@@ -16,7 +16,6 @@ requirements:
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          cd "$(pwd)"
           bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
