@@ -7,40 +7,39 @@ requirements:
     dockerPull: "cutrun-macs2-core:latest"
   InitialWorkDirRequirement:
     listing:
-      # 1) Launcher script (Dirent)
+      # 1) launcher script
       - class: Dirent
         entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          # pass empty first arg, then the JSON config
           bash /usr/local/bin/cutrun.sh '' config_for_docker.json
         entryname: run.sh
         writable: true
 
-      # 2) Your JSON config (File)
+      # 2) config JSON
       - class: File
-        location: $(inputs.config_json.path)
+        path: $(inputs.config_json.path)
         basename: config_for_docker.json
 
-      # 3) Data directories & files exactly as your config expects them:
+      # 3) mount in your inputs exactly as the pipeline expects
       - class: Directory
-        location: $(inputs.fastq_dir.path)
+        path: $(inputs.fastq_dir.path)
         basename: fastq
 
       - class: Directory
-        location: $(inputs.reference_genome_dir.path)
+        path: $(inputs.reference_genome_dir.path)
         basename: star_indices/hg38
 
       - class: Directory
-        location: $(inputs.ecoli_index_dir.path)
+        path: $(inputs.ecoli_index_dir.path)
         basename: star_indices/ecoli_canonical
 
       - class: File
-        location: $(inputs.chrom_sizes.path)
+        path: $(inputs.chrom_sizes.path)
         basename: chrom/hg38.chrom.sizes
 
       - class: File
-        location: $(inputs.annotation_genes.path)
+        path: $(inputs.annotation_genes.path)
         basename: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
