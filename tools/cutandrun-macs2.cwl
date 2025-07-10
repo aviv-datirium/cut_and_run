@@ -2,48 +2,54 @@ cwlVersion: v1.2
 class: CommandLineTool
 
 requirements:
+  # allow $(…) expressions in Dirent.entry
   InlineJavascriptRequirement: {}
 
+  # pull your locally built image
   DockerRequirement:
-    dockerPull: "cutrun-macs2-core:latest"
+    dockerPull: cutrun-macs2-core:latest
 
+  # stage exactly the files and directories the pipeline needs
   InitialWorkDirRequirement:
     listing:
-      # 1) launcher script
+      # 1) a tiny launcher script
       - class: Dirent
         entry: |
           #!/usr/bin/env bash
           set -euo pipefail
-          cd "$(pwd)"
           bash /usr/local/bin/cutrun.sh config_for_docker.json
         entryname: run.sh
         writable: true
 
-      # 2) config JSON, under this exact name
-      - class: File
-        location: $(inputs.config_json.location)
-        basename: config_for_docker.json
+      # 2) the JSON config
+      - class: Dirent
+        entry: $(inputs.config_json.path)
+        entryname: config_for_docker.json
 
-      # 3) data dirs & files exactly how cutrun.sh expects them:
-      - class: Directory
-        location: $(inputs.fastq_dir.location)
-        basename: fastq
+      # 3) fastqs
+      - class: Dirent
+        entry: $(inputs.fastq_dir.path)
+        entryname: fastq
 
-      - class: Directory
-        location: $(inputs.reference_genome_dir.location)
-        basename: star_indices/hg38
+      # 4) hg38 STAR index
+      - class: Dirent
+        entry: $(inputs.reference_genome_dir.path)
+        entryname: star_indices/hg38
 
-      - class: Directory
-        location: $(inputs.ecoli_index_dir.location)
-        basename: star_indices/ecoli_canonical
+      # 5) E. coli STAR index
+      - class: Dirent
+        entry: $(inputs.ecoli_index_dir.path)
+        entryname: star_indices/ecoli_canonical
 
-      - class: File
-        location: $(inputs.chrom_sizes.location)
-        basename: chrom/hg38.chrom.sizes
+      # 6) chromosome sizes
+      - class: Dirent
+        entry: $(inputs.chrom_sizes.path)
+        entryname: chrom/hg38.chrom.sizes
 
-      - class: File
-        location: $(inputs.annotation_genes.location)
-        basename: annotation/hg38.refGene.gtf
+      # 7) gene annotation
+      - class: Dirent
+        entry: $(inputs.annotation_genes.path)
+        entryname: annotation/hg38.refGene.gtf
 
 baseCommand:
   - bash
@@ -52,19 +58,14 @@ baseCommand:
 inputs:
   config_json:
     type: File
-
   fastq_dir:
     type: Directory
-
   reference_genome_dir:
     type: Directory
-
   ecoli_index_dir:
     type: Directory
-
   chrom_sizes:
     type: File
-
   annotation_genes:
     type: File
 
