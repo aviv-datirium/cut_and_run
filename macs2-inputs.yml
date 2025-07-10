@@ -9,7 +9,7 @@ fastq_dir:
 
 star_indices:
   class: Directory
-  path: /mnt/data/home/aviv/star_indices   # contains both hg38/ & ecoli_canonical/
+  path: /mnt/data/home/aviv/star_indices
 
 chrom_sizes:
   class: File
