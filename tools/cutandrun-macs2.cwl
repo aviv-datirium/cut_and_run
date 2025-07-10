@@ -3,58 +3,57 @@ class: CommandLineTool
 
 requirements:
   InlineJavascriptRequirement: {}
-
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
-
   InitialWorkDirRequirement:
     listing:
-      # 1) the launcher script
-      - entry: |
+      # 1) launcher script
+      - class: File
+        entry: |
           #!/usr/bin/env bash
           set -euo pipefail
           bash /usr/local/bin/cutrun.sh config_for_docker.json
-        entryname: run.sh
-        writable: true
+        basename: run.sh
 
-      # 2) your config JSON (stage the File object itself, not its .path string)
-      - entry: $(inputs.config_json)
-        entryname: config_for_docker.json
+      # 2) copy in the config JSON
+      - class: File
+        location: $(inputs.config_json.path)
+        basename: config_for_docker.json
 
-      # 3) data dirs & files exactly as your config expects them
-      - entry: $(inputs.fastq_dir)
-        entryname: fastq
+      # 3) copy in all of your data directories/files
+      - class: Directory
+        location: $(inputs.fastq_dir.path)
+        basename: fastq
 
-      - entry: $(inputs.reference_genome_dir)
-        entryname: star_indices/hg38
+      - class: Directory
+        location: $(inputs.reference_genome_dir.path)
+        basename: star_indices/hg38
 
-      - entry: $(inputs.ecoli_index_dir)
-        entryname: star_indices/ecoli_canonical
+      - class: Directory
+        location: $(inputs.ecoli_index_dir.path)
+        basename: star_indices/ecoli_canonical
 
-      - entry: $(inputs.chrom_sizes)
-        entryname: chrom/hg38.chrom.sizes
+      - class: File
+        location: $(inputs.chrom_sizes.path)
+        basename: chrom/hg38.chrom.sizes
 
-      - entry: $(inputs.annotation_genes)
-        entryname: annotation/hg38.refGene.gtf
+      - class: File
+        location: $(inputs.annotation_genes.path)
+        basename: annotation/hg38.refGene.gtf
 
 baseCommand: [ bash, run.sh ]
 
 inputs:
   config_json:
     type: File
-
   fastq_dir:
     type: Directory
-
   reference_genome_dir:
     type: Directory
-
   ecoli_index_dir:
     type: Directory
-
   chrom_sizes:
     type: File
-
   annotation_genes:
     type: File
 
