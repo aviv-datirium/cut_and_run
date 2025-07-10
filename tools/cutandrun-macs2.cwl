@@ -58,6 +58,11 @@ outputs:
     outputBinding:
       glob: output_replicates
 
+alignment_replicates:
+    type: Directory
+    outputBinding:
+      glob: alignment_replicates
+
   cutrun_stdout:
     type: File
     outputBinding:
