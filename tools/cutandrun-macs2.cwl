@@ -1,19 +1,15 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-# turn JS expressions back on
 requirements:
   - class: InlineJavascriptRequirement
 
-  # pull the Docker image
   - class: DockerRequirement
     dockerPull: "cutrun-macs2-core:latest"
 
-  # stage exactly what you need into the container's CWD,
-  # and make the two output dirs up‐front so CWL can clean them
   - class: InitialWorkDirRequirement
     listing:
-      # 1) launcher script: mkdir outputs, then call cutrun.sh
+      # 1) Launcher script: make the two output dirs, then call your pipeline.
       - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
@@ -22,11 +18,10 @@ requirements:
         entryname: run.sh
         writable: true
 
-      # 2) inline your JSON config file
-      # this will copy the *contents* of the File into
-      # config_for_docker.json in the container
-      - entry: $(inputs.config_json.contents)
-        entryname: config_for_docker.json
+      # 2) Your config JSON, staged by copying it in.
+      - class: File
+        location: $(inputs.config_json.location)
+        basename: config_for_docker.json
 
 inputs:
   config_json:
@@ -47,8 +42,6 @@ inputs:
   annotation_genes:
     type: File
 
-# we ignore all other inputs on the command line;
-# run.sh will read config_for_docker.json directly.
 baseCommand: [ bash, run.sh ]
 
 stdout: cutrun_stdout.log
