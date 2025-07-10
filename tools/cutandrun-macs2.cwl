@@ -7,37 +7,29 @@ requirements:
     dockerPull: "cutrun-macs2-core:latest"
   InitialWorkDirRequirement:
     listing:
-      # 1) launcher script with debug tracing
+      # 1) launcher that runs your script then ensures the output folder exists
       - entry: |
           #!/usr/bin/env bash
-          set -euo pipefail -x
-
-          echo "=== START cutrun.sh ==="
+          set -euo pipefail
           bash /usr/local/bin/cutrun.sh config_for_docker.json
-          echo "=== END cutrun.sh ==="
-
-          echo "=== CWD CONTENTS ==="
-          ls -R .
+          # guarantee CWL will find this directory
+          mkdir -p output_replicates
         entryname: run.sh
         writable: true
 
-      # 2) your config JSON
+      # 2) config JSON
       - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
 
-      # 3) data dirs & files exactly as your config expects them
+      # 3) data inputs
       - entry: $(inputs.fastq_dir.path)
         entryname: fastq
-
       - entry: $(inputs.reference_genome_dir.path)
         entryname: star_indices/hg38
-
       - entry: $(inputs.ecoli_index_dir.path)
         entryname: star_indices/ecoli_canonical
-
       - entry: $(inputs.chrom_sizes.path)
         entryname: chrom/hg38.chrom.sizes
-
       - entry: $(inputs.annotation_genes.path)
         entryname: annotation/hg38.refGene.gtf
 
