@@ -8,6 +8,7 @@ requirements:
   InlineJavascriptRequirement: {}
   DockerRequirement:
     dockerPull: "cutrun-macs2-core:latest"
+    dockerOutputDirectory: /tmp
   ResourceRequirement:
     coresMin: 1
     ramMin: 256
@@ -19,6 +20,8 @@ requirements:
           #!/usr/bin/env bash
           set -euo pipefail
           bash /usr/local/bin/cutrun.sh config_for_docker.json
+          # Fix permissions for cleanup
+          chmod -R 755 . 2>/dev/null || true
         writable: true
       # 2) our JSON config
       - entryname: config_for_docker.json
