@@ -7,47 +7,34 @@ requirements:
 
   InitialWorkDirRequirement:
     listing:
-      # 1) Write out our launcher script
-      - class: Dirent
-        entryname: run.sh
-        writable: true
-        entry: |
+      # 1) launcher script
+      - entry: |
           #!/usr/bin/env bash
           set -euo pipefail
           cd "$(pwd)"
           bash /usr/local/bin/cutrun.sh config_for_docker.json
+        entryname: run.sh
+        writable: true
 
-      # 2) Drop in the JSON config
-      - class: Dirent
+      # 2) config JSON
+      - entry: $(inputs.config_json.path)
         entryname: config_for_docker.json
-        writable: false
-        entry: $(inputs.config_json.path)
 
-      # 3) And stage all the data directories/files exactly where cutrun expects them:
-      - class: Dirent
+      # 3) data as cutrun expects it
+      - entry: $(inputs.fastq_dir.path)
         entryname: fastq
-        writable: false
-        entry: $(inputs.fastq_dir.path)
 
-      - class: Dirent
+      - entry: $(inputs.reference_genome_dir.path)
         entryname: star_indices/hg38
-        writable: false
-        entry: $(inputs.reference_genome_dir.path)
 
-      - class: Dirent
+      - entry: $(inputs.ecoli_index_dir.path)
         entryname: star_indices/ecoli_canonical
-        writable: false
-        entry: $(inputs.ecoli_index_dir.path)
 
-      - class: Dirent
+      - entry: $(inputs.chrom_sizes.path)
         entryname: chrom/hg38.chrom.sizes
-        writable: false
-        entry: $(inputs.chrom_sizes.path)
 
-      - class: Dirent
+      - entry: $(inputs.annotation_genes.path)
         entryname: annotation/hg38.refGene.gtf
-        writable: false
-        entry: $(inputs.annotation_genes.path)
 
 baseCommand: [ bash, run.sh ]
 
