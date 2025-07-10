@@ -1,23 +1,23 @@
 config_json:
   class: File
-  path: dockerfiles/config_for_macs2_cwl.json
+  location: /mnt/data/home/aviv/cut_and_run/dockerfiles/config_for_macs2_cwl.json
 
 fastq_dir:
   class: Directory
-  path: /mnt/data/home/aviv/fastq/min_msto211h
+  location: /mnt/data/home/aviv/fastq/min_msto211h
 
 reference_genome_dir:
   class: Directory
-  path: /mnt/data/home/aviv/star_indices/hg38
+  location: /mnt/data/home/aviv/star_indices/hg38
 
 ecoli_index_dir:
   class: Directory
-  path: /mnt/data/home/aviv/star_indices/ecoli_canonical
+  location: /mnt/data/home/aviv/star_indices/ecoli_canonical
 
 chrom_sizes:
   class: File
-  path: /mnt/data/home/aviv/chrom/hg38.chrom.sizes
+  location: /mnt/data/home/aviv/chrom/hg38.chrom.sizes
 
 annotation_genes:
   class: File
-  path: /mnt/data/home/aviv/annotation/hg38.refGene.gtf
+  location: /mnt/data/home/aviv/annotation/hg38.refGene.gtf
