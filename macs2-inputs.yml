@@ -1,15 +1,19 @@
 config_json:
   class: File
   path: config_for_macs2_cwl.json
+
 fastq_dir:
   class: Directory
   path: fastq
+
 star_indices:
   class: Directory
   path: star_indices
-chrom_sizes:
-  class: File
-  path: chrom/hg38.chrom.sizes
-annotation_genes:
-  class: File
-  path: annotation/hg38.refGene.gtf
+
+chrom_dir:
+  class: Directory
+  path: chrom
+
+annotation_dir:
+  class: Directory
+  path: annotation
