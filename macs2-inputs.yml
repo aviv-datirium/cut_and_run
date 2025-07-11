@@ -4,16 +4,20 @@ config_json:
 
 fastq_dir:
   class: Directory
-  path: /mnt/data/home/aviv/fastq
+  path: /mnt/data/home/aviv/fastq/min_msto211h
 
-star_indices:
+reference_genome_dir:
   class: Directory
-  path: /mnt/data/home/aviv/star_indices
+  path: /mnt/data/home/aviv/star_indices/hg38
 
-chrom_dir:
+ecoli_index_dir:
   class: Directory
-  path: /mnt/data/home/aviv/cut_and_run/chrom
+  path: /mnt/data/home/aviv/star_indices/ecoli_canonical
 
-annotation_dir:
-  class: Directory
-  path: /mnt/data/home/aviv/cut_and_run/annotation
+chrom_sizes:
+  class: File
+  path: /mnt/data/home/aviv/chrom/hg38.chrom.sizes
+
+annotation_genes:
+  class: File
+  path: /mnt/data/home/aviv/annotation/hg38.refGene.gtf
