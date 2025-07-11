@@ -3,7 +3,7 @@ class: CommandLineTool
 
 requirements:
   DockerRequirement:
-    dockerPull: cutrun-macs2-core:latest
+    dockerImageId: cutrun-macs2-core:latest
   InitialWorkDirRequirement:
     listing:
       - entry: $(inputs.config_json)
