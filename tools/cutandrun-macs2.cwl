@@ -13,10 +13,10 @@ requirements:
         entryname: fastq
       - entry: $(inputs.star_indices)
         entryname: star_indices
-      - entry: $(inputs.chrom_sizes)
-        entryname: chrom/hg38.chrom.sizes
-      - entry: $(inputs.annotation_genes)
-        entryname: annotation/hg38.refGene.gtf
+      - entry: $(inputs.chrom_dir)
+        entryname: chrom
+      - entry: $(inputs.annotation_dir)
+        entryname: annotation
 
 inputs:
   config_json:
@@ -25,10 +25,10 @@ inputs:
     type: Directory
   star_indices:
     type: Directory
-  chrom_sizes:
-    type: File
-  annotation_genes:
-    type: File
+  chrom_dir:
+    type: Directory
+  annotation_dir:
+    type: Directory
 
 baseCommand:
   - bash
