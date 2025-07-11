@@ -11,24 +11,33 @@ requirements:
         entryname: config_for_docker.json
       - entry: $(inputs.fastq_dir)
         entryname: fastq
-      - entry: $(inputs.star_indices)
-        entryname: star_indices
-      - entry: $(inputs.chrom_dir)
-        entryname: chrom
-      - entry: $(inputs.annotation_dir)
-        entryname: annotation
+      - entry: $(inputs.reference_genome_dir)
+        entryname: star_indices/hg38
+      - entry: $(inputs.ecoli_index_dir)
+        entryname: star_indices/ecoli_canonical
+      - entry: $(inputs.chrom_sizes)
+        entryname: chrom/hg38.chrom.sizes
+      - entry: $(inputs.annotation_genes)
+        entryname: annotation/hg38.refGene.gtf
 
 inputs:
   config_json:
     type: File
+
   fastq_dir:
     type: Directory
-  star_indices:
+
+  reference_genome_dir:
     type: Directory
-  chrom_dir:
+
+  ecoli_index_dir:
     type: Directory
-  annotation_dir:
-    type: Directory
+
+  chrom_sizes:
+    type: File
+
+  annotation_genes:
+    type: File
 
 baseCommand:
   - bash
@@ -43,11 +52,14 @@ outputs:
     type: Directory
     outputBinding:
       glob: alignment_replicates
+
   output_replicates:
     type: Directory
     outputBinding:
       glob: output_replicates
+
   cutrun_stdout:
     type: stdout
+
   cutrun_stderr:
     type: stderr

@@ -1,3 +1,5 @@
+# macs2-inputs.yml
+
 config_json:
   class: File
   path: /mnt/data/home/aviv/cut_and_run/config_for_macs2_cwl.json
