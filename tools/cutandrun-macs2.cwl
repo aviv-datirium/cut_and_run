@@ -1,11 +1,10 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-requirements:
-  DockerRequirement:
-    dockerPull: cutrun-macs2-core:latest
+defaultContainer: cutrun-macs2-core:latest
 
-  # Stage all inputs under /tmp, matching your JSON paths
+requirements:
+  DockerRequirement: {}
   InitialWorkDirRequirement:
     listing:
       - entry: $(inputs.config_json)
@@ -31,25 +30,27 @@ inputs:
   annotation_genes:
     type: File
 
-# Bypass the image’s login‐shell ENTRYPOINT and run exactly what worked:
 baseCommand:
   - bash
   - -lc
   - |
     source /opt/conda/etc/profile.d/conda.sh && \
     conda activate cutrun && \
-    exec /usr/local/bin/cutrun.sh /tmp/config_for_docker.json
+    exec /usr/local/bin/cutrun.sh config_for_docker.json
 
 outputs:
   alignment_replicates:
     type: Directory
     outputBinding:
       glob: alignment_replicates
+
   output_replicates:
     type: Directory
     outputBinding:
       glob: output_replicates
+
   cutrun_stdout:
     type: stdout
+
   cutrun_stderr:
     type: stderr
