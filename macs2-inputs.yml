@@ -1,19 +1,19 @@
 config_json:
   class: File
-  path: config_for_macs2_cwl.json
+  path: /mnt/data/home/aviv/cut_and_run/config_for_macs2_cwl.json
 
 fastq_dir:
   class: Directory
-  path: fastq
+  path: /mnt/data/home/aviv/fastq
 
 star_indices:
   class: Directory
-  path: star_indices
+  path: /mnt/data/home/aviv/star_indices
 
 chrom_dir:
   class: Directory
-  path: chrom
+  path: /mnt/data/home/aviv/cut_and_run/chrom
 
 annotation_dir:
   class: Directory
-  path: annotation
+  path: /mnt/data/home/aviv/cut_and_run/annotation
