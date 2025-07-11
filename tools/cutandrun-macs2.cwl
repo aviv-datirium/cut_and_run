@@ -1,10 +1,9 @@
 cwlVersion: v1.2
 class: CommandLineTool
 
-defaultContainer: cutrun-macs2-core:latest
-
 requirements:
-  DockerRequirement: {}
+  DockerRequirement:
+    dockerPull: cutrun-macs2-core:latest
   InitialWorkDirRequirement:
     listing:
       - entry: $(inputs.config_json)
@@ -43,14 +42,11 @@ outputs:
     type: Directory
     outputBinding:
       glob: alignment_replicates
-
   output_replicates:
     type: Directory
     outputBinding:
       glob: output_replicates
-
   cutrun_stdout:
     type: stdout
-
   cutrun_stderr:
     type: stderr
