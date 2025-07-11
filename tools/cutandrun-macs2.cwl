@@ -3,8 +3,8 @@ class: CommandLineTool
 
 requirements:
   DockerRequirement:
-    dockerPull: cutrun-macs2-core:latest
-    dockerImageId: cutrun-macs2-core:latest
+    dockerPull: biowardrobe2/cutrun-macs2-core:v1.1.1
+    dockerImageId: biowardrobe2/cutrun-macs2-core:v1.1.1
   InitialWorkDirRequirement:
     listing:
       - entry: $(inputs.config_json)
