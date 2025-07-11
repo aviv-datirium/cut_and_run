@@ -1,0 +1,15 @@
+From (macsenv) aviv@playground-2:~/cut_and_run$
+
+docker run --rm -it \
+  --entrypoint bash \
+  -e HOME=/tmp \
+  --workdir /tmp \
+  -v /mnt/data/home/aviv/cut_and_run/config_for_macs2_cwl.json:/tmp/config_for_docker.json:ro \
+  -v /mnt/data/home/aviv/fastq:/tmp/fastq:ro \
+  -v /mnt/data/home/aviv/star_indices:/tmp/star_indices:ro \
+  -v /mnt/data/home/aviv/chrom:/tmp/chrom:ro \
+  -v /mnt/data/home/aviv/annotation:/tmp/annotation:ro \
+  -v /mnt/data/home/aviv/cut_and_run/alignment_macs2:/tmp/alignment_replicates \
+  -v /mnt/data/home/aviv/cut_and_run/output_macs2:/tmp/output_replicates \
+  cutrun-macs2-core:latest \
+  -lc "source /opt/conda/etc/profile.d/conda.sh && conda activate cutrun && exec /usr/local/bin/cutrun.sh /tmp/config_for_docker.json"
