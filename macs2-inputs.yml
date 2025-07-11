@@ -1,5 +1,4 @@
 # macs2-inputs.yml
-
 config_json:
   class: File
   path: /mnt/data/home/aviv/cut_and_run/config_for_macs2_cwl.json
@@ -8,18 +7,14 @@ fastq_dir:
   class: Directory
   path: /mnt/data/home/aviv/fastq/min_msto211h
 
-reference_genome_dir:
+star_indices:
   class: Directory
-  path: /mnt/data/home/aviv/star_indices/hg38
+  path: /mnt/data/home/aviv/star_indices
 
-ecoli_index_dir:
+chrom_dir:
   class: Directory
-  path: /mnt/data/home/aviv/star_indices/ecoli_canonical
+  path: /mnt/data/home/aviv/chrom
 
-chrom_sizes:
-  class: File
-  path: /mnt/data/home/aviv/chrom/hg38.chrom.sizes
-
-annotation_genes:
-  class: File
-  path: /mnt/data/home/aviv/annotation/hg38.refGene.gtf
+annotation_dir:
+  class: Directory
+  path: /mnt/data/home/aviv/annotation
